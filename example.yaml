@@ -1,0 +1,75 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: sample-deployment
+  labels:
+    app: sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample
+  template:
+    metadata:
+        labels:
+          app: sample
+    spec:
+      serviceAccountName: sample-acc
+      containers:
+      - name: bash
+        image: bash:4.4.19
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /tmp/
+        command: ["watch"]
+        args: ["ls", "/tmp/"]
+      - name: sidecar
+        image: greenenergy/k8s-sidecar:latest
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /tmp/
+        env:
+        - name: LABEL
+          value: "findme"
+        - name: FOLDER
+          value: /tmp/
+      volumes:
+      - name: shared-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-configmap
+  labels:
+    findme: "yea"
+data:
+  hello.world: |-
+     Hello World!
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sample-role
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sample-acc
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sample-rolebind
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: sample-acc
+  namespace: default
