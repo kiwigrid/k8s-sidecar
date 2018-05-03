@@ -1,6 +1,6 @@
 
-[![Docker Automated build](https://img.shields.io/docker/automated/greenenergy/k8s-sidecar.svg)](https://hub.docker.com/r/greenenergy/k8s-sidecar/)
-[![Docker Build Status](https://img.shields.io/docker/build/greenenergy/k8s-sidecar.svg)](https://hub.docker.com/r/greenenergy/k8s-sidecar/)
+[![Docker Automated build](https://img.shields.io/docker/automated/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
+[![Docker Build Status](https://img.shields.io/docker/build/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
 
 # What?
 
