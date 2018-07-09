@@ -21,9 +21,10 @@ def watchForChanges(label, targetFolder):
     v1 = client.CoreV1Api()
     w = watch.Watch()
     for event in w.stream(v1.list_config_map_for_all_namespaces):
-        if event['object'].metadata.labels is None:
+        metadata = event['object'].metadata
+        if metadata.labels is None:
             continue
-        print("Working on configmap %s" % event['object'].metadata.name)
+        print(f'Working on configmap {metadata.namespace}/{metadata.name}')
         if label in event['object'].metadata.labels.keys():
             print("Configmap with label found")
             dataMap=event['object'].data
