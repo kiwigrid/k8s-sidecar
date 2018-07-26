@@ -4,7 +4,7 @@
 
 # What?
 
-This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained python script is working with the Kubernetes API 1.10
+This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send a html request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained python script is working with the Kubernetes API 1.10
 
 # Why?
 
@@ -13,6 +13,7 @@ Currently (April 2018) there is no simple way to hand files in configmaps to a s
 # How?
 
 Run the container created by this repo together you application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
+By adding additional env variables the container can send a html request to specified URL.
 
 # Features
 
@@ -35,3 +36,20 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - description: Folder where the files should be placed
   - required: true
   - type: string
+
+- `REQ_URL`
+  - description: URL to which send a request after a configmap got reloaded
+  - required: false
+  - type: URI
+
+- `REQ_METHOD`
+  - description: Request method GET(default) or POST
+  - required: false
+  - type: string
+
+- `REQ_PAYLOAD`
+  - description: If you use POST you can also provide json payload
+  - required: false
+  - type: json
+
+
