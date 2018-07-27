@@ -14,20 +14,21 @@ def writeTextToFile(folder, filename, data):
 
 def request(url, method, payload):
     r = requests.Session()
-    retries = Retry(total=5,
-            backoff_factor=0.2,
-            status_forcelist=[ 500, 502, 503, 504 ])
+    retries = Retry(total = 5,
+            connect = 5,
+            backoff_factor = 0.2,
+            status_forcelist = [ 500, 502, 503, 504 ])
     r.mount('http://', HTTPAdapter(max_retries=retries))
     r.mount('https://', HTTPAdapter(max_retries=retries))
     if url is None:
         print("No url provided. Doing nothing.")
         # If method is not provided use GET as default
     elif method == "GET" or method is None:
-        r = requests.get("%s" % url, timeout=10)
-        print ("%s request sent to %s. Response: %d %s" % (method, url, r.status_code, r.reason))
+        res = r.get("%s" % url, timeout=10)
+        print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
     elif method == "POST":
-        r = requests.post("%s" % url, json=payload, timeout=10)
-        print ("%s request sent to %s. Response: %d %s" % (method, url, r.status_code, r.reason))
+        res = r.post("%s" % url, json=payload, timeout=10)
+        print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
 
 
 def removeFile(folder, filename):
