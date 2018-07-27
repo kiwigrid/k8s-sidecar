@@ -50,11 +50,11 @@ def watchForChanges(label, targetFolder, url, method, payload):
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
                     writeTextToFile(targetFolder, filename, dataMap[filename])
                     if url is not None:
-					    request(url, method, payload)
+                        request(url, method, payload)
                 else:
                     removeFile(targetFolder, filename)
                     if url is not None:
-					    request(url, method, payload)
+                        request(url, method, payload)
 
 
 def main():
@@ -67,11 +67,11 @@ def main():
     if targetFolder is None:
         print("Should have added FOLDER as environment variable! Exit")
         return -1
-    
+
     method = os.getenv('REQ_METHOD')
     url = os.getenv('REQ_URL')
     payload = os.getenv('REQ_PAYLOAD')
-    
+
     config.load_incluster_config()
     print("Config for cluster api loaded...")
     watchForChanges(label, targetFolder, url, method, payload)
