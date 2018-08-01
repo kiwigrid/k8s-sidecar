@@ -35,3 +35,8 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - description: Folder where the files should be placed
   - required: true
   - type: string
+
+- `NAMESPACE`
+  - description: If specified, the sidecar will search for config-maps inside this namespace
+  - required: false
+  - type: string
