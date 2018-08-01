@@ -37,6 +37,11 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - required: true
   - type: string
 
+- `NAMESPACE`
+  - description: If specified, the sidecar will search for config-maps inside this namespace
+  - required: false
+  - type: string
+
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false
@@ -51,5 +56,3 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
-
-

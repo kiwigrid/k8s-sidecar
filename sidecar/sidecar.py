@@ -42,7 +42,13 @@ def removeFile(folder, filename):
 def watchForChanges(label, targetFolder, url, method, payload):
     v1 = client.CoreV1Api()
     w = watch.Watch()
-    for event in w.stream(v1.list_config_map_for_all_namespaces):
+    stream = None
+    namespace = os.getenv("NAMESPACE")
+    if namespace is None:
+        stream = w.stream(v1.list_config_map_for_all_namespaces)
+    else:
+        stream = w.stream(v1.list_namespaced_config_map, namespace=namespace)
+    for event in stream:
         metadata = event['object'].metadata
         if metadata.labels is None:
             continue
