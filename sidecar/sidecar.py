@@ -89,8 +89,11 @@ def main():
 
     config.load_incluster_config()
     print("Config for cluster api loaded...")
-    watchForChanges(label, targetFolder, url, method, payload)
-
+    while True:
+        try:
+            watchForChanges(label, targetFolder, url, method, payload)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
 
 if __name__ == '__main__':
     main()
