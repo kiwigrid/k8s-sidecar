@@ -1,4 +1,6 @@
 from kubernetes import client, config, watch
+from kubernetes.client.rest import ApiException
+
 import os
 import sys
 import requests
@@ -92,8 +94,11 @@ def main():
     while True:
         try:
             watchForChanges(label, targetFolder, url, method, payload)
+        except ApiException as e:
+            print("Exception when calling kubernetes: %s\n" % e)
         except:
             print("Unexpected error:", sys.exc_info()[0])
+            break
 
 if __name__ == '__main__':
     main()
