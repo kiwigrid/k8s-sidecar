@@ -38,7 +38,7 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - type: string
 
 - `NAMESPACE`
-  - description: If specified, the sidecar will search for config-maps inside this namespace
+  - description: If specified, the sidecar will search for config-maps inside this namespace. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
   - required: false
   - type: string
 

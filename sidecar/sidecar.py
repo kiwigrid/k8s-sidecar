@@ -39,12 +39,14 @@ def removeFile(folder, filename):
         print("Error: %s file not found" % completeFile)
 
 
-def watchForChanges(label, targetFolder, url, method, payload):
+def watchForChanges(label, targetFolder, url, method, payload, current):
     v1 = client.CoreV1Api()
     w = watch.Watch()
     stream = None
     namespace = os.getenv("NAMESPACE")
     if namespace is None:
+        stream = w.stream(v1.list_namespaced_config_map, namespace=current)
+    elif namespace == "ALL":
         stream = w.stream(v1.list_config_map_for_all_namespaces)
     else:
         stream = w.stream(v1.list_namespaced_config_map, namespace=namespace)
@@ -89,7 +91,8 @@ def main():
 
     config.load_incluster_config()
     print("Config for cluster api loaded...")
-    watchForChanges(label, targetFolder, url, method, payload)
+    namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    watchForChanges(label, targetFolder, url, method, payload, namespace)
 
 
 if __name__ == '__main__':
