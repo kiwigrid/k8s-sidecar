@@ -42,6 +42,11 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - required: false
   - type: string
 
+- `METHOD`
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
+  - required: false
+  - type: string
+  
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false
