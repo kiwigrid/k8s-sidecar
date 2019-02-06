@@ -7,6 +7,14 @@ from requests.adapters import HTTPAdapter
 
 
 def writeTextToFile(folder, filename, data):
+    if not os.path.exists(folder):
+        try:
+            os.makedirs(folder)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+
     with open(folder +"/"+ filename, 'w') as f:
         f.write(data)
         f.close()
@@ -60,11 +68,12 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
             print("Configmap with label found")
 
             if folderAnnotation is not None:
-                if folderAnnotation in metadata.annotations.keys():
-                    destFolder = metadata.annotations[folderAnnotation]
-                    print("Found a folder override annotation, placing the configmap in: {destFolder}")
-                else:
-                    destFolder = targetFolder
+                if event['object'].metadata.annotations is not None:
+                    if folderAnnotation in event['object'].metadata.annotations.keys():
+                        destFolder = event['object'].metadata.annotations[folderAnnotation]
+                        print(f'Found a folder override annotation, placing the configmap in: {destFolder}')
+                    else:
+                        destFolder = targetFolder
 
             dataMap=event['object'].data
             if dataMap is None:
@@ -86,7 +95,10 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
 def main():
     print("Starting config map collector")
     label = os.getenv('LABEL')
-    folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
+    # I want this to be configurable, but I also don't want to hack up
+    # the upstream grafana chart right now. Hard coding this for now...
+    # folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
+    folderAnnotation = "k8s-sidecar-target-directory"
     if label is None:
         print("Should have added LABEL as environment variable! Exit")
         return -1
