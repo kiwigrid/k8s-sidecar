@@ -39,10 +39,11 @@ def removeFile(folder, filename):
         print("Error: %s file not found" % completeFile)
 
 
-def watchForChanges(label, targetFolder, url, method, payload, current):
+def watchForChanges(label, targetFolder, url, method, payload, current, folderAnnotation):
     v1 = client.CoreV1Api()
     w = watch.Watch()
     stream = None
+    destFolder = targetFolder
     namespace = os.getenv("NAMESPACE")
     if namespace is None:
         stream = w.stream(v1.list_namespaced_config_map, namespace=current)
@@ -57,6 +58,14 @@ def watchForChanges(label, targetFolder, url, method, payload, current):
         print(f'Working on configmap {metadata.namespace}/{metadata.name}')
         if label in event['object'].metadata.labels.keys():
             print("Configmap with label found")
+
+            if folderAnnotation is not None:
+                if folderAnnotation in metadata.annotations.keys():
+                    destFolder = metadata.annotations[folderAnnotation]
+                    print("Found a folder override annotation, placing the configmap in: {destFolder}")
+                else:
+                    destFolder = targetFolder
+
             dataMap=event['object'].data
             if dataMap is None:
                 print("Configmap does not have data.")
@@ -65,11 +74,11 @@ def watchForChanges(label, targetFolder, url, method, payload, current):
             for filename in dataMap.keys():
                 print("File in configmap %s %s" % (filename, eventType))
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
-                    writeTextToFile(targetFolder, filename, dataMap[filename])
+                    writeTextToFile(destFolder, filename, dataMap[filename])
                     if url is not None:
                         request(url, method, payload)
                 else:
-                    removeFile(targetFolder, filename)
+                    removeFile(destFolder, filename)
                     if url is not None:
                         request(url, method, payload)
 
@@ -77,6 +86,7 @@ def watchForChanges(label, targetFolder, url, method, payload, current):
 def main():
     print("Starting config map collector")
     label = os.getenv('LABEL')
+    folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
     if label is None:
         print("Should have added LABEL as environment variable! Exit")
         return -1
@@ -92,7 +102,7 @@ def main():
     config.load_incluster_config()
     print("Config for cluster api loaded...")
     namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-    watchForChanges(label, targetFolder, url, method, payload, namespace)
+    watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
 
 
 if __name__ == '__main__':
