@@ -2,6 +2,8 @@ from kubernetes import client, config, watch
 import os
 import sys
 import requests
+from kubernetes.client.rest import ApiException
+from urllib3.exceptions import ProtocolError
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
@@ -113,8 +115,19 @@ def main():
 
     config.load_incluster_config()
     print("Config for cluster api loaded...")
-    namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-    watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
+    with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+        namespace = f.read()
+
+    
+    while True:
+        try:
+            watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
+        except ApiException as e:
+            print("ApiException when calling kubernetes: %s\n" % e)
+        except ProtocolError as e:
+            print("ProtocolError when calling kubernetes: %s\n" % e)
+        except:
+            raise
 
 
 if __name__ == '__main__':
