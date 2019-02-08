@@ -74,8 +74,6 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
                     if folderAnnotation in event['object'].metadata.annotations.keys():
                         destFolder = event['object'].metadata.annotations[folderAnnotation]
                         print(f'Found a folder override annotation, placing the configmap in: {destFolder}')
-                    else:
-                        destFolder = targetFolder
 
             dataMap=event['object'].data
             if dataMap is None:
