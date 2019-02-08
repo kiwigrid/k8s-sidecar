@@ -25,6 +25,8 @@ By adding additional env variables the container can send a html request to spec
 
 Example for a simple deployment can be found in `example.yaml`. Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding   --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
+One can override the default directory that files are copied into using a special annotation that looks like "k8s-sidecar-target-directory: /path/to/target/directory" the sidecar will attempt to create this directory if it does not exist.
+
 ## Configuration Environment Variables
 
 - `LABEL` 
