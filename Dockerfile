@@ -1,6 +1,7 @@
-FROM       python:3.6-slim-stretch
-RUN        pip install kubernetes==6.0.0
-COPY       sidecar/sidecar.py /app/
+FROM        python:3.7-slim
+COPY        requirements.txt /app/
+RUN         pip install -r /app/requirements.txt
+COPY        sidecar/sidecar.py /app/
 ENV         PYTHONUNBUFFERED=1
-WORKDIR    /app/
-CMD [ "python", "-u", "/app/sidecar.py" ]
+WORKDIR     /app/
+CMD         [ "python", "-u", "/app/sidecar.py" ]
