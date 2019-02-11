@@ -67,6 +67,11 @@ def listConfigmaps(label, targetFolder, url, method, payload, current):
 
 
 def watchForChanges(label, targetFolder, url, method, payload, current):
+    if os.getenv('SKIP_TLS_VERIFY') == 'true':
+        configuration = client.Configuration()
+        configuration.verify_ssl=False
+        configuration.debug = False
+        client.Configuration.set_default(configuration)
     v1 = client.CoreV1Api()
     w = watch.Watch()
     stream = None

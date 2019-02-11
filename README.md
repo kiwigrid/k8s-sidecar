@@ -61,3 +61,8 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
+
+- `SKIP_TLS_VERIFY`
+  - description: Set to true to skip tls verification for kube api calls
+  - required: false
+  - type: boolean
