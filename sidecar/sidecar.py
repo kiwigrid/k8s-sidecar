@@ -39,6 +39,33 @@ def removeFile(folder, filename):
         print("Error: %s file not found" % completeFile)
 
 
+def listConfigmaps(label, targetFolder, url, method, payload, current):
+    v1 = client.CoreV1Api()
+    namespace = os.getenv("NAMESPACE")
+    if namespace is None:
+        ret = v1.list_namespaced_config_map(namespace=current)
+    elif namespace == "ALL":
+        ret = v1.list_config_map_for_all_namespaces()
+    else:
+        ret = v1.list_namespaced_config_map(namespace=namespace)
+    for cm in ret.items:
+        metadata = cm.metadata
+        if metadata.labels is None:
+            continue
+        print(f'Working on configmap {metadata.namespace}/{metadata.name}')
+        if label in cm.metadata.labels.keys():
+            print("Configmap with label found")
+            dataMap=cm.data
+            if dataMap is None:
+                print("Configmap does not have data.")
+                continue
+            if label in cm.metadata.labels.keys():
+                for filename in dataMap.keys():
+                    writeTextToFile(targetFolder, filename, dataMap[filename])
+                    if url is not None:
+                        request(url, method, payload)
+
+
 def watchForChanges(label, targetFolder, url, method, payload, current):
     v1 = client.CoreV1Api()
     w = watch.Watch()
@@ -92,7 +119,12 @@ def main():
     config.load_incluster_config()
     print("Config for cluster api loaded...")
     namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-    watchForChanges(label, targetFolder, url, method, payload, namespace)
+
+    k8s_method = os.getenv("METHOD")
+    if k8s_method == "LIST":
+        listConfigmaps(label, targetFolder, url, method, payload, namespace)
+    else:
+        watchForChanges(label, targetFolder, url, method, payload, namespace)
 
 
 if __name__ == '__main__':
