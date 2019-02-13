@@ -61,6 +61,10 @@ def listConfigmaps(label, targetFolder, url, method, payload, current):
                 continue
             if label in cm.metadata.labels.keys():
                 for filename in dataMap.keys():
+                    fileData = dataMap[filename]
+                    if filename.endswith(".url"):
+                        filename = filename[:-4]
+                        fileData = request(fileData, "GET").text
                     writeTextToFile(targetFolder, filename, dataMap[filename])
                     if url is not None:
                         request(url, method, payload)
