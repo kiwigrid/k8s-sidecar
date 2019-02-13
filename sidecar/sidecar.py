@@ -65,7 +65,7 @@ def listConfigmaps(label, targetFolder, url, method, payload, current):
                     if filename.endswith(".url"):
                         filename = filename[:-4]
                         fileData = request(fileData, "GET").text
-                    writeTextToFile(targetFolder, filename, dataMap[filename])
+                    writeTextToFile(targetFolder, filename, fileData)
                     if url is not None:
                         request(url, method, payload)
 
