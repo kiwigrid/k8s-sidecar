@@ -40,6 +40,11 @@ def removeFile(folder, filename):
 
 
 def listConfigmaps(label, targetFolder, url, method, payload, current):
+    if os.getenv('SKIP_TLS_VERIFY') == 'true':
+        configuration = client.Configuration()
+        configuration.verify_ssl=False
+        configuration.debug = False
+        client.Configuration.set_default(configuration)
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE")
     if namespace is None:
