@@ -25,6 +25,8 @@ By adding additional env variables the container can send a html request to spec
 
 Example for a simple deployment can be found in `example.yaml`. Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding   --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
+If the filename ends with `.url` prefix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+
 ## Configuration Environment Variables
 
 - `LABEL` 
