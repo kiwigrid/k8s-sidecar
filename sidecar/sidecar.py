@@ -12,7 +12,7 @@ def writeTextToFile(folder, filename, data):
         f.close()
 
 
-def request(url, method, payload):
+def request(url, method, payload = None):
     r = requests.Session()
     retries = Retry(total = 5,
             connect = 5,
@@ -29,7 +29,7 @@ def request(url, method, payload):
     elif method == "POST":
         res = r.post("%s" % url, json=payload, timeout=10)
         print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
-
+    return res
 
 def removeFile(folder, filename):
     completeFile = folder +"/"+filename
@@ -61,7 +61,11 @@ def listConfigmaps(label, targetFolder, url, method, payload, current):
                 continue
             if label in cm.metadata.labels.keys():
                 for filename in dataMap.keys():
-                    writeTextToFile(targetFolder, filename, dataMap[filename])
+                    fileData = dataMap[filename]
+                    if filename.endswith(".url"):
+                        filename = filename[:-4]
+                        fileData = request(fileData, "GET").text
+                    writeTextToFile(targetFolder, filename, fileData)
                     if url is not None:
                         request(url, method, payload)
 
@@ -92,10 +96,16 @@ def watchForChanges(label, targetFolder, url, method, payload, current):
             for filename in dataMap.keys():
                 print("File in configmap %s %s" % (filename, eventType))
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
-                    writeTextToFile(targetFolder, filename, dataMap[filename])
+                    fileData = dataMap[filename]
+                    if filename.endswith(".url"):
+                        filename = filename[:-4]
+                        fileData = request(fileData, "GET").text
+                    writeTextToFile(targetFolder, filename, fileData)
                     if url is not None:
                         request(url, method, payload)
                 else:
+                    if filename.endswith(".url"):
+                        filename = filename[:-4]
                     removeFile(targetFolder, filename)
                     if url is not None:
                         request(url, method, payload)
