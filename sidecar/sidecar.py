@@ -130,7 +130,13 @@ def main():
     print("Config for cluster api loaded...")
     namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
-    k8s_method = os.getenv("METHOD")
+    if os.getenv('SKIP_TLS_VERIFY') == 'true':
+        configuration = client.Configuration()
+        configuration.verify_ssl=False
+        configuration.debug = False
+        client.Configuration.set_default(configuration)
+
+    k8s_method = os.getenv("METHOD")    
     if k8s_method == "LIST":
         listConfigmaps(label, targetFolder, url, method, payload, namespace)
     else:

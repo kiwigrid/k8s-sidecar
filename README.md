@@ -63,3 +63,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
+
+- `SKIP_TLS_VERIFY`
+  - description: Set to true to skip tls verification for kube api calls
+  - required: false
+  - type: boolean
