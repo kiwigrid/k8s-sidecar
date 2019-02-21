@@ -20,6 +20,7 @@ By adding additional env variables the container can send a html request to spec
 - Extract files from config maps
 - Filter based on label
 - Update/Delete on change of configmap
+- Decode base64 data from within a configmap
 
 # Usage
 
@@ -68,3 +69,9 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: Set to true to skip tls verification for kube api calls
   - required: false
   - type: boolean
+
+## Annotations
+
+| Annotation | Description |
+|------------|-------------|
+| `k8s-sidecar.kiwigrid/base64-data` | Tells the sidecar to treat the values in your `ConfigMap` as base64 encoded and saves the decoded output into the destination file |
