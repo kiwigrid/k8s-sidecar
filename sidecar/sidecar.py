@@ -1,4 +1,5 @@
 from kubernetes import client, config, watch
+import base64
 import os
 import sys
 import requests
@@ -69,6 +70,13 @@ def listConfigmaps(label, targetFolder, url, method, payload, current):
                     if url is not None:
                         request(url, method, payload)
 
+def getAnnotation(obj, annotation):
+    if not hasattr(obj, 'metadata'):
+        return None
+    if not hasattr(obj.metadata, 'annotations'):
+        return None
+    return obj.metadata.annotations.get(annotation)
+
 
 def watchForChanges(label, targetFolder, url, method, payload, current):
     v1 = client.CoreV1Api()
@@ -93,10 +101,13 @@ def watchForChanges(label, targetFolder, url, method, payload, current):
                 print("Configmap does not have data.")
                 continue
             eventType = event['type']
+            contentBase64Encoded = getAnnotation(event['object'], 'k8s-sidecar.kiwigrid/base64-data')
             for filename in dataMap.keys():
                 print("File in configmap %s %s" % (filename, eventType))
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
                     fileData = dataMap[filename]
+                    if contentBase64Encoded:
+                        fileData = base64.b64decode(fileData).decode()
                     if filename.endswith(".url"):
                         filename = filename[:-4]
                         fileData = request(fileData, "GET").text
