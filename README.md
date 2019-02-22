@@ -28,6 +28,8 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
 
 If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
 
+If the filename ends with `.base64` suffix, the content will be base64 decoded and persisted to disk.
+
 ## Configuration Environment Variables
 
 - `LABEL` 
@@ -69,9 +71,3 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: Set to true to skip tls verification for kube api calls
   - required: false
   - type: boolean
-
-## Annotations
-
-| Annotation | Description |
-|------------|-------------|
-| `k8s-sidecar.kiwigrid/base64-data` | Tells the sidecar to treat the values in your `ConfigMap` as base64 encoded and saves the decoded output into the destination file |
