@@ -95,10 +95,10 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
 def main():
     print("Starting config map collector")
     label = os.getenv('LABEL')
-    # I want this to be configurable, but I also don't want to hack up
-    # the upstream grafana chart right now. Hard coding this for now...
-    # folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
-    folderAnnotation = "k8s-sidecar-target-directory"
+    folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
+    if folderAnnotation is None:
+        print("No folder annotation was provided, defaulting to k8s-sidecar-target-directory")
+        folderAnnotation = "k8s-sidecar-target-directory"
     if label is None:
         print("Should have added LABEL as environment variable! Exit")
         return -1
@@ -121,7 +121,10 @@ def main():
         try:
             watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
         except ApiException as e:
-            print("ApiException when calling kubernetes: %s\n" % e)
+            if "500" not in e:
+              print("ApiException when calling kubernetes: %s\n" % e)
+            else:
+              raise
         except ProtocolError as e:
             print("ProtocolError when calling kubernetes: %s\n" % e)
         except:
