@@ -28,6 +28,8 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
 One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). the sidecar will attempt to create directories defined by configmaps if they are not present. Exmaple configmap annotation:
   k8s-sidecar-target-directory: "/path/to/target/directory"
 
+If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+
 ## Configuration Environment Variables
 
 - `LABEL` 
@@ -45,6 +47,11 @@ One can override the default directory that files are copied into using a config
   - required: false
   - type: string
 
+- `METHOD`
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
+  - required: false
+  - type: string
+  
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false
@@ -59,3 +66,8 @@ One can override the default directory that files are copied into using a config
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
+
+- `SKIP_TLS_VERIFY`
+  - description: Set to true to skip tls verification for kube api calls
+  - required: false
+  - type: boolean
