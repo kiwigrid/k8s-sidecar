@@ -89,6 +89,7 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
     w = watch.Watch()
     stream = None
     namespace = os.getenv("NAMESPACE")
+    destFolder = targetFolder
     if namespace is None:
         stream = w.stream(v1.list_namespaced_config_map, namespace=current)
     elif namespace == "ALL":
