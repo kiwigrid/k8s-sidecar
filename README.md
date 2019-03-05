@@ -25,6 +25,11 @@ By adding additional env variables the container can send a html request to spec
 
 Example for a simple deployment can be found in `example.yaml`. Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding   --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
+One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
+  k8s-sidecar-target-directory: "/path/to/target/directory"
+
+If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+
 ## Configuration Environment Variables
 
 - `LABEL` 
@@ -37,11 +42,21 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - required: true
   - type: string
 
+- `FOLDER_ANNOTATION`
+  - description: The annotation the sidecar will look for in configmaps to override the destination folder for files, defaults to "k8s-sidecar-target-directory"
+  - required: false
+  - type: string
+
 - `NAMESPACE`
   - description: If specified, the sidecar will search for config-maps inside this namespace. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
   - required: false
   - type: string
 
+- `METHOD`
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
+  - required: false
+  - type: string
+  
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false
@@ -56,3 +71,8 @@ Example for a simple deployment can be found in `example.yaml`. Depending on the
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
+
+- `SKIP_TLS_VERIFY`
+  - description: Set to true to skip tls verification for kube api calls
+  - required: false
+  - type: boolean
