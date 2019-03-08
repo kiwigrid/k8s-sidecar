@@ -96,6 +96,12 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - default: 0.2
   - type: float
 
+- `REQ_TIMEOUT`
+  - description: many seconds to wait for the server to send data before giving up
+  - required: false
+  - default: 10
+  - type: float
+
 - `SKIP_TLS_VERIFY`
   - description: Set to true to skip tls verification for kube api calls
   - required: false
