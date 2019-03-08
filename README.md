@@ -84,6 +84,12 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - default: 5
   - type: integer
 
+- `REQ_RETRY_READ`
+  - description: How many times to retry on read errors
+  - required: false
+  - default: 5
+  - type: integer
+
 - `REQ_RETRY_BACKOFF_FACTOR`
   - description: A backoff factor to apply between attempts after the second try
   - required: false
