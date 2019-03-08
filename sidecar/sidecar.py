@@ -22,10 +22,14 @@ def writeTextToFile(folder, filename, data):
 
 
 def request(url, method, payload = None):
+    retryTotal = 5 if os.getenv('REQ_RETRY_TOTAL') is None else int(os.getenv('REQ_RETRY_TOTAL'))
+    retryConnect = 5 if os.getenv('REQ_RETRY_CONNECT') is None else int(os.getenv('REQ_RETRY_CONNECT'))
+    retryBackoffFactor = 0.2 if os.getenv('REQ_RETRY_BACKOFF_FACTOR') is None else float(os.getenv('REQ_RETRY_BACKOFF_FACTOR'))
+
     r = requests.Session()
-    retries = Retry(total = 5,
-            connect = 5,
-            backoff_factor = 0.2,
+    retries = Retry(total = retryTotal,
+            connect = retryConnect,
+            backoff_factor = retryBackoffFactor,
             status_forcelist = [ 500, 502, 503, 504 ])
     r.mount('http://', HTTPAdapter(max_retries=retries))
     r.mount('https://', HTTPAdapter(max_retries=retries))
