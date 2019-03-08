@@ -51,7 +51,6 @@ def removeFile(folder, filename):
 def listConfigmaps(label, targetFolder, url, method, payload, current, folderAnnotation):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE")
-    destFolder = targetFolder
     if namespace is None:
         ret = v1.list_namespaced_config_map(namespace=current)
     elif namespace == "ALL":
@@ -59,6 +58,7 @@ def listConfigmaps(label, targetFolder, url, method, payload, current, folderAnn
     else:
         ret = v1.list_namespaced_config_map(namespace=namespace)
     for cm in ret.items:
+        destFolder = targetFolder
         metadata = cm.metadata
         if metadata.labels is None:
             continue
@@ -89,7 +89,6 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
     w = watch.Watch()
     stream = None
     namespace = os.getenv("NAMESPACE")
-    destFolder = targetFolder
     if namespace is None:
         stream = w.stream(v1.list_namespaced_config_map, namespace=current)
     elif namespace == "ALL":
@@ -97,6 +96,7 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
     else:
         stream = w.stream(v1.list_namespaced_config_map, namespace=namespace)
     for event in stream:
+        destFolder = targetFolder
         metadata = event['object'].metadata
         if metadata.labels is None:
             continue
