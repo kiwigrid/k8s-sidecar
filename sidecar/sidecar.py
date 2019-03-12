@@ -167,7 +167,7 @@ def main():
             try:
                 watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
             except ApiException as e:
-                if "500" not in e:
+                if e.status is not 500:
                   print("ApiException when calling kubernetes: %s\n" % e)
                 else:
                   raise
