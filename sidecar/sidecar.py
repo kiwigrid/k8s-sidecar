@@ -22,10 +22,17 @@ def writeTextToFile(folder, filename, data):
 
 
 def request(url, method, payload = None):
+    retryTotal = 5 if os.getenv('REQ_RETRY_TOTAL') is None else int(os.getenv('REQ_RETRY_TOTAL'))
+    retryConnect = 5 if os.getenv('REQ_RETRY_CONNECT') is None else int(os.getenv('REQ_RETRY_CONNECT'))
+    retryRead = 5 if os.getenv('REQ_RETRY_READ') is None else int(os.getenv('REQ_RETRY_READ'))
+    retryBackoffFactor = 0.2 if os.getenv('REQ_RETRY_BACKOFF_FACTOR') is None else float(os.getenv('REQ_RETRY_BACKOFF_FACTOR'))
+    timeout = 10 if os.getenv('REQ_TIMEOUT') is None else float(os.getenv('REQ_TIMEOUT'))
+
     r = requests.Session()
-    retries = Retry(total = 5,
-            connect = 5,
-            backoff_factor = 0.2,
+    retries = Retry(total = retryTotal,
+            connect = retryConnect,
+            read = retryRead,
+            backoff_factor = retryBackoffFactor,
             status_forcelist = [ 500, 502, 503, 504 ])
     r.mount('http://', HTTPAdapter(max_retries=retries))
     r.mount('https://', HTTPAdapter(max_retries=retries))
@@ -33,10 +40,10 @@ def request(url, method, payload = None):
         print("No url provided. Doing nothing.")
         # If method is not provided use GET as default
     elif method == "GET" or method is None:
-        res = r.get("%s" % url, timeout=10)
+        res = r.get("%s" % url, timeout=timeout)
         print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
     elif method == "POST":
-        res = r.post("%s" % url, json=payload, timeout=10)
+        res = r.post("%s" % url, json=payload, timeout=timeout)
         print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
     return res
 

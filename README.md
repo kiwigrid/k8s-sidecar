@@ -72,6 +72,36 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: false
   - type: json
 
+- `REQ_RETRY_TOTAL`
+  - description: Total number of retries to allow
+  - required: false
+  - default: 5
+  - type: integer
+
+- `REQ_RETRY_CONNECT`
+  - description: How many connection-related errors to retry on
+  - required: false
+  - default: 5
+  - type: integer
+
+- `REQ_RETRY_READ`
+  - description: How many times to retry on read errors
+  - required: false
+  - default: 5
+  - type: integer
+
+- `REQ_RETRY_BACKOFF_FACTOR`
+  - description: A backoff factor to apply between attempts after the second try
+  - required: false
+  - default: 0.2
+  - type: float
+
+- `REQ_TIMEOUT`
+  - description: many seconds to wait for the server to send data before giving up
+  - required: false
+  - default: 10
+  - type: float
+
 - `SKIP_TLS_VERIFY`
   - description: Set to true to skip tls verification for kube api calls
   - required: false
