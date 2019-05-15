@@ -1,6 +1,6 @@
 from kubernetes import client, config, watch
 import os
-import sys
+import errno
 import requests
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
@@ -16,24 +16,26 @@ def writeTextToFile(folder, filename, data):
             if e.errno != errno.EEXIST:
                 raise
 
-    with open(folder +"/"+ filename, 'w') as f:
+    with open(folder + "/" + filename, 'w') as f:
         f.write(data)
         f.close()
 
 
-def request(url, method, payload = None):
+def request(url, method, payload=None):
     retryTotal = 5 if os.getenv('REQ_RETRY_TOTAL') is None else int(os.getenv('REQ_RETRY_TOTAL'))
-    retryConnect = 5 if os.getenv('REQ_RETRY_CONNECT') is None else int(os.getenv('REQ_RETRY_CONNECT'))
+    retryConnect = 5 if os.getenv('REQ_RETRY_CONNECT') is None else int(
+        os.getenv('REQ_RETRY_CONNECT'))
     retryRead = 5 if os.getenv('REQ_RETRY_READ') is None else int(os.getenv('REQ_RETRY_READ'))
-    retryBackoffFactor = 0.2 if os.getenv('REQ_RETRY_BACKOFF_FACTOR') is None else float(os.getenv('REQ_RETRY_BACKOFF_FACTOR'))
+    retryBackoffFactor = 0.2 if os.getenv('REQ_RETRY_BACKOFF_FACTOR') is None else float(
+        os.getenv('REQ_RETRY_BACKOFF_FACTOR'))
     timeout = 10 if os.getenv('REQ_TIMEOUT') is None else float(os.getenv('REQ_TIMEOUT'))
 
     r = requests.Session()
-    retries = Retry(total = retryTotal,
-            connect = retryConnect,
-            read = retryRead,
-            backoff_factor = retryBackoffFactor,
-            status_forcelist = [ 500, 502, 503, 504 ])
+    retries = Retry(total=retryTotal,
+                    connect=retryConnect,
+                    read=retryRead,
+                    backoff_factor=retryBackoffFactor,
+                    status_forcelist=[500, 502, 503, 504])
     r.mount('http://', HTTPAdapter(max_retries=retries))
     r.mount('https://', HTTPAdapter(max_retries=retries))
     if url is None:
@@ -41,14 +43,15 @@ def request(url, method, payload = None):
         # If method is not provided use GET as default
     elif method == "GET" or method is None:
         res = r.get("%s" % url, timeout=timeout)
-        print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
+        print("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
     elif method == "POST":
         res = r.post("%s" % url, json=payload, timeout=timeout)
-        print ("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
+        print("%s request sent to %s. Response: %d %s" % (method, url, res.status_code, res.reason))
     return res
 
+
 def removeFile(folder, filename):
-    completeFile = folder +"/"+filename
+    completeFile = folder + "/"+filename
     if os.path.isfile(completeFile):
         os.remove(completeFile)
     else:
@@ -76,7 +79,7 @@ def listConfigmaps(label, targetFolder, url, method, payload, current, folderAnn
                 if folderAnnotation in cm.metadata.annotations.keys():
                     destFolder = cm.metadata.annotations[folderAnnotation]
 
-            dataMap=cm.data
+            dataMap = cm.data
             if dataMap is None:
                 print("Configmap does not have data.")
                 continue
@@ -113,8 +116,9 @@ def watchForChanges(label, targetFolder, url, method, payload, current, folderAn
             if event['object'].metadata.annotations is not None:
                 if folderAnnotation in event['object'].metadata.annotations.keys():
                     destFolder = event['object'].metadata.annotations[folderAnnotation]
-                    print(f'Found a folder override annotation, placing the configmap in: {destFolder}')
-            dataMap=event['object'].data
+                    print('Found a folder override annotation, '
+                          'placing the configmap in: {destFolder}')
+            dataMap = event['object'].data
             if dataMap is None:
                 print("Configmap does not have data.")
                 continue
@@ -162,25 +166,26 @@ def main():
 
     if os.getenv('SKIP_TLS_VERIFY') == 'true':
         configuration = client.Configuration()
-        configuration.verify_ssl=False
+        configuration.verify_ssl = False
         configuration.debug = False
         client.Configuration.set_default(configuration)
 
-    k8s_method = os.getenv("METHOD")    
+    k8s_method = os.getenv("METHOD")
     if k8s_method == "LIST":
         listConfigmaps(label, targetFolder, url, method, payload, namespace, folderAnnotation)
     else:
         while True:
             try:
-                watchForChanges(label, targetFolder, url, method, payload, namespace, folderAnnotation)
+                watchForChanges(label, targetFolder, url, method,
+                                payload, namespace, folderAnnotation)
             except ApiException as e:
-                if e.status is not 500:
-                  print("ApiException when calling kubernetes: %s\n" % e)
+                if e.status != 500:
+                    print("ApiException when calling kubernetes: %s\n" % e)
                 else:
-                  raise
+                    raise
             except ProtocolError as e:
                 print("ProtocolError when calling kubernetes: %s\n" % e)
-            except:
+            except Exception:
                 raise
 
 
