@@ -32,7 +32,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 
 ## Configuration Environment Variables
 
-- `LABEL` 
+- `LABEL`
   - description: Label that should be used for filtering
   - required: true
   - type: string
@@ -52,11 +52,17 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: false
   - type: string
 
+- `RESOURCE`
+  - description: Resouce type, which is monitored by the sidecar. Options: configmap (default), secret, both
+  - required: false
+  - default: configmap
+  - type: string
+
 - `METHOD`
   - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
   - required: false
   - type: string
-  
+
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false

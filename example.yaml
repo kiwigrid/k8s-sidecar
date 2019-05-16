@@ -33,6 +33,8 @@ spec:
           value: "findme"
         - name: FOLDER
           value: /tmp/
+        - name: RESOURCE
+          value: both
       volumes:
       - name: shared-volume
         emptyDir: {}
@@ -47,13 +49,24 @@ data:
   hello.world: |-
      Hello World!
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sample-secret
+  labels:
+    findme: "yea"
+type: Opaque
+data:
+  # base64 encoded: my super cool \n multiline \ secret
+  secret.world: bXkgc3VwZXIgY29vbAptdWx0aWxpbmUKc2VjcmV0
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: sample-role
 rules:
 - apiGroups: [""]
-  resources: ["configmaps"]
+  resources: ["configmaps", "secrets"]
   verbs: ["get", "watch", "list"]
 ---
 apiVersion: v1
