@@ -1,6 +1,7 @@
 import base64
 import os
-from threading import Thread
+from multiprocessing import Process
+from time import sleep
 
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
@@ -70,8 +71,7 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
 
 
 def _watch_resource_iterator(label, targetFolder, url, method, payload,
-                             current, folderAnnotation, resource, thread):
-    print_prefix = "Thread: " if thread else ""
+                             current, folderAnnotation, resource):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current)
     if namespace == "ALL":
@@ -84,21 +84,21 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
         metadata = event['object'].metadata
         if metadata.labels is None:
             continue
-        print(f'{print_prefix}Working on {resource} {metadata.namespace}/{metadata.name}')
+        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
         if label in event['object'].metadata.labels.keys():
-            print(f"{print_prefix}{resource} with label found")
+            print(f"{resource} with label found")
             if event['object'].metadata.annotations is not None:
                 if folderAnnotation in event['object'].metadata.annotations.keys():
                     destFolder = event['object'].metadata.annotations[folderAnnotation]
-                    print(f'{print_prefix}ound a folder override annotation, '
-                          'placing the {resource} in: {destFolder}')
+                    print('Found a folder override annotation, '
+                          f'placing the {resource} in: {destFolder}')
             dataMap = event['object'].data
             if dataMap is None:
-                print(f"{print_prefix}{resource} does not have data.")
+                print(f"{resource} does not have data.")
                 continue
             eventType = event['type']
             for data_key in dataMap.keys():
-                print(f"{print_prefix}File in {resource} {data_key} {eventType}")
+                print(f"File in {resource} {data_key} {eventType}")
 
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
                     filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
@@ -115,27 +115,51 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
 
 
 def _watch_resource_loop(*args):
-    try:
-        _watch_resource_iterator(*args)
-    except ApiException as e:
-        if e.status != 500:
-            print(f"ApiException when calling kubernetes: {e}\n")
-        else:
-            raise
-    except ProtocolError as e:
-        print(f"ProtocolError when calling kubernetes: {e}\n")
-    except Exception as e:
-        print(f"Received unknown exception: {e}\n")
+    while True:
+        try:
+            _watch_resource_iterator(*args)
+        except ApiException as e:
+            if e.status != 500:
+                print(f"ApiException when calling kubernetes: {e}\n")
+            else:
+                raise
+        except ProtocolError as e:
+            print(f"ProtocolError when calling kubernetes: {e}\n")
+        except Exception as e:
+            print(f"Received unknown exception: {e}\n")
 
 
 def watchForChanges(label, targetFolder, url, method, payload,
                     current, folderAnnotation, resources):
 
-    if len(resources) == 2:
-        Thread(target=_watch_resource_loop,
-               args=(label, targetFolder, url, method, payload,
-                     current, folderAnnotation, resources[1], True)
-               ).start()
+    firstProc = Process(target=_watch_resource_loop,
+                        args=(label, targetFolder, url, method, payload,
+                              current, folderAnnotation, resources[0])
+                        )
+    firstProc.start()
 
-    _watch_resource_loop(label, targetFolder, url, method, payload,
-                         current, folderAnnotation, resources[0], False)
+    if len(resources) == 2:
+        secProc = Process(target=_watch_resource_loop,
+                          args=(label, targetFolder, url, method, payload,
+                                current, folderAnnotation, resources[1])
+                          )
+        secProc.start()
+
+    while True:
+        if not firstProc.is_alive():
+            print(f"Process for {resources[0]} died. Stopping and exiting")
+            if len(resources) == 2 and secProc.is_alive():
+                secProc.terminate()
+            elif len(resources) == 2:
+                print(f"Process for {resources[1]}  also died...")
+            raise Exception("Loop died")
+
+        if len(resources) == 2 and not secProc.is_alive():
+            print(f"Process for {resources[1]} died. Stopping and exiting")
+            if firstProc.is_alive():
+                firstProc.terminate()
+            else:
+                print(f"Process for {resources[0]}  also died...")
+            raise Exception("Loop died")
+
+        sleep(5)
