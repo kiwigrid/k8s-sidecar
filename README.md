@@ -1,6 +1,6 @@
 
-[![Docker Automated build](https://img.shields.io/docker/automated/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
-[![Docker Build Status](https://img.shields.io/docker/build/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
+
+[![CircleCI](https://img.shields.io/circleci/project/github/kiwigrid/k8s-sidecar/master.svg?style=plastic)](https://circleci.com/gh/kiwigrid/k8s-sidecar)
 [![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=plastic)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
 
 # What?
