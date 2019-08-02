@@ -1,0 +1,50 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.7.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      #- run:
+      #    name: run tests
+      #    command: |
+      #      . venv/bin/activate
+      #      python manage.py test
+
+      #- store_artifacts:
+      #    path: test-reports
+      #    destination: test-reports
+
+      - setup_remote_docker:
+          docker_layer_caching: true
+
+      - run: |
+          TAG=0.1.$CIRCLE_BUILD_NUM
+          docker build -t   kiwigrid/k8s-sidecar:$TAG .     
+          docker login -u $DOCKER_USER -p $DOCKER_PASS
+          docker push kiwigrid/k8s-sidecar:$TAG
