@@ -139,10 +139,10 @@ jobs:
           TAG=`cat /tmp/VERSION`
           docker login -u $DOCKER_USER -p $DOCKER_PASS
           docker pull kiwigrid/k8s-sidecar-build:$TAG
-          docker tag kiwigrid/k8s-sidecar-build:$TAG timsmyth/k8s-sidecar:$TAG
-          docker tag kiwigrid/k8s-sidecar-build:$TAG timsmyth/k8s-sidecar:latest
-          docker push timsmyth/k8s-sidecar:$TAG
-          docker push timsmyth/k8s-sidecar:latest
+          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:$TAG
+          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:latest
+          docker push kiwigrid/k8s-sidecar:$TAG
+          docker push kiwigrid/k8s-sidecar:latest
 
 workflows:
   version: 2
