@@ -1,0 +1,50 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sample-role
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sample-acc
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sample-rolebind
+roleRef:
+  kind: ClusterRole
+  name: sample-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: sample-acc
+  namespace: default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar-build:SIDECAR_VERSION
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    env:
+    - name: LABEL
+      value: "findme"
+    - name: FOLDER
+      value: /tmp/
+    - name: RESOURCE
+      value: both
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
