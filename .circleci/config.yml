@@ -44,7 +44,7 @@ jobs:
           TAG=0.1.$CIRCLE_BUILD_NUM
           echo "$TAG" > /tmp/VERSION
           docker build -t   kiwigrid/k8s-sidecar-build:$TAG . 
-          docker login -u $DOCKER_USER -p $DOCKER_PASS
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           docker push kiwigrid/k8s-sidecar-build:$TAG
       - persist_to_workspace:
           root: /tmp
@@ -137,7 +137,7 @@ jobs:
 
       - run: |
           TAG=`cat /tmp/VERSION`
-          docker login -u $DOCKER_USER -p $DOCKER_PASS
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           docker pull kiwigrid/k8s-sidecar-build:$TAG
           docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:$TAG
           docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:latest
