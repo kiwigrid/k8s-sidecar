@@ -126,9 +126,6 @@ jobs:
           no_output_timeout: 3600
 
   deploy:
-    branches:
-      only:
-        - master
     docker:
       - image: circleci/python:3.7.4
     steps:
@@ -170,3 +167,6 @@ workflows:
             - test-k8s-1-12
             - test-k8s-1-13
             - test-k8s-1-14
+          filters:
+            branches:
+              only: master
