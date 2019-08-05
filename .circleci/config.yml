@@ -126,6 +126,9 @@ jobs:
           no_output_timeout: 3600
 
   deploy:
+    branches:
+      only:
+        - master
     docker:
       - image: circleci/python:3.7.4
     steps:
