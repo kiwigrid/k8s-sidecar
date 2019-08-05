@@ -167,3 +167,6 @@ workflows:
             - test-k8s-1-12
             - test-k8s-1-13
             - test-k8s-1-14
+          filters:
+            branches:
+              only: master
