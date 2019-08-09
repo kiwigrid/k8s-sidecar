@@ -1,2 +1,2 @@
-kubernetes==8.0.1
-requests==2.21.0
+kubernetes==10.0.0
+requests==2.22.0
