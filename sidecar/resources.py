@@ -5,6 +5,7 @@ import os
 import sys
 import signal
 
+from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
 
@@ -29,6 +30,8 @@ _list_for_all_namespaces = {
     "secret": "list_secret_for_all_namespaces",
     "configmap": "list_config_map_for_all_namespaces"
 }
+
+_namespaces_using_file = defaultdict(list)
 
 
 def _get_file_data_and_name(full_filename, content, resource):
@@ -77,6 +80,9 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
                                                                  resource)
                     writeTextToFile(destFolder, filename, filedata)
 
+                    if metadata.namespace not in _namespaces_using_file[filename]:
+                        _namespaces_using_file[filename].append(metadata.namespace)
+
                     if url is not None:
                         request(url, method, payload)
 
@@ -116,11 +122,20 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
                                                                  resource)
                     writeTextToFile(destFolder, filename, filedata)
 
+                    if metadata.namespace not in _namespaces_using_file[filename]:
+                        _namespaces_using_file[filename].append(metadata.namespace)
+
                     if url is not None:
                         request(url, method, payload)
                 else:
                     filename = data_key[:-4] if data_key.endswith(".url") else data_key
-                    removeFile(destFolder, filename)
+
+                    if metadata.namespace in _namespaces_using_file[filename]:
+                        _namespaces_using_file[filename].remove(metadata.namespace)
+
+                    if len(_namespaces_using_file[filename]) == 0:
+                        removeFile(destFolder, filename)
+
                     if url is not None:
                         request(url, method, payload)
 
