@@ -114,10 +114,14 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
                         request(url, method, payload)
 
 
-def _watch_resource_loop(*args):
+def _watch_resource_loop(mode, *args):
     while True:
         try:
-            _watch_resource_iterator(*args)
+            if mode == "SLEEP":
+                listResources(*args)
+                sleep(60)
+            else:
+                _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
                 print(f"ApiException when calling kubernetes: {e}\n")
@@ -129,18 +133,18 @@ def _watch_resource_loop(*args):
             print(f"Received unknown exception: {e}\n")
 
 
-def watchForChanges(label, targetFolder, url, method, payload,
+def watchForChanges(mode, label, targetFolder, url, method, payload,
                     current, folderAnnotation, resources):
 
     firstProc = Process(target=_watch_resource_loop,
-                        args=(label, targetFolder, url, method, payload,
+                        args=(mode, label, targetFolder, url, method, payload,
                               current, folderAnnotation, resources[0])
                         )
     firstProc.start()
 
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
-                          args=(label, targetFolder, url, method, payload,
+                          args=(mode, label, targetFolder, url, method, payload,
                                 current, folderAnnotation, resources[1])
                           )
         secProc.start()
