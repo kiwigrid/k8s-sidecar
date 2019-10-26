@@ -59,7 +59,7 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
         if metadata.labels is None:
             continue
         print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
-        if label in sec.metadata.labels.keys():
+        if label in metadata.labels.keys():
             print(f"Found {resource} with label")
 
             dataMap = sec.data
@@ -67,7 +67,7 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
                 print(f"No data field in {resource}")
                 continue
 
-            if label in sec.metadata.labels.keys():
+            if label in metadata.labels.keys():
                 for data_key in dataMap.keys():
                     filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
                                                                  resource)
@@ -93,7 +93,7 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
         if metadata.labels is None:
             continue
         print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
-        if label in event['object'].metadata.labels.keys():
+        if label in metadata.labels.keys():
             print(f"{resource} with label found")
             dataMap = event['object'].data
             if dataMap is None:
