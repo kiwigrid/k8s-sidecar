@@ -35,6 +35,16 @@ def _get_file_data_and_name(full_filename, content, resource):
     return filename, file_data
 
 
+def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
+    if metadata.annotations:
+        if folderAnnotation in metadata.annotations.keys():
+            destFolder = metadata.annotations[folderAnnotation]
+            print('Found a folder override annotation, '
+                f'placing the {metadata.name} in: {destFolder}')
+            return destFolder
+    return defaultFolder
+
+
 def listResources(label, targetFolder, url, method, payload, current, folderAnnotation, resource):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current)
@@ -44,16 +54,13 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
         ret = getattr(v1, _list_namespaced[resource])(namespace=namespace)
 
     for sec in ret.items:
-        destFolder = targetFolder
         metadata = sec.metadata
+        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
         if metadata.labels is None:
             continue
         print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
         if label in sec.metadata.labels.keys():
             print(f"Found {resource} with label")
-            if sec.metadata.annotations is not None:
-                if folderAnnotation in sec.metadata.annotations.keys():
-                    destFolder = sec.metadata.annotations[folderAnnotation]
 
             dataMap = sec.data
             if dataMap is None:
@@ -80,18 +87,14 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
         stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace)
 
     for event in stream:
-        destFolder = targetFolder
         metadata = event['object'].metadata
+        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
+
         if metadata.labels is None:
             continue
         print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
         if label in event['object'].metadata.labels.keys():
             print(f"{resource} with label found")
-            if event['object'].metadata.annotations is not None:
-                if folderAnnotation in event['object'].metadata.annotations.keys():
-                    destFolder = event['object'].metadata.annotations[folderAnnotation]
-                    print('Found a folder override annotation, '
-                          f'placing the {resource} in: {destFolder}')
             dataMap = event['object'].data
             if dataMap is None:
                 print(f"{resource} does not have data.")
