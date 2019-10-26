@@ -18,6 +18,10 @@ def main():
         print("Should have added LABEL as environment variable! Exit")
         return -1
 
+    labelValue = os.getenv('LABEL_VALUE')
+    if labelValue:
+        print(f"Filter labels with value: {labelValue}")
+
     targetFolder = os.getenv('FOLDER')
     if targetFolder is None:
         print("Should have added FOLDER as environment variable! Exit")
@@ -33,7 +37,7 @@ def main():
 
     config.load_incluster_config()
     print("Config for cluster api loaded...")
-    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    currentNamespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
     if os.getenv('SKIP_TLS_VERIFY') == 'true':
         configuration = client.Configuration()
@@ -43,11 +47,11 @@ def main():
 
     if os.getenv("METHOD") == "LIST":
         for res in resources:
-            listResources(label, targetFolder, url, method, payload,
-                          current_namespace, folderAnnotation, res)
+            listResources(label, labelValue, targetFolder, url, method, payload,
+                          currentNamespace, folderAnnotation, res)
     else:
-        watchForChanges(label, targetFolder, url, method,
-                        payload, current_namespace, folderAnnotation, resources)
+        watchForChanges(label, labelValue, targetFolder, url, method,
+                        payload, currentNamespace, folderAnnotation, resources)
 
 
 if __name__ == '__main__':

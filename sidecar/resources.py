@@ -45,76 +45,87 @@ def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
     return defaultFolder
 
 
-def listResources(label, targetFolder, url, method, payload, current, folderAnnotation, resource):
+def listResources(label, labelValue, targetFolder, url, method, payload, currentNamespace, folderAnnotation, resource):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current)
-    if namespace == "ALL":
-        ret = getattr(v1, _list_for_all_namespaces[resource])()
-    else:
-        ret = getattr(v1, _list_namespaced[resource])(namespace=namespace)
+    namespace = os.getenv("NAMESPACE", currentNamespace)
+    # Filter resources based on label and value or just label
+    labelSelector=f"{label}={labelValue}" if labelValue else label
 
+    if namespace == "ALL":
+        ret = getattr(v1, _list_for_all_namespaces[resource])(label_selector=labelSelector)
+    else:
+        ret = getattr(v1, _list_namespaced[resource])(namespace=namespace, label_selector=labelSelector)
+
+    # For all the found resources
     for sec in ret.items:
         metadata = sec.metadata
-        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
-        if metadata.labels is None:
-            continue
+
         print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
-        if label in metadata.labels.keys():
-            print(f"Found {resource} with label")
 
-            dataMap = sec.data
-            if dataMap is None:
-                print(f"No data field in {resource}")
-                continue
+        # Get the destination folder
+        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
 
-            if label in metadata.labels.keys():
-                for data_key in dataMap.keys():
-                    filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
-                                                                 resource)
-                    writeTextToFile(destFolder, filename, filedata)
+        # Check if it's an empty ConfigMap or Secret
+        dataMap = sec.data
+        if dataMap is None:
+            print(f"No data field in {resource}")
+            continue
 
-                    if url:
-                        request(url, method, payload)
+        # Each key on the data is a file
+        for data_key in dataMap.keys():
+            filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
+                                                            resource)
+            writeTextToFile(destFolder, filename, filedata)
+
+            if url:
+                request(url, method, payload)
 
 
-def _watch_resource_iterator(label, targetFolder, url, method, payload,
-                             current_namespace, folderAnnotation, resource):
+def _watch_resource_iterator(label, labelValue, targetFolder, url, method, payload,
+                             currentNamespace, folderAnnotation, resource):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current_namespace)
-    if namespace == "ALL":
-        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]))
-    else:
-        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace)
+    namespace = os.getenv("NAMESPACE", currentNamespace)
+    # Filter resources based on label and value or just label
+    labelSelector=f"{label}={labelValue}" if labelValue else label
 
+    if namespace == "ALL":
+        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]), label_selector=labelSelector)
+    else:
+        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace, label_selector=labelSelector)
+
+    # Process events
     for event in stream:
         metadata = event['object'].metadata
+
+        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
+
+        # Get the destination folder
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
 
-        if metadata.labels is None:
+        # Check if it's an empty ConfigMap or Secret
+        dataMap = event['object'].data
+        if dataMap is None:
+            print(f"{resource} does not have data.")
             continue
-        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
-        if label in metadata.labels.keys():
-            print(f"{resource} with label found")
-            dataMap = event['object'].data
-            if dataMap is None:
-                print(f"{resource} does not have data.")
-                continue
-            eventType = event['type']
-            for data_key in dataMap.keys():
-                print(f"File in {resource} {data_key} {eventType}")
 
-                if (eventType == "ADDED") or (eventType == "MODIFIED"):
-                    filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
-                                                                 resource)
-                    writeTextToFile(destFolder, filename, filedata)
+        eventType = event['type']
+        # Each key on the data is a file
+        for data_key in dataMap.keys():
+            print(f"File in {resource} {data_key} {eventType}")
 
-                    if url:
-                        request(url, method, payload)
-                else:
-                    filename = data_key[:-4] if data_key.endswith(".url") else data_key
-                    removeFile(destFolder, filename)
-                    if url:
-                        request(url, method, payload)
+            if (eventType == "ADDED") or (eventType == "MODIFIED"):
+                filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
+                                                                resource)
+                writeTextToFile(destFolder, filename, filedata)
+
+                if url:
+                    request(url, method, payload)
+            else:
+                # Get filename from event
+                filename = data_key[:-4] if data_key.endswith(".url") else data_key
+                removeFile(destFolder, filename)
+                if url:
+                    request(url, method, payload)
 
 
 def _watch_resource_loop(*args):
@@ -132,19 +143,19 @@ def _watch_resource_loop(*args):
             print(f"Received unknown exception: {e}\n")
 
 
-def watchForChanges(label, targetFolder, url, method, payload,
-                    current_namespace, folderAnnotation, resources):
+def watchForChanges(label, labelValue, targetFolder, url, method, payload,
+                    currentNamespace, folderAnnotation, resources):
 
     firstProc = Process(target=_watch_resource_loop,
-                        args=(label, targetFolder, url, method, payload,
-                              current_namespace, folderAnnotation, resources[0])
+                        args=(label, labelValue, targetFolder, url, method, payload,
+                              currentNamespace, folderAnnotation, resources[0])
                         )
     firstProc.start()
 
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
-                          args=(label, targetFolder, url, method, payload,
-                                current_namespace, folderAnnotation, resources[1])
+                          args=(label, labelValue, targetFolder, url, method, payload,
+                                currentNamespace, folderAnnotation, resources[1])
                           )
         secProc.start()
 
