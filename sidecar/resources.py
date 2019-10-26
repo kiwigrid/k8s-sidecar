@@ -71,9 +71,9 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
 
 
 def _watch_resource_iterator(label, targetFolder, url, method, payload,
-                             current, folderAnnotation, resource):
+                             current_namespace, folderAnnotation, resource):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current)
+    namespace = os.getenv("NAMESPACE", current_namespace)
     if namespace == "ALL":
         stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]))
     else:
@@ -130,18 +130,18 @@ def _watch_resource_loop(*args):
 
 
 def watchForChanges(label, targetFolder, url, method, payload,
-                    current, folderAnnotation, resources):
+                    current_namespace, folderAnnotation, resources):
 
     firstProc = Process(target=_watch_resource_loop,
                         args=(label, targetFolder, url, method, payload,
-                              current, folderAnnotation, resources[0])
+                              current_namespace, folderAnnotation, resources[0])
                         )
     firstProc.start()
 
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
                           args=(label, targetFolder, url, method, payload,
-                                current, folderAnnotation, resources[1])
+                                current_namespace, folderAnnotation, resources[1])
                           )
         secProc.start()
 

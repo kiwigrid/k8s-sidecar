@@ -33,7 +33,7 @@ def main():
 
     config.load_incluster_config()
     print("Config for cluster api loaded...")
-    namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
     if os.getenv('SKIP_TLS_VERIFY') == 'true':
         configuration = client.Configuration()
@@ -44,10 +44,10 @@ def main():
     if os.getenv("METHOD") == "LIST":
         for res in resources:
             listResources(label, targetFolder, url, method, payload,
-                          namespace, folderAnnotation, res)
+                          current_namespace, folderAnnotation, res)
     else:
         watchForChanges(label, targetFolder, url, method,
-                        payload, namespace, folderAnnotation, resources)
+                        payload, current_namespace, folderAnnotation, resources)
 
 
 if __name__ == '__main__':
