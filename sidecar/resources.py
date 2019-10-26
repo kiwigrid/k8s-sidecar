@@ -73,7 +73,7 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
                                                                  resource)
                     writeTextToFile(destFolder, filename, filedata)
 
-                    if url is not None:
+                    if url:
                         request(url, method, payload)
 
 
@@ -108,12 +108,12 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
                                                                  resource)
                     writeTextToFile(destFolder, filename, filedata)
 
-                    if url is not None:
+                    if url:
                         request(url, method, payload)
                 else:
                     filename = data_key[:-4] if data_key.endswith(".url") else data_key
                     removeFile(destFolder, filename)
-                    if url is not None:
+                    if url:
                         request(url, method, payload)
 
 
