@@ -8,7 +8,7 @@ from resources import listResources, watchForChanges
 def main():
     print("Starting collector")
 
-    folderAnnotation = os.getenv('FOLDER_ANNOTATIONS')
+    folderAnnotation = os.getenv('FOLDER_ANNOTATION')
     if folderAnnotation is None:
         print("No folder annotation was provided, defaulting to k8s-sidecar-target-directory")
         folderAnnotation = "k8s-sidecar-target-directory"
