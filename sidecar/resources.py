@@ -1,5 +1,7 @@
 import base64
 import os
+import signal
+
 from multiprocessing import Process
 from time import sleep
 
@@ -13,6 +15,13 @@ _list_namespaced = {
     "secret": "list_namespaced_secret",
     "configmap": "list_namespaced_config_map"
 }
+
+def on_terminate():
+    print('Received a signal. Exiting.')
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, on_terminate)
+signal.signal(signal.SIGINT, on_terminate)
 
 _list_for_all_namespaces = {
     "secret": "list_secret_for_all_namespaces",
