@@ -1,5 +1,6 @@
 import base64
 import os
+import sys
 import signal
 
 from multiprocessing import Process
@@ -16,12 +17,11 @@ _list_namespaced = {
     "configmap": "list_namespaced_config_map"
 }
 
-def on_terminate():
-    print('Received a signal. Exiting.')
-    os._exit(0)
+def signal_handler(signum, frame):
+    print("Subprocess exiting gracefully")
+    sys.exit(0)
 
-signal.signal(signal.SIGTERM, on_terminate)
-signal.signal(signal.SIGINT, on_terminate)
+signal.signal(signal.SIGTERM, signal_handler)
 
 _list_for_all_namespaces = {
     "secret": "list_secret_for_all_namespaces",
@@ -145,6 +145,7 @@ def watchForChanges(label, targetFolder, url, method, payload,
                         args=(label, targetFolder, url, method, payload,
                               current, folderAnnotation, resources[0])
                         )
+    firstProc.daemon=True
     firstProc.start()
 
     if len(resources) == 2:
@@ -152,6 +153,7 @@ def watchForChanges(label, targetFolder, url, method, payload,
                           args=(label, targetFolder, url, method, payload,
                                 current, folderAnnotation, resources[1])
                           )
+        secProc.daemon=True
         secProc.start()
 
     while True:
