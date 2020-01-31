@@ -50,6 +50,18 @@ data:
      Hello World!
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-configmap-from-url
+  namespace: prometheus-operator
+  labels:
+        findme: "yea"
+data:
+  # fetch https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/grafana/dashboards/nginx.json with the grafana sidecar
+  # .url will be stripped and the file will be called nginx-ingress.json
+  nginx-ingress.json.url: https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/grafana/dashboards/nginx.json
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: sample-secret
