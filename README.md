@@ -60,7 +60,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `METHOD`
-  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. With `SLEEP` it will list all config-maps, then sleep for 60 seconds. Default is watch.
   - required: false
   - type: string
 

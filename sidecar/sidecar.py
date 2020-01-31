@@ -46,7 +46,7 @@ def main():
             listResources(label, targetFolder, url, method, payload,
                           namespace, folderAnnotation, res)
     else:
-        watchForChanges(label, targetFolder, url, method,
+        watchForChanges(os.getenv("METHOD"), label, targetFolder, url, method,
                         payload, namespace, folderAnnotation, resources)
 
 
