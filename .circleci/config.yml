@@ -147,24 +147,24 @@ workflows:
   test_deploy:
     jobs:
       - build
-      - test-k8s-1-11:
-          requires:
-            - build
-      - test-k8s-1-12:
-          requires:
-            - build
       - test-k8s-1-13:
           requires:
             - build
       - test-k8s-1-14:
           requires:
             - build
+      - test-k8s-1-15:
+          requires:
+            - build
+      - test-k8s-1-16:
+          requires:
+            - build
       - deploy:
           requires:
-            - test-k8s-1-11
-            - test-k8s-1-12
             - test-k8s-1-13
             - test-k8s-1-14
+            - test-k8s-1-15
+            - test-k8s-1-16
           filters:
             branches:
               only: master
