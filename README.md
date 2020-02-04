@@ -5,7 +5,7 @@
 
 # What?
 
-This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained python script is working with the Kubernetes API 1.10
+This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained Python script is working with the Kubernetes API 1.10
 
 # Why?
 
@@ -13,7 +13,7 @@ Currently (April 2018) there is no simple way to hand files in configmaps to a s
 
 # How?
 
-Run the container created by this repo together you application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
+Run the container created by this repo together with your application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
 By adding additional env variables the container can send an HTTP request to specified URL.
 
 # Features
@@ -24,10 +24,10 @@ By adding additional env variables the container can send an HTTP request to spe
 
 # Usage
 
-Example for a simple deployment can be found in `example.yaml`. Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding   --clusterrole cluster-admin   --user $(gcloud config get-value account)`
+Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
 One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
-  k8s-sidecar-target-directory: "/path/to/target/directory"
+  `k8s-sidecar-target-directory: "/path/to/target/directory"`
 
 If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
 
