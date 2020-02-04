@@ -1,10 +1,11 @@
 
-[![Docker Automated build](https://img.shields.io/docker/automated/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
-[![Docker Build Status](https://img.shields.io/docker/build/kiwigrid/k8s-sidecar.svg)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
+
+[![CircleCI](https://img.shields.io/circleci/project/github/kiwigrid/k8s-sidecar/master.svg?style=plastic)](https://circleci.com/gh/kiwigrid/k8s-sidecar)
+[![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=plastic)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
 
 # What?
 
-This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send a html request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained python script is working with the Kubernetes API 1.10
+This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained python script is working with the Kubernetes API 1.10
 
 # Why?
 
@@ -13,7 +14,7 @@ Currently (April 2018) there is no simple way to hand files in configmaps to a s
 # How?
 
 Run the container created by this repo together you application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
-By adding additional env variables the container can send a html request to specified URL.
+By adding additional env variables the container can send an HTTP request to specified URL.
 
 # Features
 
@@ -32,7 +33,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 
 ## Configuration Environment Variables
 
-- `LABEL` 
+- `LABEL`
   - description: Label that should be used for filtering
   - required: true
   - type: string
@@ -52,11 +53,17 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: false
   - type: string
 
+- `RESOURCE`
+  - description: Resouce type, which is monitored by the sidecar. Options: configmap (default), secret, both
+  - required: false
+  - default: configmap
+  - type: string
+
 - `METHOD`
-  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. Default is watch.
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. With `SLEEP` it will list all config-maps, then sleep for 60 seconds. Default is watch.
   - required: false
   - type: string
-  
+
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
   - required: false

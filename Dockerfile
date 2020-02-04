@@ -1,7 +1,12 @@
 FROM        python:3.7-alpine
+
+#create app directory
 WORKDIR     /app
 COPY        requirements.txt .
 RUN         pip install -r requirements.txt
-COPY        sidecar/sidecar.py .
+COPY        sidecar/* ./
 ENV         PYTHONUNBUFFERED=1
+
+#run as non-privileged user 
+USER nobody
 CMD         [ "python", "-u", "/app/sidecar.py" ]

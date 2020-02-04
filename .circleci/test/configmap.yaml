@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-configmap
+  labels:
+    findme: "yea"
+data:
+  hello.world: |-
+     Hello World!
