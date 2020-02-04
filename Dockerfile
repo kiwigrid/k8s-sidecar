@@ -1,4 +1,4 @@
-FROM        python:3.7-alpine AS builder
+FROM        python:3.7-alpine
 ENV         PYTHONUNBUFFERED=1
 WORKDIR     /app
 
