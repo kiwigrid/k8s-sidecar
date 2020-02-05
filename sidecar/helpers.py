@@ -9,20 +9,27 @@ from requests.adapters import HTTPAdapter
 
 
 def writeTextToFile(folder, filename, data):
+    """
+    Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient
+    permissions to create the directory, log an error and return.
+    """
     if not os.path.exists(folder):
         try:
             os.makedirs(folder)
         except OSError as e:
-            if e.errno != errno.EEXIST:
+            if e.errno not in (errno.EACCES, errno.EEXIST):
                 raise
+            if e.errno == errno.EACCES:
+                print(f"Error: insufficient privileges to create {folder}. Skipping {filename}.")
+                return
 
-    with open(folder + "/" + filename, 'w') as f:
+    with open(os.path.join(folder, filename), 'w') as f:
         f.write(data)
         f.close()
 
 
 def removeFile(folder, filename):
-    completeFile = folder + "/" + filename
+    completeFile = os.path.join(folder, filename)
     if os.path.isfile(completeFile):
         os.remove(completeFile)
     else:

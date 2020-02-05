@@ -5,7 +5,7 @@
 
 # What?
 
-This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained Python script is working with the Kubernetes API 1.10
+This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained Python script is working with the Kubernetes API 1.16.
 
 # Why?
 
