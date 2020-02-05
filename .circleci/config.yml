@@ -51,49 +51,11 @@ jobs:
           paths:
             - VERSION
 
-  test-k8s-1-11:    
-    working_directory: ~/repo
-
-    machine: true
-    environment:
-      KIND_VERSION: v0.4.0
-      K8S_VERSION: v1.11.10
-    steps:
-      - attach_workspace:
-          at: /tmp/
-      - checkout
-      - run: |
-          VERSION=`cat /tmp/VERSION`
-          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          cat .circleci/test/sidecar.yaml
-      - run:
-          name: test-in-cluster
-          command: .circleci/test-in-cluster.sh
-          no_output_timeout: 3600
-
-  test-k8s-1-12:
-    machine: true
-    environment:
-      KIND_VERSION: v0.4.0
-      K8S_VERSION: v1.12.9
-    steps:
-      - attach_workspace:
-          at: /tmp/
-      - checkout
-      - run: |
-          VERSION=`cat /tmp/VERSION`
-          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          cat .circleci/test/sidecar.yaml
-      - run:
-          name: test-in-cluster
-          command: .circleci/test-in-cluster.sh
-          no_output_timeout: 3600
-
   test-k8s-1-13:
     machine: true
     environment:
-      KIND_VERSION: v0.4.0
-      K8S_VERSION: v1.13.7
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.13.10
     steps:
       - attach_workspace:
           at: /tmp/
@@ -110,8 +72,44 @@ jobs:
   test-k8s-1-14:
     machine: true
     environment:
-      KIND_VERSION: v0.4.0
-      K8S_VERSION: v1.14.3
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.14.6
+    steps:
+      - attach_workspace:
+          at: /tmp/
+      - checkout
+      - run: |
+          VERSION=`cat /tmp/VERSION`
+          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          cat .circleci/test/sidecar.yaml
+      - run:
+          name: test-in-cluster
+          command: .circleci/test-in-cluster.sh
+          no_output_timeout: 3600
+
+  test-k8s-1-15:
+    machine: true
+    environment:
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.15.3
+    steps:
+      - attach_workspace:
+          at: /tmp/
+      - checkout
+      - run: |
+          VERSION=`cat /tmp/VERSION`
+          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          cat .circleci/test/sidecar.yaml
+      - run:
+          name: test-in-cluster
+          command: .circleci/test-in-cluster.sh
+          no_output_timeout: 3600
+
+  test-k8s-1-16:
+    machine: true
+    environment:
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.16.2
     steps:
       - attach_workspace:
           at: /tmp/
@@ -149,24 +147,24 @@ workflows:
   test_deploy:
     jobs:
       - build
-      - test-k8s-1-11:
-          requires:
-            - build
-      - test-k8s-1-12:
-          requires:
-            - build
       - test-k8s-1-13:
           requires:
             - build
       - test-k8s-1-14:
           requires:
             - build
+      - test-k8s-1-15:
+          requires:
+            - build
+      - test-k8s-1-16:
+          requires:
+            - build
       - deploy:
           requires:
-            - test-k8s-1-11
-            - test-k8s-1-12
             - test-k8s-1-13
             - test-k8s-1-14
+            - test-k8s-1-15
+            - test-k8s-1-16
           filters:
             branches:
               only: master

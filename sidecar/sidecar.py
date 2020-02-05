@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 
 from kubernetes import client, config
@@ -50,7 +52,7 @@ def main():
             listResources(label, labelValue, targetFolder, url, method, payload,
                           currentNamespace, folderAnnotation, res)
     else:
-        watchForChanges(label, labelValue, targetFolder, url, method,
+        watchForChanges(os.getenv("METHOD"), label, labelValue, targetFolder, url, method,
                         payload, currentNamespace, folderAnnotation, resources)
 
 

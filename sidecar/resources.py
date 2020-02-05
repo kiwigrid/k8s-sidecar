@@ -1,5 +1,10 @@
+#!/usr/bin/env python
+
 import base64
 import os
+import sys
+import signal
+
 from multiprocessing import Process
 from time import sleep
 
@@ -13,6 +18,12 @@ _list_namespaced = {
     "secret": "list_namespaced_secret",
     "configmap": "list_namespaced_config_map"
 }
+
+def signal_handler(signum, frame):
+    print("Subprocess exiting gracefully")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, signal_handler)
 
 _list_for_all_namespaces = {
     "secret": "list_secret_for_all_namespaces",
@@ -128,10 +139,14 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
                     request(url, method, payload)
 
 
-def _watch_resource_loop(*args):
+def _watch_resource_loop(mode, *args):
     while True:
         try:
-            _watch_resource_iterator(*args)
+            if mode == "SLEEP":
+                listResources(*args)
+                sleep(60)
+            else:
+                _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
                 print(f"ApiException when calling kubernetes: {e}\n")
@@ -143,20 +158,22 @@ def _watch_resource_loop(*args):
             print(f"Received unknown exception: {e}\n")
 
 
-def watchForChanges(label, labelValue, targetFolder, url, method, payload,
+def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
                     currentNamespace, folderAnnotation, resources):
 
     firstProc = Process(target=_watch_resource_loop,
-                        args=(label, labelValue, targetFolder, url, method, payload,
+                        args=(mode, label, labelValue, targetFolder, url, method, payload,
                               currentNamespace, folderAnnotation, resources[0])
                         )
+    firstProc.daemon=True
     firstProc.start()
 
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
-                          args=(label, labelValue, targetFolder, url, method, payload,
+                          args=(mode, label, labelValue, targetFolder, url, method, payload,
                                 currentNamespace, folderAnnotation, resources[1])
                           )
+        secProc.daemon=True
         secProc.start()
 
     while True:
