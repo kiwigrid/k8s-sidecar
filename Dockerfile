@@ -5,7 +5,8 @@ WORKDIR     /app
 COPY        requirements.txt .
 RUN         apk add --no-cache gcc && \
 	    pip install -r requirements.txt && \
-	    apk del gcc
+	    apk del -r gcc && \
+            rm -rf /var/cache/apk/* requirements.txt
 
 COPY sidecar/* ./
 
