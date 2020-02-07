@@ -38,6 +38,11 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: true
   - type: string
 
+- `LABEL_VALUE`
+  - description: The value for the label you want to filter your resources on. Don't set a value to filter by any value
+  - required: false
+  - type: string
+
 - `FOLDER`
   - description: Folder where the files should be placed
   - required: true

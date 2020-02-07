@@ -11,7 +11,7 @@ from helpers import timestamp
 def main():
     print(f"{timestamp()} Starting collector")
 
-    folderAnnotation = os.getenv("FOLDER_ANNOTATIONS")
+    folderAnnotation = os.getenv("FOLDER_ANNOTATION")
     if folderAnnotation is None:
         print(f"{timestamp()} No folder annotation was provided, "
               "defaulting to k8s-sidecar-target-directory")
@@ -21,6 +21,10 @@ def main():
     if label is None:
         print(f"{timestamp()} Should have added LABEL as environment variable! Exit")
         return -1
+
+    labelValue = os.getenv("LABEL_VALUE")
+    if labelValue:
+        print(f"{timestamp()} Filter labels with value: {labelValue}")
 
     targetFolder = os.getenv("FOLDER")
     if targetFolder is None:
@@ -37,7 +41,7 @@ def main():
 
     config.load_incluster_config()
     print(f"{timestamp()} Config for cluster api loaded...")
-    namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    currentNamespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
     if os.getenv("SKIP_TLS_VERIFY") == "true":
         configuration = client.Configuration()
@@ -47,11 +51,11 @@ def main():
 
     if os.getenv("METHOD") == "LIST":
         for res in resources:
-            listResources(label, targetFolder, url, method, payload,
-                          namespace, folderAnnotation, res)
+            listResources(label, labelValue, targetFolder, url, method, payload,
+                          currentNamespace, folderAnnotation, res)
     else:
-        watchForChanges(os.getenv("METHOD"), label, targetFolder, url, method,
-                        payload, namespace, folderAnnotation, resources)
+        watchForChanges(os.getenv("METHOD"), label, labelValue, targetFolder, url, method,
+                        payload, currentNamespace, folderAnnotation, resources)
 
 
 if __name__ == "__main__":
