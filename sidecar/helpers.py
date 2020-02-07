@@ -6,6 +6,7 @@ import errno
 import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from datetime import datetime
 
 
 def writeTextToFile(folder, filename, data):
@@ -20,7 +21,8 @@ def writeTextToFile(folder, filename, data):
             if e.errno not in (errno.EACCES, errno.EEXIST):
                 raise
             if e.errno == errno.EACCES:
-                print(f"Error: insufficient privileges to create {folder}. Skipping {filename}.")
+                print(f"{timestamp()} Error: insufficient privileges to create {folder}. "
+                      f"Skipping {filename}.")
                 return
 
     with open(os.path.join(folder, filename), 'w') as f:
@@ -33,17 +35,17 @@ def removeFile(folder, filename):
     if os.path.isfile(completeFile):
         os.remove(completeFile)
     else:
-        print(f"Error: {completeFile} file not found")
+        print(f"{timestamp()} Error: {completeFile} file not found")
 
 
 def request(url, method, payload=None):
-    retryTotal = 5 if os.getenv('REQ_RETRY_TOTAL') is None else int(os.getenv('REQ_RETRY_TOTAL'))
-    retryConnect = 5 if os.getenv('REQ_RETRY_CONNECT') is None else int(
-        os.getenv('REQ_RETRY_CONNECT'))
-    retryRead = 5 if os.getenv('REQ_RETRY_READ') is None else int(os.getenv('REQ_RETRY_READ'))
-    retryBackoffFactor = 0.2 if os.getenv('REQ_RETRY_BACKOFF_FACTOR') is None else float(
-        os.getenv('REQ_RETRY_BACKOFF_FACTOR'))
-    timeout = 10 if os.getenv('REQ_TIMEOUT') is None else float(os.getenv('REQ_TIMEOUT'))
+    retryTotal = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
+    retryConnect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
+        os.getenv("REQ_RETRY_CONNECT"))
+    retryRead = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
+    retryBackoffFactor = 0.2 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
+        os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
+    timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
     r = requests.Session()
     retries = Retry(total=retryTotal,
@@ -51,10 +53,10 @@ def request(url, method, payload=None):
                     read=retryRead,
                     backoff_factor=retryBackoffFactor,
                     status_forcelist=[500, 502, 503, 504])
-    r.mount('http://', HTTPAdapter(max_retries=retries))
-    r.mount('https://', HTTPAdapter(max_retries=retries))
+    r.mount("http://", HTTPAdapter(max_retries=retries))
+    r.mount("https://", HTTPAdapter(max_retries=retries))
     if url is None:
-        print("No url provided. Doing nothing.")
+        print(f"{timestamp()} No url provided. Doing nothing.")
         return
 
     # If method is not provided use GET as default
@@ -62,5 +64,11 @@ def request(url, method, payload=None):
         res = r.get("%s" % url, timeout=timeout)
     elif method == "POST":
         res = r.post("%s" % url, json=payload, timeout=timeout)
-        print(f"{method} request sent to {url}. Response: {res.status_code} {res.reason}")
+        print(f"{timestamp()} {method} request sent to {url}. "
+              f"Response: {res.status_code} {res.reason}")
     return res
+
+
+def timestamp():
+    """Get a timestamp of the current time for logging."""
+    return datetime.now().strftime("[%Y-%m-%d %X]")

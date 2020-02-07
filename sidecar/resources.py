@@ -12,7 +12,7 @@ from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
 
-from helpers import request, writeTextToFile, removeFile
+from helpers import request, writeTextToFile, removeFile, timestamp
 
 _list_namespaced = {
     "secret": "list_namespaced_secret",
@@ -20,7 +20,7 @@ _list_namespaced = {
 }
 
 def signal_handler(signum, frame):
-    print("Subprocess exiting gracefully")
+    print(f"{timestamp()} Subprocess exiting gracefully")
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, signal_handler)
@@ -59,16 +59,16 @@ def listResources(label, targetFolder, url, method, payload, current, folderAnno
         metadata = sec.metadata
         if metadata.labels is None:
             continue
-        print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
+        print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
         if label in sec.metadata.labels.keys():
-            print(f"Found {resource} with label")
+            print(f"{timestamp()} Found {resource} with label")
             if sec.metadata.annotations is not None:
                 if folderAnnotation in sec.metadata.annotations.keys():
                     destFolder = sec.metadata.annotations[folderAnnotation]
 
             dataMap = sec.data
             if dataMap is None:
-                print(f"No data field in {resource}")
+                print(f"{timestamp()} No data field in {resource}")
                 continue
 
             if label in sec.metadata.labels.keys():
@@ -92,24 +92,24 @@ def _watch_resource_iterator(label, targetFolder, url, method, payload,
 
     for event in stream:
         destFolder = targetFolder
-        metadata = event['object'].metadata
+        metadata = event["object"].metadata
         if metadata.labels is None:
             continue
-        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
-        if label in event['object'].metadata.labels.keys():
-            print(f"{resource} with label found")
-            if event['object'].metadata.annotations is not None:
-                if folderAnnotation in event['object'].metadata.annotations.keys():
-                    destFolder = event['object'].metadata.annotations[folderAnnotation]
-                    print('Found a folder override annotation, '
-                          f'placing the {resource} in: {destFolder}')
-            dataMap = event['object'].data
+        print(f"{timestamp()} Working on {resource} {metadata.namespace}/{metadata.name}")
+        if label in event["object"].metadata.labels.keys():
+            print(f"{timestamp()} {resource} with label found")
+            if event["object"].metadata.annotations is not None:
+                if folderAnnotation in event["object"].metadata.annotations.keys():
+                    destFolder = event["object"].metadata.annotations[folderAnnotation]
+                    print(f"{timestamp()} Found a folder override annotation, "
+                          f"placing the {resource} in: {destFolder}")
+            dataMap = event["object"].data
             if dataMap is None:
-                print(f"{resource} does not have data.")
+                print(f"{timestamp()} {resource} does not have data.")
                 continue
-            eventType = event['type']
+            eventType = event["type"]
             for data_key in dataMap.keys():
-                print(f"File in {resource} {data_key} {eventType}")
+                print(f"{timestamp()} File in {resource} {data_key} {eventType}")
 
                 if (eventType == "ADDED") or (eventType == "MODIFIED"):
                     filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
@@ -135,13 +135,13 @@ def _watch_resource_loop(mode, *args):
                 _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
-                print(f"ApiException when calling kubernetes: {e}\n")
+                print(f"{timestamp()} ApiException when calling kubernetes: {e}\n")
             else:
                 raise
         except ProtocolError as e:
-            print(f"ProtocolError when calling kubernetes: {e}\n")
+            print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
         except Exception as e:
-            print(f"Received unknown exception: {e}\n")
+            print(f"{timestamp()} Received unknown exception: {e}\n")
 
 
 def watchForChanges(mode, label, targetFolder, url, method, payload,
@@ -164,19 +164,19 @@ def watchForChanges(mode, label, targetFolder, url, method, payload,
 
     while True:
         if not firstProc.is_alive():
-            print(f"Process for {resources[0]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[0]} died. Stopping and exiting")
             if len(resources) == 2 and secProc.is_alive():
                 secProc.terminate()
             elif len(resources) == 2:
-                print(f"Process for {resources[1]}  also died...")
+                print(f"{timestamp()} Process for {resources[1]}  also died...")
             raise Exception("Loop died")
 
         if len(resources) == 2 and not secProc.is_alive():
-            print(f"Process for {resources[1]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[1]} died. Stopping and exiting")
             if firstProc.is_alive():
                 firstProc.terminate()
             else:
-                print(f"Process for {resources[0]}  also died...")
+                print(f"{timestamp()} Process for {resources[0]}  also died...")
             raise Exception("Loop died")
 
         sleep(5)
