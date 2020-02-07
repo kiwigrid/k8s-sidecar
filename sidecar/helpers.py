@@ -25,7 +25,7 @@ def writeTextToFile(folder, filename, data):
                       f"Skipping {filename}.")
                 return
 
-    with open(os.path.join(folder, filename), 'w') as f:
+    with open(os.path.join(folder, filename), "w") as f:
         f.write(data)
         f.close()
 

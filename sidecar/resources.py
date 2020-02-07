@@ -50,8 +50,8 @@ def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
     if metadata.annotations:
         if folderAnnotation in metadata.annotations.keys():
             destFolder = metadata.annotations[folderAnnotation]
-            print('Found a folder override annotation, '
-                f'placing the {metadata.name} in: {destFolder}')
+            print(f"{timestamp()} Found a folder override annotation, "
+                  f"placing the {metadata.name} in: {destFolder}")
             return destFolder
     return defaultFolder
 
@@ -79,7 +79,7 @@ def listResources(label, labelValue, targetFolder, url, method, payload, current
         # Check if it's an empty ConfigMap or Secret
         dataMap = sec.data
         if dataMap is None:
-            print(f"No data field in {resource}")
+            print(f"{timestamp()} No data field in {resource}")
             continue
 
         # Each key on the data is a file
@@ -114,15 +114,15 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
 
         # Check if it's an empty ConfigMap or Secret
-        dataMap = event['object'].data
+        dataMap = event["object"].data
         if dataMap is None:
-            print(f"{resource} does not have data.")
+            print(f"{timestamp()} {resource} does not have data.")
             continue
 
-        eventType = event['type']
+        eventType = event["type"]
         # Each key on the data is a file
         for data_key in dataMap.keys():
-            print(f"File in {resource} {data_key} {eventType}")
+            print(f"{timestamp()} File in {resource} {data_key} {eventType}")
 
             if (eventType == "ADDED") or (eventType == "MODIFIED"):
                 filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
