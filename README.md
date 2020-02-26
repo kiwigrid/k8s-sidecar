@@ -118,3 +118,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: Set to true to skip tls verification for kube api calls
   - required: false
   - type: boolean
+
+- `DEFAULT_FILE_MODE`
+  - description: The default file system permission for every file. Use three digits (e.g. '500', '440', ...)
+  - required: false
+  - type: string
