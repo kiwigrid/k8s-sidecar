@@ -25,9 +25,13 @@ def writeTextToFile(folder, filename, data):
                       f"Skipping {filename}.")
                 return
 
-    with open(os.path.join(folder, filename), "w") as f:
+    absolutepath = os.path.join(folder, filename)
+    with open(absolutepath, 'w') as f:
         f.write(data)
         f.close()
+    if os.getenv('DEFAULT_FILE_MODE'):
+        mode = int(os.getenv('DEFAULT_FILE_MODE'), base=8)
+        os.chmod(absolutepath, mode)
 
 
 def removeFile(folder, filename):
