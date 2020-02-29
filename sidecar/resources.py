@@ -12,7 +12,7 @@ from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
 
-from helpers import request, writeTextToFile, removeFile
+from helpers import request, writeTextToFile, removeFile, timestamp
 
 _list_namespaced = {
     "secret": "list_namespaced_secret",
@@ -20,7 +20,7 @@ _list_namespaced = {
 }
 
 def signal_handler(signum, frame):
-    print("Subprocess exiting gracefully")
+    print(f"{timestamp()} Subprocess exiting gracefully")
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, signal_handler)
@@ -50,8 +50,8 @@ def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
     if metadata.annotations:
         if folderAnnotation in metadata.annotations.keys():
             destFolder = metadata.annotations[folderAnnotation]
-            print('Found a folder override annotation, '
-                f'placing the {metadata.name} in: {destFolder}')
+            print(f"{timestamp()} Found a folder override annotation, "
+                  f"placing the {metadata.name} in: {destFolder}")
             return destFolder
     return defaultFolder
 
@@ -70,8 +70,8 @@ def listResources(label, labelValue, targetFolder, url, method, payload, current
     # For all the found resources
     for sec in ret.items:
         metadata = sec.metadata
-
-        print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
+        
+        print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
@@ -79,7 +79,7 @@ def listResources(label, labelValue, targetFolder, url, method, payload, current
         # Check if it's an empty ConfigMap or Secret
         dataMap = sec.data
         if dataMap is None:
-            print(f"No data field in {resource}")
+            print(f"{timestamp()} No data field in {resource}")
             continue
 
         # Each key on the data is a file
@@ -106,23 +106,23 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
 
     # Process events
     for event in stream:
-        metadata = event['object'].metadata
-
-        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
+        metadata = event["object"].metadata
+    
+        print(f"{timestamp()} Working on {resource} {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
 
         # Check if it's an empty ConfigMap or Secret
-        dataMap = event['object'].data
+        dataMap = event["object"].data
         if dataMap is None:
-            print(f"{resource} does not have data.")
+            print(f"{timestamp()} {resource} does not have data.")
             continue
 
-        eventType = event['type']
+        eventType = event["type"]
         # Each key on the data is a file
         for data_key in dataMap.keys():
-            print(f"File in {resource} {data_key} {eventType}")
+            print(f"{timestamp()} File in {resource} {data_key} {eventType}")
 
             if (eventType == "ADDED") or (eventType == "MODIFIED"):
                 filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
@@ -149,13 +149,13 @@ def _watch_resource_loop(mode, *args):
                 _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
-                print(f"ApiException when calling kubernetes: {e}\n")
+                print(f"{timestamp()} ApiException when calling kubernetes: {e}\n")
             else:
                 raise
         except ProtocolError as e:
-            print(f"ProtocolError when calling kubernetes: {e}\n")
+            print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
         except Exception as e:
-            print(f"Received unknown exception: {e}\n")
+            print(f"{timestamp()} Received unknown exception: {e}\n")
 
 
 def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
@@ -178,19 +178,19 @@ def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
 
     while True:
         if not firstProc.is_alive():
-            print(f"Process for {resources[0]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[0]} died. Stopping and exiting")
             if len(resources) == 2 and secProc.is_alive():
                 secProc.terminate()
             elif len(resources) == 2:
-                print(f"Process for {resources[1]}  also died...")
+                print(f"{timestamp()} Process for {resources[1]}  also died...")
             raise Exception("Loop died")
 
         if len(resources) == 2 and not secProc.is_alive():
-            print(f"Process for {resources[1]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[1]} died. Stopping and exiting")
             if firstProc.is_alive():
                 firstProc.terminate()
             else:
-                print(f"Process for {resources[0]}  also died...")
+                print(f"{timestamp()} Process for {resources[0]}  also died...")
             raise Exception("Loop died")
 
         sleep(5)
