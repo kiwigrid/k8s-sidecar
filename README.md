@@ -21,6 +21,7 @@ By adding additional env variables the container can send an HTTP request to spe
 - Extract files from config maps
 - Filter based on label
 - Update/Delete on change of configmap
+- Enforce unique filenames
 
 # Usage
 
@@ -117,6 +118,12 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 - `SKIP_TLS_VERIFY`
   - description: Set to true to skip tls verification for kube api calls
   - required: false
+  - type: boolean
+
+- `UNIQUE_FILENAMES`
+  - description: Set to true to produce unique filenames where duplicate data keys exist between ConfigMaps and/or Secrets within the same or multiple Namespaces.
+  - required: false
+  - default: false
   - type: boolean
 
 - `DEFAULT_FILE_MODE`

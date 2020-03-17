@@ -49,6 +49,14 @@ def main():
         configuration.debug = False
         client.Configuration.set_default(configuration)
 
+    uniqueFilenames = os.getenv("UNIQUE_FILENAMES") 
+    if uniqueFilenames is not None and uniqueFilenames.lower() == "true":
+        print(f"{timestamp()} Unique filenames will enforced.")
+        uniqueFilenames = True
+    else:
+        print(f"{timestamp()} Unique filenames will not be enforced.")
+        uniqueFilenames = False
+
     if os.getenv("METHOD") == "LIST":
         for res in resources:
             listResources(label, labelValue, targetFolder, url, method, payload,
