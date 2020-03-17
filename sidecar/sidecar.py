@@ -51,7 +51,7 @@ def main():
 
     uniqueFilenames = os.getenv("UNIQUE_FILENAMES") 
     if uniqueFilenames is not None and uniqueFilenames.lower() == "true":
-        print(f"{timestamp()} Unique filenames will enforced.")
+        print(f"{timestamp()} Unique filenames will be enforced.")
         uniqueFilenames = True
     else:
         print(f"{timestamp()} Unique filenames will not be enforced.")
