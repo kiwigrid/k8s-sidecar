@@ -60,10 +60,10 @@ def main():
     if os.getenv("METHOD") == "LIST":
         for res in resources:
             listResources(label, labelValue, targetFolder, url, method, payload,
-                          currentNamespace, folderAnnotation, res)
+                          currentNamespace, folderAnnotation, res, uniqueFilenames)
     else:
         watchForChanges(os.getenv("METHOD"), label, labelValue, targetFolder, url, method,
-                        payload, currentNamespace, folderAnnotation, resources)
+                        payload, currentNamespace, folderAnnotation, resources, uniqueFilenames)
 
 
 if __name__ == "__main__":

@@ -179,11 +179,11 @@ def _watch_resource_loop(mode, *args):
 
 
 def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
-                    currentNamespace, folderAnnotation, resources):
+                    currentNamespace, folderAnnotation, resources, uniqueFilenames):
 
     firstProc = Process(target=_watch_resource_loop,
                         args=(mode, label, labelValue, targetFolder, url, method, payload,
-                              currentNamespace, folderAnnotation, resources[0])
+                              currentNamespace, folderAnnotation, resources[0], uniqueFilenames)
                         )
     firstProc.daemon=True
     firstProc.start()
@@ -191,7 +191,7 @@ def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
                           args=(mode, label, labelValue, targetFolder, url, method, payload,
-                                currentNamespace, folderAnnotation, resources[1])
+                                currentNamespace, folderAnnotation, resources[1], uniqueFilenames)
                           )
         secProc.daemon=True
         secProc.start()
