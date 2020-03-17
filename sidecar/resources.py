@@ -12,7 +12,7 @@ from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
 
-from helpers import request, writeTextToFile, removeFile, timestamp
+from helpers import request, writeTextToFile, removeFile, timestamp, uniqueFilename
 
 _list_namespaced = {
     "secret": "list_namespaced_secret",
@@ -56,7 +56,8 @@ def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
     return defaultFolder
 
 
-def listResources(label, labelValue, targetFolder, url, method, payload, currentNamespace, folderAnnotation, resource):
+def listResources(label, labelValue, targetFolder, url, method, payload,
+                  currentNamespace, folderAnnotation, resource, uniqueFilenames):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", currentNamespace)
     # Filter resources based on label and value or just label
@@ -86,6 +87,12 @@ def listResources(label, labelValue, targetFolder, url, method, payload, current
         for data_key in dataMap.keys():
             filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
                                                             resource)
+            if uniqueFilenames:
+                filename = uniqueFilename(filename      = filename,
+                                          namespace     = metadata.namespace,
+                                          resource      = resource,
+                                          resource_name = metadata.name)
+
             writeTextToFile(destFolder, filename, filedata)
 
             if url:
@@ -93,7 +100,7 @@ def listResources(label, labelValue, targetFolder, url, method, payload, current
 
 
 def _watch_resource_iterator(label, labelValue, targetFolder, url, method, payload,
-                             currentNamespace, folderAnnotation, resource):
+                             currentNamespace, folderAnnotation, resource, uniqueFilenames):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", currentNamespace)
     # Filter resources based on label and value or just label
@@ -127,6 +134,12 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
             if (eventType == "ADDED") or (eventType == "MODIFIED"):
                 filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
                                                                 resource)
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
+
                 writeTextToFile(destFolder, filename, filedata)
 
                 if url:
@@ -134,6 +147,13 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
             else:
                 # Get filename from event
                 filename = data_key[:-4] if data_key.endswith(".url") else data_key
+
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
+
                 removeFile(destFolder, filename)
                 if url:
                     request(url, method, payload)
