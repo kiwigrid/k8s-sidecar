@@ -80,7 +80,7 @@ def timestamp():
 
 def uniqueFilename(filename, namespace, resource, resource_name):
     """Return a unique filename derived from the arguments provided, e.g.
-    "namespace_{namespace}-{configmap|secret}_{resource_name}-{filename}".
+    "namespace_{namespace}.{configmap|secret}_{resource_name}.{filename}".
 
     This is used where duplicate data keys may exist between ConfigMaps
     and/or Secrets within the same or multiple Namespaces.
@@ -91,4 +91,4 @@ def uniqueFilename(filename, namespace, resource, resource_name):
     resource -- the resource type, e.g. "configmap" or "secret".
     resource_name -- the name of the "configmap" or "secret" resource instance.
     """
-    return "namespace_" + namespace + "-" + resource + "_" + resource_name + "-" + filename
+    return "namespace_" + namespace + "." + resource + "_" + resource_name + "." + filename
