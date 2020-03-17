@@ -76,3 +76,19 @@ def request(url, method, payload=None):
 def timestamp():
     """Get a timestamp of the current time for logging."""
     return datetime.now().strftime("[%Y-%m-%d %X]")
+
+
+def uniqueFilename(filename, namespace, resource, resource_name):
+    """Return a unique filename derived from the arguments provided, e.g.
+    "namespace_{namespace}-{configmap|secret}_{resource_name}-{filename}".
+
+    This is used where duplicate data keys may exist between ConfigMaps
+    and/or Secrets within the same or multiple Namespaces.
+
+    Keyword arguments:
+    filename -- the filename derived from a data key present in a ConfigMap or Secret.
+    namespace -- the Namespace from which data is sourced.
+    resource -- the resource type, e.g. "configmap" or "secret".
+    resource_name -- the name of the "configmap" or "secret" resource instance.
+    """
+    return "namespace_" + namespace + "-" + resource + "_" + resource_name + "-" + filename
