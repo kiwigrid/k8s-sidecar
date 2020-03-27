@@ -10,6 +10,8 @@ RUN         apk add --no-cache gcc && \
 
 COPY sidecar/* ./
 
-#run as non-privileged user 
-USER nobody
+# Use the nobody user's numeric UID/GID to satisfy MustRunAsNonRoot PodSecurityPolicies
+# https://kubernetes.io/docs/concepts/policy/pod-security-policy/#users-and-groups
+USER 65534:65534
+
 CMD         [ "python", "-u", "/app/sidecar.py" ]
