@@ -11,6 +11,7 @@ from time import sleep
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import MaxRetryError
 
 from helpers import request, writeTextToFile, removeFile, timestamp
 
@@ -154,6 +155,9 @@ def _watch_resource_loop(mode, *args):
                 raise
         except ProtocolError as e:
             print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
+        except MaxRetryError as e:
+            print(f"{timestamp()} MaxRetryError when calling kubernetes: {e}\n")
+            sleep(5)
         except Exception as e:
             print(f"{timestamp()} Received unknown exception: {e}\n")
 
