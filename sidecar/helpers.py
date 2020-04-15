@@ -51,6 +51,13 @@ def request(url, method, payload=None):
         os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
     timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
+    username = os.getenv("REQ_USERNAME")
+    password = os.getenv("REQ_PASSWORD")
+    if username and password:
+        auth = (username, password)
+    else:
+        auth = None
+
     r = requests.Session()
     retries = Retry(total=retryTotal,
                     connect=retryConnect,
@@ -65,9 +72,9 @@ def request(url, method, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, timeout=timeout)
+        res = r.get("%s" % url, auth=auth, timeout=timeout)
     elif method == "POST":
-        res = r.post("%s" % url, json=payload, timeout=timeout)
+        res = r.post("%s" % url, auth=auth, json=payload, timeout=timeout)
         print(f"{timestamp()} {method} request sent to {url}. "
               f"Response: {res.status_code} {res.reason}")
     return res

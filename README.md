@@ -74,6 +74,11 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: false
   - type: URI
 
+- `REQ_USERNAME`
+  - description: Username to use for basic authentication
+  - required: false
+  - type: string
+
 - `REQ_METHOD`
   - description: Request method GET(default) or POST
   - required: false
@@ -83,6 +88,11 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: If you use POST you can also provide json payload
   - required: false
   - type: json
+
+- `REQ_PASSWORD`
+  - description: Password to use for basic authentication
+  - required: false
+  - type: string
 
 - `REQ_RETRY_TOTAL`
   - description: Total number of retries to allow
