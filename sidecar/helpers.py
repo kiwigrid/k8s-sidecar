@@ -2,6 +2,7 @@
 
 import os
 import errno
+import base64
 
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -63,11 +64,21 @@ def request(url, method, payload=None):
         print(f"{timestamp()} No url provided. Doing nothing.")
         return
 
+    headers = {
+    }
+
+    userName = os.getenv("REQ_AUTH_USERNAME")
+    password = os.getenv("REQ_AUTH_PASSWORD")
+    if userName is not None and password is not None:
+        credentials = (userName + ':' + password).encode('utf-8')
+        base64_encoded_credentials = base64.b64encode(credentials).decode('utf-8')        
+        headers['Authorization'] = 'Basic ' + base64_encoded_credentials
+
     # If method is not provided use GET as default
     if method == "GET" or not method:
         res = r.get("%s" % url, timeout=timeout)
     elif method == "POST":
-        res = r.post("%s" % url, json=payload, timeout=timeout)
+        res = r.post("%s" % url, json=payload, timeout=timeout, headers=headers)
         print(f"{timestamp()} {method} request sent to {url}. "
               f"Response: {res.status_code} {res.reason}")
     return res
