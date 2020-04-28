@@ -49,13 +49,21 @@ def main():
         configuration.debug = False
         client.Configuration.set_default(configuration)
 
+    uniqueFilenames = os.getenv("UNIQUE_FILENAMES") 
+    if uniqueFilenames is not None and uniqueFilenames.lower() == "true":
+        print(f"{timestamp()} Unique filenames will be enforced.")
+        uniqueFilenames = True
+    else:
+        print(f"{timestamp()} Unique filenames will not be enforced.")
+        uniqueFilenames = False
+
     if os.getenv("METHOD") == "LIST":
         for res in resources:
             listResources(label, labelValue, targetFolder, url, method, payload,
-                          currentNamespace, folderAnnotation, res)
+                          currentNamespace, folderAnnotation, res, uniqueFilenames)
     else:
         watchForChanges(os.getenv("METHOD"), label, labelValue, targetFolder, url, method,
-                        payload, currentNamespace, folderAnnotation, resources)
+                        payload, currentNamespace, folderAnnotation, resources, uniqueFilenames)
 
 
 if __name__ == "__main__":
