@@ -147,6 +147,8 @@ def _watch_resource_loop(mode, *args):
                 listResources(*args)
                 sleep(60)
             else:
+                # Always wait 5 seconds to slow down the loop in case of exceptions
+                sleep(5)
                 _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
@@ -157,7 +159,6 @@ def _watch_resource_loop(mode, *args):
             print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
         except MaxRetryError as e:
             print(f"{timestamp()} MaxRetryError when calling kubernetes: {e}\n")
-            sleep(5)
         except Exception as e:
             print(f"{timestamp()} Received unknown exception: {e}\n")
 
