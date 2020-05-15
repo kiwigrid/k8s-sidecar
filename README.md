@@ -66,9 +66,15 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `METHOD`
-  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. With `SLEEP` it will list all config-maps, then sleep for 60 seconds. Default is watch.
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. With `SLEEP` it will list all config-maps, then sleep for `SLEEP_TIME` seconds. Default is watch.
   - required: false
   - type: string
+
+- `SLEEP_TIME`
+  - description: How many seconds to wait before updating config-maps when using `SLEEP` method.
+  - required: false
+  - default: 60
+  - type: integer
 
 - `REQ_URL`
   - description: URL to which send a request after a configmap got reloaded
@@ -120,10 +126,16 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: float
 
 - `REQ_TIMEOUT`
-  - description: many seconds to wait for the server to send data before giving up
+  - description: How many seconds to wait for the server to send data before giving up
   - required: false
   - default: 10
   - type: float
+
+- `ERROR_THROTTLE_SLEEP`
+  - description: How many seconds to wait before watching resources again when an error occurs
+  - required: false
+  - default: 5
+  - type: integer
 
 - `SKIP_TLS_VERIFY`
   - description: Set to true to skip tls verification for kube api calls
