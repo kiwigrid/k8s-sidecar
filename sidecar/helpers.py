@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import hashlib
 import os
 import errno
 
@@ -26,6 +27,18 @@ def writeTextToFile(folder, filename, data):
                 return
 
     absolutepath = os.path.join(folder, filename)
+    if os.path.exists(absolutepath):
+        # Compare file contents with new ones so we don't update the file if nothing changed
+        sha256_hash_new = hashlib.sha256(data.encode('utf-8'))
+        with open(absolutepath, 'rb') as f:
+            sha256_hash_cur = hashlib.sha256()
+            for byte_block in iter(lambda: f.read(4096),b""):
+                sha256_hash_cur.update(byte_block)
+
+        if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
+            print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
+            return
+
     with open(absolutepath, 'w') as f:
         f.write(data)
         f.close()
