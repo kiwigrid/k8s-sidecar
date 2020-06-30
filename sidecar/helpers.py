@@ -89,7 +89,7 @@ def request(url, method, payload=None):
     elif method == "POST":
         res = r.post("%s" % url, auth=auth, json=payload, timeout=timeout)
         print(f"{timestamp()} {method} request sent to {url}. "
-              f"Response: {res.status_code} {res.reason} (res.text}")
+              f"Response: {res.status_code} {res.reason} {res.text}")
     return res
 
 
