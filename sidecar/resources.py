@@ -72,7 +72,7 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
     # For all the found resources
     for sec in ret.items:
         metadata = sec.metadata
-        
+
         print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
@@ -96,8 +96,8 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
 
             writeTextToFile(destFolder, filename, filedata)
 
-            if url:
-                request(url, method, payload)
+    if url:
+        request(url, method, payload)
 
 
 def _watch_resource_iterator(label, labelValue, targetFolder, url, method, payload,
@@ -115,7 +115,7 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
     # Process events
     for event in stream:
         metadata = event["object"].metadata
-    
+
         print(f"{timestamp()} Working on {resource} {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
@@ -142,9 +142,6 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
                                               resource_name = metadata.name)
 
                 writeTextToFile(destFolder, filename, filedata)
-
-                if url:
-                    request(url, method, payload)
             else:
                 # Get filename from event
                 filename = data_key[:-4] if data_key.endswith(".url") else data_key
@@ -156,19 +153,19 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
                                               resource_name = metadata.name)
 
                 removeFile(destFolder, filename)
-                if url:
-                    request(url, method, payload)
+        if url:
+            request(url, method, payload)
 
 
 def _watch_resource_loop(mode, *args):
     while True:
         try:
+            # Always wait to slow down the loop in case of exceptions
+            sleep(os.getenv("ERROR_THROTTLE_SLEEP", 5))
             if mode == "SLEEP":
                 listResources(*args)
-                sleep(60)
+                sleep(os.getenv("SLEEP_TIME", 60))
             else:
-                # Always wait 5 seconds to slow down the loop in case of exceptions
-                sleep(5)
                 _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
