@@ -46,6 +46,9 @@ jobs:
           docker build -t   kiwigrid/k8s-sidecar-build:$TAG . 
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           docker push kiwigrid/k8s-sidecar-build:$TAG
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker build --platform linux/arm64/v8 -t   kiwigrid/k8s-sidecar-build:$TAG .
+          docker push --platform linux/arm64/v8 kiwigrid/k8s-sidecar-build:$TAG
       - persist_to_workspace:
           root: /tmp
           paths:
