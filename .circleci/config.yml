@@ -39,7 +39,7 @@ jobs:
 
       - setup_remote_docker:
           version: 19.03.12
-      #    docker_layer_caching: true
+          docker_layer_caching: true
 
       - run: |
           TAG=0.1.$CIRCLE_BUILD_NUM
@@ -122,7 +122,7 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: 19.03.12
-      #    docker_layer_caching: true
+          docker_layer_caching: true
 
       - run: |
           TAG=`cat /tmp/VERSION`
