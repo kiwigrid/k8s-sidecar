@@ -38,14 +38,22 @@ jobs:
       #    destination: test-reports
 
       - setup_remote_docker:
-          docker_layer_caching: true
+          version: 18.09.3
+      #    docker_layer_caching: true
 
       - run: |
           TAG=0.1.$CIRCLE_BUILD_NUM
           echo "$TAG" > /tmp/VERSION
-          docker build -t   kiwigrid/k8s-sidecar-build:$TAG . 
+          mkdir -vp ~/.docker/cli-plugins/
+          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+          chmod a+x ~/.docker/cli-plugins/docker-buildx
+          docker buildx version
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker context create buildcontext
+          docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker push kiwigrid/k8s-sidecar-build:$TAG
+          docker buildx build --push -t cablespaghetti/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
+
       - persist_to_workspace:
           root: /tmp
           paths:
@@ -131,16 +139,19 @@ jobs:
           at: /tmp/
       - checkout
       - setup_remote_docker:
-          docker_layer_caching: true
+          version: 18.09.3
+      #    docker_layer_caching: true
 
       - run: |
           TAG=`cat /tmp/VERSION`
+          mkdir -vp ~/.docker/cli-plugins/
+          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+          chmod a+x ~/.docker/cli-plugins/docker-buildx
+          docker buildx version
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker buildx create --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker pull kiwigrid/k8s-sidecar-build:$TAG
-          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:$TAG
-          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:latest
-          docker push kiwigrid/k8s-sidecar:$TAG
-          docker push kiwigrid/k8s-sidecar:latest
+          docker buildx build --push -t cablespaghetti/k8s-sidecar:$TAG -t cablespaghetti/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 .
 
 workflows:
   version: 2
