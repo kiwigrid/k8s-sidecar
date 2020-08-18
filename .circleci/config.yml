@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/python:3.7.4
+      - image: circleci/python:3.7.8
 
     working_directory: ~/repo
 
@@ -38,7 +38,7 @@ jobs:
       #    destination: test-reports
 
       - setup_remote_docker:
-          version: 18.09.3
+          version: 19.03.12
       #    docker_layer_caching: true
 
       - run: |
@@ -133,13 +133,13 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/python:3.7.4
+      - image: circleci/python:3.7.8
     steps:
       - attach_workspace:
           at: /tmp/
       - checkout
       - setup_remote_docker:
-          version: 18.09.3
+          version: 19.03.12
       #    docker_layer_caching: true
 
       - run: |
