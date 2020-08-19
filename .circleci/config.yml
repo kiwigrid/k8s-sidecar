@@ -134,7 +134,7 @@ jobs:
           docker context create buildcontext
           docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker buildx build --push -t kiwigrid/k8s-sidecar:$TAG -t kiwigrid/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 .
+          echo "FROM kiwigrid/k8s-sidecar-build:$TAG" | docker buildx build --push -t kiwigrid/k8s-sidecar:$TAG -t kiwigrid/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
 
 workflows:
   version: 2
