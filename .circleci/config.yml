@@ -177,6 +177,12 @@ workflows:
   test_deploy:
     jobs:
       - build
+      - test-k8s-1-14:
+          requires:
+            - build
+      - test-k8s-1-15:
+          requires:
+            - build
       - test-k8s-1-16:
           requires:
             - build
