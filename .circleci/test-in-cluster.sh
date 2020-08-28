@@ -68,7 +68,7 @@ CLUSTER_NAME="sidecar-testing"
   }
 
   verify_configmap_read(){
-    kubectl exec sidecar ls /tmp/hello.world
+    kubectl exec sidecar -- ls /tmp/hello.world
   }
 
   cleanup_cluster() {
