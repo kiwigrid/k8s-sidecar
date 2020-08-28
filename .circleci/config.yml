@@ -70,6 +70,7 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -88,6 +89,7 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -106,6 +108,7 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -124,6 +127,7 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -142,6 +146,7 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
