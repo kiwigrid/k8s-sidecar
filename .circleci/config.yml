@@ -39,7 +39,6 @@ jobs:
 
       - setup_remote_docker:
           version: 19.03.12
-          docker_layer_caching: true
 
       - run: |
           TAG=0.1.$CIRCLE_BUILD_NUM
@@ -52,7 +51,7 @@ jobs:
           docker context create buildcontext
           docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker buildx build --push -t kiwigrid/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
+          docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
 
       - persist_to_workspace:
           root: /tmp
@@ -158,7 +157,6 @@ jobs:
       - checkout
       - setup_remote_docker:
           version: 19.03.12
-          docker_layer_caching: true
 
       - run: |
           TAG=`cat /tmp/VERSION`
@@ -170,7 +168,7 @@ jobs:
           docker context create buildcontext
           docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          echo "FROM kiwigrid/k8s-sidecar-build:$TAG" | docker buildx build --push -t kiwigrid/k8s-sidecar:$TAG -t kiwigrid/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
+          echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" | docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
 
 workflows:
   version: 2
