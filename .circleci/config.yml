@@ -153,6 +153,25 @@ jobs:
           command: .circleci/test-in-cluster.sh
           no_output_timeout: 3600
 
+  test-k8s-1-19:
+    machine: true
+    environment:
+      KIND_VERSION: v0.8.1
+      K8S_VERSION: v1.19.0
+    steps:
+      - attach_workspace:
+          at: /tmp/
+      - checkout
+      - run: |
+          VERSION=`cat /tmp/VERSION`
+          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
+          cat .circleci/test/sidecar.yaml
+      - run:
+          name: test-in-cluster
+          command: .circleci/test-in-cluster.sh
+          no_output_timeout: 3600
+
   deploy:
     docker:
       - image: circleci/python:3.7.8
@@ -195,6 +214,9 @@ workflows:
       - test-k8s-1-18:
           requires:
             - build
+      - test-k8s-1-19:
+          requires:
+            - build
       - deploy:
           requires:
             - test-k8s-1-14
@@ -202,6 +224,7 @@ workflows:
             - test-k8s-1-16
             - test-k8s-1-17
             - test-k8s-1-18
+            - test-k8s-1-19
           filters:
             branches:
               only: master
