@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/python:3.7.8
+      - image: circleci/python:3.7.4
 
     working_directory: ~/repo
 
@@ -38,30 +38,41 @@ jobs:
       #    destination: test-reports
 
       - setup_remote_docker:
-          version: 19.03.12
+          docker_layer_caching: true
 
       - run: |
           TAG=0.1.$CIRCLE_BUILD_NUM
           echo "$TAG" > /tmp/VERSION
-          mkdir -vp ~/.docker/cli-plugins/
-          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
-          chmod a+x ~/.docker/cli-plugins/docker-buildx
-          docker buildx version
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker context create buildcontext
-          docker buildx create buildcontext --use
+          docker build -t   kiwigrid/k8s-sidecar-build:$TAG . 
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
-
+          docker push kiwigrid/k8s-sidecar-build:$TAG
       - persist_to_workspace:
           root: /tmp
           paths:
             - VERSION
 
+  test-k8s-1-13:
+    machine: true
+    environment:
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.13.12
+    steps:
+      - attach_workspace:
+          at: /tmp/
+      - checkout
+      - run: |
+          VERSION=`cat /tmp/VERSION`
+          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          cat .circleci/test/sidecar.yaml
+      - run:
+          name: test-in-cluster
+          command: .circleci/test-in-cluster.sh
+          no_output_timeout: 3600
+
   test-k8s-1-14:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.7.0
       K8S_VERSION: v1.14.10
     steps:
       - attach_workspace:
@@ -70,7 +81,6 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -80,8 +90,8 @@ jobs:
   test-k8s-1-15:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.15.11
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.15.7
     steps:
       - attach_workspace:
           at: /tmp/
@@ -89,7 +99,6 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -99,8 +108,8 @@ jobs:
   test-k8s-1-16:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.16.9
+      KIND_VERSION: v0.7.0
+      K8S_VERSION: v1.16.4
     steps:
       - attach_workspace:
           at: /tmp/
@@ -108,64 +117,6 @@ jobs:
       - run: |
           VERSION=`cat /tmp/VERSION`
           sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
-          cat .circleci/test/sidecar.yaml
-      - run:
-          name: test-in-cluster
-          command: .circleci/test-in-cluster.sh
-          no_output_timeout: 3600
-
-  test-k8s-1-17:
-    machine: true
-    environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.17.5
-    steps:
-      - attach_workspace:
-          at: /tmp/
-      - checkout
-      - run: |
-          VERSION=`cat /tmp/VERSION`
-          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
-          cat .circleci/test/sidecar.yaml
-      - run:
-          name: test-in-cluster
-          command: .circleci/test-in-cluster.sh
-          no_output_timeout: 3600
-
-  test-k8s-1-18:
-    machine: true
-    environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.18.8
-    steps:
-      - attach_workspace:
-          at: /tmp/
-      - checkout
-      - run: |
-          VERSION=`cat /tmp/VERSION`
-          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
-          cat .circleci/test/sidecar.yaml
-      - run:
-          name: test-in-cluster
-          command: .circleci/test-in-cluster.sh
-          no_output_timeout: 3600
-
-  test-k8s-1-19:
-    machine: true
-    environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.19.0
-    steps:
-      - attach_workspace:
-          at: /tmp/
-      - checkout
-      - run: |
-          VERSION=`cat /tmp/VERSION`
-          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
-          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
           cat .circleci/test/sidecar.yaml
       - run:
           name: test-in-cluster
@@ -174,31 +125,31 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/python:3.7.8
+      - image: circleci/python:3.7.4
     steps:
       - attach_workspace:
           at: /tmp/
       - checkout
       - setup_remote_docker:
-          version: 19.03.12
+          docker_layer_caching: true
 
       - run: |
           TAG=`cat /tmp/VERSION`
-          mkdir -vp ~/.docker/cli-plugins/
-          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
-          chmod a+x ~/.docker/cli-plugins/docker-buildx
-          docker buildx version
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker context create buildcontext
-          docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" | docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
+          docker pull kiwigrid/k8s-sidecar-build:$TAG
+          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:$TAG
+          docker tag kiwigrid/k8s-sidecar-build:$TAG kiwigrid/k8s-sidecar:latest
+          docker push kiwigrid/k8s-sidecar:$TAG
+          docker push kiwigrid/k8s-sidecar:latest
 
 workflows:
   version: 2
   test_deploy:
     jobs:
       - build
+      - test-k8s-1-13:
+          requires:
+            - build
       - test-k8s-1-14:
           requires:
             - build
@@ -208,23 +159,12 @@ workflows:
       - test-k8s-1-16:
           requires:
             - build
-      - test-k8s-1-17:
-          requires:
-            - build
-      - test-k8s-1-18:
-          requires:
-            - build
-      - test-k8s-1-19:
-          requires:
-            - build
       - deploy:
           requires:
+            - test-k8s-1-13
             - test-k8s-1-14
             - test-k8s-1-15
             - test-k8s-1-16
-            - test-k8s-1-17
-            - test-k8s-1-18
-            - test-k8s-1-19
           filters:
             branches:
               only: master
