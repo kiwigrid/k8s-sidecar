@@ -31,7 +31,10 @@ def main():
     url = os.getenv('REQ_URL')
     payload = os.getenv('REQ_PAYLOAD')
 
-    config.load_incluster_config()
+    try:
+      config.load_kube_config()
+    except:
+      config.load_incluster_config()
     print("Config for cluster api loaded...")
     namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
