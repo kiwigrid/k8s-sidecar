@@ -161,10 +161,10 @@ def _watch_resource_loop(mode, *args):
     while True:
         try:
             # Always wait to slow down the loop in case of exceptions
-            sleep(os.getenv("ERROR_THROTTLE_SLEEP", 5))
+            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
             if mode == "SLEEP":
                 listResources(*args)
-                sleep(os.getenv("SLEEP_TIME", 60))
+                sleep(int(os.getenv("SLEEP_TIME", 60)))
             else:
                 _watch_resource_iterator(*args)
         except ApiException as e:
