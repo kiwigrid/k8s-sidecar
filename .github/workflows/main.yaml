@@ -14,5 +14,5 @@ jobs:
       uses: anothrNick/github-tag-action@1.26.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        REPO_OWNER: Tim-Smyth
+        REPO_OWNER: pulledtim
         INITIAL_VERSION: 1.0.0
