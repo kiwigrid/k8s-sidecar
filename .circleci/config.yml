@@ -41,7 +41,11 @@ jobs:
           version: 19.03.12
 
       - run: |
-          TAG=0.1.$CIRCLE_BUILD_NUM
+          if [[ -z "${CIRCLE_TAG}" ]]; then
+            TAG=0.1.$CIRCLE_BUILD_NUM
+          else
+            TAG="${CIRCLE_TAG}"
+          fi
           echo "$TAG" > /tmp/VERSION
           mkdir -vp ~/.docker/cli-plugins/
           curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
