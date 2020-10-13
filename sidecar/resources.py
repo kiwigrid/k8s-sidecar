@@ -1,18 +1,30 @@
+#!/usr/bin/env python
+
 import base64
 import os
+import sys
+import signal
+
 from multiprocessing import Process
 from time import sleep
 
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import MaxRetryError
 
-from helpers import request, writeTextToFile, removeFile
+from helpers import request, writeTextToFile, removeFile, timestamp, uniqueFilename
 
 _list_namespaced = {
     "secret": "list_namespaced_secret",
     "configmap": "list_namespaced_config_map"
 }
+
+def signal_handler(signum, frame):
+    print(f"{timestamp()} Subprocess exiting gracefully")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, signal_handler)
 
 _list_for_all_namespaces = {
     "secret": "list_secret_for_all_namespaces",
@@ -35,131 +47,172 @@ def _get_file_data_and_name(full_filename, content, resource):
     return filename, file_data
 
 
-def listResources(label, targetFolder, url, method, payload, current, folderAnnotation, resource):
-    v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current)
-    if namespace == "ALL":
-        ret = getattr(v1, _list_for_all_namespaces[resource])()
-    else:
-        ret = getattr(v1, _list_namespaced[resource])(namespace=namespace)
+def _get_destination_folder(metadata, defaultFolder, folderAnnotation):
+    if metadata.annotations:
+        if folderAnnotation in metadata.annotations.keys():
+            destFolder = metadata.annotations[folderAnnotation]
+            print(f"{timestamp()} Found a folder override annotation, "
+                  f"placing the {metadata.name} in: {destFolder}")
+            return destFolder
+    return defaultFolder
 
+
+def listResources(label, labelValue, targetFolder, url, method, payload,
+                  currentNamespace, folderAnnotation, resource, uniqueFilenames):
+    v1 = client.CoreV1Api()
+    namespace = os.getenv("NAMESPACE", currentNamespace)
+    # Filter resources based on label and value or just label
+    labelSelector=f"{label}={labelValue}" if labelValue else label
+
+    if namespace == "ALL":
+        ret = getattr(v1, _list_for_all_namespaces[resource])(label_selector=labelSelector)
+    else:
+        ret = getattr(v1, _list_namespaced[resource])(namespace=namespace, label_selector=labelSelector)
+
+    # For all the found resources
     for sec in ret.items:
-        destFolder = targetFolder
         metadata = sec.metadata
-        if metadata.labels is None:
+
+        print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
+
+        # Get the destination folder
+        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
+
+        # Check if it's an empty ConfigMap or Secret
+        dataMap = sec.data
+        if dataMap is None:
+            print(f"{timestamp()} No data field in {resource}")
             continue
-        print(f'Working on {resource}: {metadata.namespace}/{metadata.name}')
-        if label in sec.metadata.labels.keys():
-            print(f"Found {resource} with label")
-            if sec.metadata.annotations is not None:
-                if folderAnnotation in sec.metadata.annotations.keys():
-                    destFolder = sec.metadata.annotations[folderAnnotation]
 
-            dataMap = sec.data
-            if dataMap is None:
-                print(f"No data field in {resource}")
-                continue
+        # Each key on the data is a file
+        for data_key in dataMap.keys():
+            filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
+                                                            resource)
+            if uniqueFilenames:
+                filename = uniqueFilename(filename      = filename,
+                                          namespace     = metadata.namespace,
+                                          resource      = resource,
+                                          resource_name = metadata.name)
 
-            if label in sec.metadata.labels.keys():
-                for data_key in dataMap.keys():
-                    filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
-                                                                 resource)
-                    writeTextToFile(destFolder, filename, filedata)
+            writeTextToFile(destFolder, filename, filedata)
 
-                    if url is not None:
-                        request(url, method, payload)
+    if url:
+        request(url, method, payload)
 
 
-def _watch_resource_iterator(label, targetFolder, url, method, payload,
-                             current, folderAnnotation, resource):
+def _watch_resource_iterator(label, labelValue, targetFolder, url, method, payload,
+                             currentNamespace, folderAnnotation, resource, uniqueFilenames):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current)
+    namespace = os.getenv("NAMESPACE", currentNamespace)
+    # Filter resources based on label and value or just label
+    labelSelector=f"{label}={labelValue}" if labelValue else label
+
     if namespace == "ALL":
-        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]))
+        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]), label_selector=labelSelector)
     else:
-        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace)
+        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace, label_selector=labelSelector)
 
+    # Process events
     for event in stream:
-        destFolder = targetFolder
-        metadata = event['object'].metadata
-        if metadata.labels is None:
+        metadata = event["object"].metadata
+
+        print(f"{timestamp()} Working on {resource} {metadata.namespace}/{metadata.name}")
+
+        # Get the destination folder
+        destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
+
+        # Check if it's an empty ConfigMap or Secret
+        dataMap = event["object"].data
+        if dataMap is None:
+            print(f"{timestamp()} {resource} does not have data.")
             continue
-        print(f'Working on {resource} {metadata.namespace}/{metadata.name}')
-        if label in event['object'].metadata.labels.keys():
-            print(f"{resource} with label found")
-            if event['object'].metadata.annotations is not None:
-                if folderAnnotation in event['object'].metadata.annotations.keys():
-                    destFolder = event['object'].metadata.annotations[folderAnnotation]
-                    print('Found a folder override annotation, '
-                          f'placing the {resource} in: {destFolder}')
-            dataMap = event['object'].data
-            if dataMap is None:
-                print(f"{resource} does not have data.")
-                continue
-            eventType = event['type']
-            for data_key in dataMap.keys():
-                print(f"File in {resource} {data_key} {eventType}")
 
-                if (eventType == "ADDED") or (eventType == "MODIFIED"):
-                    filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
-                                                                 resource)
-                    writeTextToFile(destFolder, filename, filedata)
+        eventType = event["type"]
+        # Each key on the data is a file
+        for data_key in dataMap.keys():
+            print(f"{timestamp()} File in {resource} {data_key} {eventType}")
 
-                    if url is not None:
-                        request(url, method, payload)
-                else:
-                    filename = data_key[:-4] if data_key.endswith(".url") else data_key
-                    removeFile(destFolder, filename)
-                    if url is not None:
-                        request(url, method, payload)
+            if (eventType == "ADDED") or (eventType == "MODIFIED"):
+                filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
+                                                                resource)
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
+
+                writeTextToFile(destFolder, filename, filedata)
+            else:
+                # Get filename from event
+                filename = data_key[:-4] if data_key.endswith(".url") else data_key
+
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
+
+                removeFile(destFolder, filename)
+        if url:
+            request(url, method, payload)
 
 
-def _watch_resource_loop(*args):
+def _watch_resource_loop(mode, *args):
     while True:
         try:
-            _watch_resource_iterator(*args)
+            # Always wait to slow down the loop in case of exceptions
+            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
+            if mode == "SLEEP":
+                listResources(*args)
+                sleep(int(os.getenv("SLEEP_TIME", 60)))
+            else:
+                _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
-                print(f"ApiException when calling kubernetes: {e}\n")
+                print(f"{timestamp()} ApiException when calling kubernetes: {e}\n")
             else:
                 raise
         except ProtocolError as e:
-            print(f"ProtocolError when calling kubernetes: {e}\n")
+            print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
+        except MaxRetryError as e:
+            print(f"{timestamp()} MaxRetryError when calling kubernetes: {e}\n")
         except Exception as e:
-            print(f"Received unknown exception: {e}\n")
+            print(f"{timestamp()} Received unknown exception: {e}\n")
 
 
-def watchForChanges(label, targetFolder, url, method, payload,
-                    current, folderAnnotation, resources):
+def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
+                    currentNamespace, folderAnnotation, resources, uniqueFilenames):
 
     firstProc = Process(target=_watch_resource_loop,
-                        args=(label, targetFolder, url, method, payload,
-                              current, folderAnnotation, resources[0])
+                        args=(mode, label, labelValue, targetFolder, url, method, payload,
+                              currentNamespace, folderAnnotation, resources[0], uniqueFilenames)
                         )
+    firstProc.daemon=True
     firstProc.start()
 
     if len(resources) == 2:
         secProc = Process(target=_watch_resource_loop,
-                          args=(label, targetFolder, url, method, payload,
-                                current, folderAnnotation, resources[1])
+                          args=(mode, label, labelValue, targetFolder, url, method, payload,
+                                currentNamespace, folderAnnotation, resources[1], uniqueFilenames)
                           )
+        secProc.daemon=True
         secProc.start()
 
     while True:
         if not firstProc.is_alive():
-            print(f"Process for {resources[0]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[0]} died. Stopping and exiting")
             if len(resources) == 2 and secProc.is_alive():
                 secProc.terminate()
             elif len(resources) == 2:
-                print(f"Process for {resources[1]}  also died...")
+                print(f"{timestamp()} Process for {resources[1]}  also died...")
             raise Exception("Loop died")
 
         if len(resources) == 2 and not secProc.is_alive():
-            print(f"Process for {resources[1]} died. Stopping and exiting")
+            print(f"{timestamp()} Process for {resources[1]} died. Stopping and exiting")
             if firstProc.is_alive():
                 firstProc.terminate()
             else:
-                print(f"Process for {resources[0]}  also died...")
+                print(f"{timestamp()} Process for {resources[0]}  also died...")
             raise Exception("Loop died")
 
         sleep(5)

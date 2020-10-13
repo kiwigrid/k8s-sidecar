@@ -3,7 +3,6 @@ apiVersion: kind.sigs.k8s.io/v1alpha3
 nodes:
 # the control plane node config
 - role: control-plane
-# the three workers
-- role: worker
+# the workers
 - role: worker
 - role: worker

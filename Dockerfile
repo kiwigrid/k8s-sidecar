@@ -1,11 +1,17 @@
-FROM        python:3.7-slim
-#create app directory
-WORKDIR     /app
-COPY        requirements.txt .
-RUN         pip install -r requirements.txt
-COPY        sidecar/* ./
+FROM        python:3.7-alpine
 ENV         PYTHONUNBUFFERED=1
+WORKDIR     /app
 
-#run as non-privileged user 
-USER nobody
+COPY        requirements.txt .
+RUN         apk add --no-cache gcc && \
+	    pip install -r requirements.txt && \
+	    apk del -r gcc && \
+            rm -rf /var/cache/apk/* requirements.txt
+
+COPY sidecar/* ./
+
+# Use the nobody user's numeric UID/GID to satisfy MustRunAsNonRoot PodSecurityPolicies
+# https://kubernetes.io/docs/concepts/policy/pod-security-policy/#users-and-groups
+USER 65534:65534
+
 CMD         [ "python", "-u", "/app/sidecar.py" ]
