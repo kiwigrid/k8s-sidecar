@@ -41,8 +41,12 @@ jobs:
           version: 19.03.12
 
       - run: |
-          TAG=0.1.$CIRCLE_BUILD_NUM
-          echo "$TAG" > /tmp/VERSION
+          if [[ -z "${CIRCLE_TAG}" ]]; then
+            TAG=0.1.$CIRCLE_BUILD_NUM
+          else
+            TAG="${CIRCLE_TAG}"
+          fi
+          echo "$TAG" | tee /tmp/VERSION
           mkdir -vp ~/.docker/cli-plugins/
           curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
           chmod a+x ~/.docker/cli-plugins/docker-buildx
@@ -198,23 +202,44 @@ workflows:
   version: 2
   test_deploy:
     jobs:
-      - build
+      - build:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
       - test-k8s-1-14:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-15:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-16:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-17:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-18:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-19:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - deploy:
@@ -228,3 +253,5 @@ workflows:
           filters:
             branches:
               only: master
+            tags:
+              only: /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
