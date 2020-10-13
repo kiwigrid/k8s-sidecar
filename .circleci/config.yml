@@ -46,7 +46,7 @@ jobs:
           else
             TAG="${CIRCLE_TAG}"
           fi
-          echo "$TAG" > /tmp/VERSION
+          echo "$TAG" | tee /tmp/VERSION
           mkdir -vp ~/.docker/cli-plugins/
           curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
           chmod a+x ~/.docker/cli-plugins/docker-buildx
