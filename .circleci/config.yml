@@ -203,22 +203,43 @@ workflows:
   test_deploy:
     jobs:
       - build
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
       - test-k8s-1-14:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-15:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-16:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-17:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-18:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - test-k8s-1-19:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
           requires:
             - build
       - deploy:
