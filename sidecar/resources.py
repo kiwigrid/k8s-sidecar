@@ -32,9 +32,11 @@ _list_for_all_namespaces = {
 }
 
 
-def _get_file_data_and_name(full_filename, content, resource):
+def _get_file_data_and_name(full_filename, content, resource, content_type="ascii"):
     if resource == "secret":
         file_data = base64.b64decode(content).decode()
+    elif content_type == "binary":
+        file_data = base64.decodebytes(content.encode('ascii'))
     else:
         file_data = content
 
@@ -81,22 +83,43 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
 
         # Check if it's an empty ConfigMap or Secret
-        dataMap = sec.data
-        if dataMap is None:
-            print(f"{timestamp()} No data field in {resource}")
-            continue
+        if resource == "configmap":
+            if sec.data is None and sec.binary_data is None:
+                print(f"{timestamp()} No data/binaryData field in {resource}")
+                continue
+        else:
+            if sec.data is None:
+                print(f"{timestamp()} No data field in {resource}")
+                continue
 
         # Each key on the data is a file
-        for data_key in dataMap.keys():
-            filename, filedata = _get_file_data_and_name(data_key, dataMap[data_key],
-                                                            resource)
-            if uniqueFilenames:
-                filename = uniqueFilename(filename      = filename,
-                                          namespace     = metadata.namespace,
-                                          resource      = resource,
-                                          resource_name = metadata.name)
+        if sec.data is not None:
+            for data_key in sec.data.keys():
+                filename, filedata = _get_file_data_and_name(data_key,
+                                                             sec.data[data_key],
+                                                             resource)
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
 
-            files_changed |= writeTextToFile(destFolder, filename, filedata)
+                files_changed |= writeTextToFile(destFolder, filename, filedata)
+
+        # Each key on the binaryData is a file
+        if sec.binary_data is not None:
+            for data_key in sec.binary_data.keys():
+                filename, filedata = _get_file_data_and_name(data_key,
+                                                             sec.binary_data[data_key],
+                                                             resource,
+                                                             content_type="binary")
+                if uniqueFilenames:
+                    filename = uniqueFilename(filename      = filename,
+                                              namespace     = metadata.namespace,
+                                              resource      = resource,
+                                              resource_name = metadata.name)
+
+                files_changed |= writeTextToFile(destFolder, filename, filedata, data_type="binary")
 
     if url and files_changed:
         request(url, method, payload)
