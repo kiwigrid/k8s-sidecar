@@ -69,6 +69,8 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
     else:
         ret = getattr(v1, _list_namespaced[resource])(namespace=namespace, label_selector=labelSelector)
 
+    files_changed = False
+
     # For all the found resources
     for sec in ret.items:
         metadata = sec.metadata
@@ -94,9 +96,9 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
                                           resource      = resource,
                                           resource_name = metadata.name)
 
-            writeTextToFile(destFolder, filename, filedata)
+            files_changed |= writeTextToFile(destFolder, filename, filedata)
 
-    if url:
+    if url and files_changed:
         request(url, method, payload)
 
 
@@ -117,6 +119,8 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
         metadata = event["object"].metadata
 
         print(f"{timestamp()} Working on {resource} {metadata.namespace}/{metadata.name}")
+
+        files_changed = False
 
         # Get the destination folder
         destFolder = _get_destination_folder(metadata, targetFolder, folderAnnotation)
@@ -141,7 +145,7 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
                                               resource      = resource,
                                               resource_name = metadata.name)
 
-                writeTextToFile(destFolder, filename, filedata)
+                files_changed |= writeTextToFile(destFolder, filename, filedata)
             else:
                 # Get filename from event
                 filename = data_key[:-4] if data_key.endswith(".url") else data_key
@@ -152,8 +156,8 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
                                               resource      = resource,
                                               resource_name = metadata.name)
 
-                removeFile(destFolder, filename)
-        if url:
+                files_changed |= removeFile(destFolder, filename)
+        if url and files_changed:
             request(url, method, payload)
 
 
