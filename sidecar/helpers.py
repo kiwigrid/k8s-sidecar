@@ -37,7 +37,7 @@ def writeTextToFile(folder, filename, data):
 
         if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
             print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
-            return
+            return False
 
     with open(absolutepath, 'w') as f:
         f.write(data)
@@ -45,14 +45,17 @@ def writeTextToFile(folder, filename, data):
     if os.getenv('DEFAULT_FILE_MODE'):
         mode = int(os.getenv('DEFAULT_FILE_MODE'), base=8)
         os.chmod(absolutepath, mode)
+    return True
 
 
 def removeFile(folder, filename):
     completeFile = os.path.join(folder, filename)
     if os.path.isfile(completeFile):
         os.remove(completeFile)
+        return True
     else:
         print(f"{timestamp()} Error: {completeFile} file not found")
+        return False
 
 
 def request(url, method, payload=None):
