@@ -10,7 +10,7 @@ from requests.adapters import HTTPAdapter
 from datetime import datetime
 
 
-def writeTextToFile(folder, filename, data):
+def writeTextToFile(folder, filename, data, data_type="ascii"):
     """
     Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient
     permissions to create the directory, log an error and return.
@@ -29,7 +29,11 @@ def writeTextToFile(folder, filename, data):
     absolutepath = os.path.join(folder, filename)
     if os.path.exists(absolutepath):
         # Compare file contents with new ones so we don't update the file if nothing changed
-        sha256_hash_new = hashlib.sha256(data.encode('utf-8'))
+        if data_type == "binary":
+            sha256_hash_new = hashlib.sha256(data)
+        else:
+            sha256_hash_new = hashlib.sha256(data.encode('utf-8'))
+
         with open(absolutepath, 'rb') as f:
             sha256_hash_cur = hashlib.sha256()
             for byte_block in iter(lambda: f.read(4096),b""):
@@ -39,7 +43,12 @@ def writeTextToFile(folder, filename, data):
             print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
             return False
 
-    with open(absolutepath, 'w') as f:
+    if data_type == "ascii":
+        write_type = "w"
+    elif data_type == "binary":
+        write_type = "wb"
+
+    with open(absolutepath, write_type) as f:
         f.write(data)
         f.close()
     if os.getenv('DEFAULT_FILE_MODE'):

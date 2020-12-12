@@ -4,7 +4,7 @@ WORKDIR     /app
 
 COPY        requirements.txt .
 RUN         apk add --no-cache gcc && \
-	    pip install -r requirements.txt && \
+	    pip3 install -r requirements.txt && \
 	    apk del -r gcc && \
             rm -rf /var/cache/apk/* requirements.txt
 
