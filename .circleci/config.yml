@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/python:3.7.8
+      - image: circleci/python:3.8.5
 
     working_directory: ~/repo
 
@@ -38,7 +38,7 @@ jobs:
       #    destination: test-reports
 
       - setup_remote_docker:
-          version: 19.03.12
+          version: 19.03.13
 
       - run: |
           if [[ -z "${CIRCLE_TAG}" ]]; then
@@ -48,7 +48,7 @@ jobs:
           fi
           echo "$TAG" | tee /tmp/VERSION
           mkdir -vp ~/.docker/cli-plugins/
-          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
           chmod a+x ~/.docker/cli-plugins/docker-buildx
           docker buildx version
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
