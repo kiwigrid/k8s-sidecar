@@ -5,10 +5,13 @@
 
 set -o errexit
 set -o pipefail
+set -o nounset;
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 WORKDIR="/workdir"
 CLUSTER_NAME="sidecar-testing"
+BIN_DIR="$(mktemp -d)"
+KIND="${BIN_DIR}/kind"
 
 #if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
   echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
@@ -20,16 +23,22 @@ CLUSTER_NAME="sidecar-testing"
     sudo mv ./kubectl /usr/local/bin/kubectl
   }
 
+  install_kind_release() {
+    echo 'Installing kind...'
+
+    KIND_BINARY_URL="https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+    wget -O "${KIND}" "${KIND_BINARY_URL}"
+    chmod +x "${KIND}"
+  }
+
   create_kind_cluster() {
-      echo 'Installing kind...'
 
-      curl -sSLo kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
-      chmod +x kind
-      sudo mv kind /usr/local/bin/kind
+      "${KIND}" create cluster --loglevel=debug --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
+      #kind create cluster --name "${CLUSTER_NAME}" --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
 
-      kind create cluster --name "${CLUSTER_NAME}" --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
-
-      export KUBECONFIG="$(kind get kubeconfig-path --name="${CLUSTER_NAME}")"
+      KUBECONFIG="$("${KIND}" get kubeconfig-path)"
+      export KUBECONFIG
+      #export KUBECONFIG="$(kind get kubeconfig-path --name="${CLUSTER_NAME}")"
       
       kubectl cluster-info
       echo
@@ -81,9 +90,17 @@ CLUSTER_NAME="sidecar-testing"
     fi
   }
 
+  # cleanup on exit (useful for running locally)
+  cleanup() {
+    "${KIND}" delete cluster || true
+    rm -rf "${BIN_DIR}"
+  }
+  trap cleanup EXIT
+
   main() {
       install_kubectl
-      cleanup_cluster
+      #cleanup_cluster
+      install_kind_release
       create_kind_cluster
       install_sidecar
       sleep 5
