@@ -7,8 +7,7 @@ set -o errexit
 set -o pipefail
 set -o nounset;
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-WORKDIR="/workdir"
+
 CLUSTER_NAME="sidecar-testing"
 BIN_DIR="$(mktemp -d)"
 KIND="${BIN_DIR}/kind"
@@ -38,11 +37,6 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
       echo "Creating cluster with kind config from ${KIND_CONFIG}"
 
       "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
-      #kind create cluster --name "${CLUSTER_NAME}" --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
-
-      #KUBECONFIG="$("${KIND}" get kubeconfig-path)"
-      #export KUBECONFIG
-      #export KUBECONFIG="$(kind get kubeconfig-path --name="${CLUSTER_NAME}")"
       
       kubectl cluster-info
       echo
