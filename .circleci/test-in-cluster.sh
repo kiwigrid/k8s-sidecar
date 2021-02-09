@@ -85,15 +85,6 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
     kubectl exec sidecar -- ls /tmp/hello.binary
   }
 
-  cleanup_cluster() {
-    if [ -n "$(command -v kind)" ]; then
-      for CLUSTER in $(kind get clusters); do
-        echo "delete old cluster ${CLUSTER}"
-        kind delete cluster --name "${CLUSTER}"
-      done
-    fi
-  }
-
   # cleanup on exit (useful for running locally)
   cleanup() {
     "${KIND}" delete cluster || true
@@ -103,7 +94,6 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 
   main() {
       install_kubectl
-      #cleanup_cluster
       install_kind_release
       create_kind_cluster
       install_sidecar
