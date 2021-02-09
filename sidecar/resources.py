@@ -151,8 +151,12 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
         # Check if it's an empty ConfigMap or Secret
         dataMap = event["object"].data
         if dataMap is None:
-            print(f"{timestamp()} {resource} does not have data.")
-            continue
+            
+            dataMap = event["object"].binaryData
+            if dataMap is None:
+
+                print(f"{timestamp()} {resource} does not have data/binaryData.")
+                continue
 
         eventType = event["type"]
         # Each key on the data is a file
