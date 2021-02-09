@@ -261,6 +261,12 @@ workflows:
               only: /.*/
           requires:
             - build
+      - test-k8s-1-20:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
+          requires:
+            - build
       - deploy:
           requires:
             - test-k8s-1-14
@@ -269,6 +275,7 @@ workflows:
             - test-k8s-1-17
             - test-k8s-1-18
             - test-k8s-1-19
+            - test-k8s-1-20
           filters:
             branches:
               only: master
