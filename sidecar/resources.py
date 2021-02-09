@@ -152,7 +152,7 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
         dataMap = event["object"].data
         if dataMap is None:
             
-            dataMap = event["object"].binaryData
+            dataMap = event["object"].binary_data
             if dataMap is None:
 
                 print(f"{timestamp()} {resource} does not have data/binaryData.")
