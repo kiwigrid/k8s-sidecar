@@ -65,7 +65,7 @@ jobs:
   test-k8s-1-14:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.14.10
     steps:
       - attach_workspace:
@@ -84,7 +84,7 @@ jobs:
   test-k8s-1-15:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.15.11
     steps:
       - attach_workspace:
@@ -103,7 +103,7 @@ jobs:
   test-k8s-1-16:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.16.9
     steps:
       - attach_workspace:
@@ -122,7 +122,7 @@ jobs:
   test-k8s-1-17:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.17.5
     steps:
       - attach_workspace:
@@ -141,7 +141,7 @@ jobs:
   test-k8s-1-18:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.18.8
     steps:
       - attach_workspace:
@@ -160,7 +160,7 @@ jobs:
   test-k8s-1-19:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.19.0
     steps:
       - attach_workspace:

@@ -37,11 +37,11 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 
       echo "Creating cluster with kind config from ${KIND_CONFIG}"
 
-      "${KIND}" create cluster --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
+      "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
       #kind create cluster --name "${CLUSTER_NAME}" --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
 
-      KUBECONFIG="$("${KIND}" get kubeconfig-path)"
-      export KUBECONFIG
+      #KUBECONFIG="$("${KIND}" get kubeconfig-path)"
+      #export KUBECONFIG
       #export KUBECONFIG="$(kind get kubeconfig-path --name="${CLUSTER_NAME}")"
       
       kubectl cluster-info
