@@ -65,7 +65,7 @@ jobs:
   test-k8s-1-14:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
+      KIND_VERSION: v0.10.0
       K8S_VERSION: v1.14.10
     steps:
       - attach_workspace:
@@ -84,8 +84,8 @@ jobs:
   test-k8s-1-15:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.15.11
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.15.12
     steps:
       - attach_workspace:
           at: /tmp/
@@ -103,8 +103,8 @@ jobs:
   test-k8s-1-16:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.16.9
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.16.15
     steps:
       - attach_workspace:
           at: /tmp/
@@ -122,8 +122,8 @@ jobs:
   test-k8s-1-17:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.17.5
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.17.17
     steps:
       - attach_workspace:
           at: /tmp/
@@ -141,8 +141,8 @@ jobs:
   test-k8s-1-18:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.18.8
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.18.15
     steps:
       - attach_workspace:
           at: /tmp/
@@ -160,8 +160,27 @@ jobs:
   test-k8s-1-19:
     machine: true
     environment:
-      KIND_VERSION: v0.8.1
-      K8S_VERSION: v1.19.0
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.19.7
+    steps:
+      - attach_workspace:
+          at: /tmp/
+      - checkout
+      - run: |
+          VERSION=`cat /tmp/VERSION`
+          sed -i 's/SIDECAR_VERSION/'"$VERSION"'/g' .circleci/test/sidecar.yaml
+          sed -i 's/CIRCLE_PROJECT_USERNAME/'"$CIRCLE_PROJECT_USERNAME"'/g' .circleci/test/sidecar.yaml
+          cat .circleci/test/sidecar.yaml
+      - run:
+          name: test-in-cluster
+          command: .circleci/test-in-cluster.sh
+          no_output_timeout: 3600
+
+  test-k8s-1-20:
+    machine: true
+    environment:
+      KIND_VERSION: v0.10.0
+      K8S_VERSION: v1.20.2
     steps:
       - attach_workspace:
           at: /tmp/
@@ -178,18 +197,18 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/python:3.7.8
+      - image: circleci/python:3.8.5
     steps:
       - attach_workspace:
           at: /tmp/
       - checkout
       - setup_remote_docker:
-          version: 19.03.12
+          version: 19.03.13
 
       - run: |
           TAG=`cat /tmp/VERSION`
           mkdir -vp ~/.docker/cli-plugins/
-          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.4.1/buildx-v0.4.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+          curl --silent -L "https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
           chmod a+x ~/.docker/cli-plugins/docker-buildx
           docker buildx version
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -242,6 +261,12 @@ workflows:
               only: /.*/
           requires:
             - build
+      - test-k8s-1-20:
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
+          requires:
+            - build
       - deploy:
           requires:
             - test-k8s-1-14
@@ -250,6 +275,7 @@ workflows:
             - test-k8s-1-17
             - test-k8s-1-18
             - test-k8s-1-19
+            - test-k8s-1-20
           filters:
             branches:
               only: master

@@ -7,11 +7,12 @@ set -o errexit
 set -o pipefail
 set -o nounset;
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-WORKDIR="/workdir"
+
 CLUSTER_NAME="sidecar-testing"
 BIN_DIR="$(mktemp -d)"
 KIND="${BIN_DIR}/kind"
+CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+KIND_CONFIG="${CWD}/kind-config.yaml"
 
 #if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
   echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
@@ -33,12 +34,9 @@ KIND="${BIN_DIR}/kind"
 
   create_kind_cluster() {
 
-      "${KIND}" create cluster --loglevel=debug --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
-      #kind create cluster --name "${CLUSTER_NAME}" --config "${REPO_ROOT}"/.circleci/kind-config.yaml --image "kindest/node:${K8S_VERSION}"
+      echo "Creating cluster with kind config from ${KIND_CONFIG}"
 
-      KUBECONFIG="$("${KIND}" get kubeconfig-path)"
-      export KUBECONFIG
-      #export KUBECONFIG="$(kind get kubeconfig-path --name="${CLUSTER_NAME}")"
+      "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
       
       kubectl cluster-info
       echo
@@ -60,11 +58,11 @@ KIND="${BIN_DIR}/kind"
   }
 
   install_sidecar(){
-    kubectl apply -f "${REPO_ROOT}"/.circleci/test/sidecar.yaml
+    kubectl apply -f "${CWD}"/test/sidecar.yaml
   }
 
   install_configmap(){
-    kubectl apply -f "${REPO_ROOT}"/.circleci/test/configmap.yaml
+    kubectl apply -f "${CWD}"/test/configmap.yaml
   }
 
   list_pods(){
@@ -81,15 +79,6 @@ KIND="${BIN_DIR}/kind"
     kubectl exec sidecar -- ls /tmp/hello.binary
   }
 
-  cleanup_cluster() {
-    if [ -n "$(command -v kind)" ]; then
-      for CLUSTER in $(kind get clusters); do
-        echo "delete old cluster ${CLUSTER}"
-        kind delete cluster --name "${CLUSTER}"
-      done
-    fi
-  }
-
   # cleanup on exit (useful for running locally)
   cleanup() {
     "${KIND}" delete cluster || true
@@ -99,7 +88,6 @@ KIND="${BIN_DIR}/kind"
 
   main() {
       install_kubectl
-      #cleanup_cluster
       install_kind_release
       create_kind_cluster
       install_sidecar
