@@ -102,6 +102,9 @@ def request(url, method, payload=None):
         res = r.post("%s" % url, auth=auth, json=payload, timeout=timeout)
         print(f"{timestamp()} {method} request sent to {url}. "
               f"Response: {res.status_code} {res.reason} {res.text}")
+    else:
+        print(f"{timestamp()} Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
+        return
     return res
 
 
