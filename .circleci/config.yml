@@ -216,7 +216,11 @@ jobs:
           docker buildx create buildcontext --use
           docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" | docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
-
+          docker login -u $QUAY_BOT_USERNAME -p $QUAY_BOT_PASSWORD quay.io
+          docker tag ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/kiwigrid/k8s-sidecar:$TAG
+          docker tag quay.io/kiwigrid/k8s-sidecar:$TAG quay.io/kiwigrid/k8s-sidecar:latest
+          docker push quay.io/kiwigrid/k8s-sidecar:$TAG
+          docker push quay.io/kiwigrid/k8s-sidecar:latest
 workflows:
   version: 2
   test_deploy:
