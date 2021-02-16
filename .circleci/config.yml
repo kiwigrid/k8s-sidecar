@@ -215,16 +215,19 @@ jobs:
           docker context create buildcontext
           docker buildx create buildcontext --use
           echo $DOCKER_PASSWORD   | docker login -u $DOCKER_USERNAME   --password-stdin docker.io
-          echo $QUAY_BOT_PASSWORD | docker login -u $QUAY_BOT_USERNAME --password-stdin quay.io
           echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" \
             | docker buildx build \
             --push \
             --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
             --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
-            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
-            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
             --platform linux/amd64,linux/arm64,linux/arm/v7 \
             -
+          echo $QUAY_BOT_PASSWORD | docker login -u $QUAY_BOT_USERNAME --password-stdin quay.io
+          docker pull docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+          docker tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+          docker push quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+          docker tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
+          docker push quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
 
 workflows:
   version: 2
