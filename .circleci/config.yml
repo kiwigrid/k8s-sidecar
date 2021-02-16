@@ -221,7 +221,7 @@ jobs:
             --push \
             --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
             --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
-            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
             --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
             --platform linux/amd64,linux/arm64,linux/arm/v7 \
             -
