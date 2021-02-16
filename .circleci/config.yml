@@ -214,13 +214,18 @@ jobs:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker context create buildcontext
           docker buildx create buildcontext --use
-          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" | docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest --platform linux/amd64,linux/arm64,linux/arm/v7 -
-          docker login -u $QUAY_BOT_USERNAME -p $QUAY_BOT_PASSWORD quay.io
-          docker tag ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/kiwigrid/k8s-sidecar:$TAG
-          docker tag quay.io/kiwigrid/k8s-sidecar:$TAG quay.io/kiwigrid/k8s-sidecar:latest
-          docker push quay.io/kiwigrid/k8s-sidecar:$TAG
-          docker push quay.io/kiwigrid/k8s-sidecar:latest
+          echo $DOCKER_PASSWORD   | docker login -u $DOCKER_USERNAME   --password-stdin docker.io
+          echo $QUAY_BOT_PASSWORD | docker login -u $QUAY_BOT_USERNAME --password-stdin quay.io
+          echo "FROM ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG" \
+            | docker buildx build \
+            --push \
+            --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
+            --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
+            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+            --tag quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
+            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            -
+
 workflows:
   version: 2
   test_deploy:
