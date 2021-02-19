@@ -107,7 +107,7 @@ def listResources(label, labelValue, targetFolder, url, method, payload,
                 files_changed |= writeTextToFile(destFolder, filename, filedata)
 
         # Each key on the binaryData is a file
-        if sec.binary_data is not None:
+        if resource == "configmap" and sec.binary_data is not None:
             for data_key in sec.binary_data.keys():
                 filename, filedata = _get_file_data_and_name(data_key,
                                                              sec.binary_data[data_key],
