@@ -16,6 +16,15 @@ Currently (April 2018) there is no simple way to hand files in configmaps to a s
 Run the container created by this repo together with your application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
 By adding additional env variables the container can send an HTTP request to specified URL.
 
+# Where?
+
+Images are available at:
+
+- [docker.io/kiwigrid/k8s-sidecar](https://hub.docker.com/r/kiwigrid/k8s-sidecar)
+- [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
+
+Both are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`
+
 # Features
 
 - Extract files from config maps
