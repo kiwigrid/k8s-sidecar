@@ -54,8 +54,8 @@ jobs:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker context create buildcontext
           docker buildx create buildcontext --use
-          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker buildx build --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
+          echo "${DOCKER_PASSWORD}" | docker login --username="${DOCKER_USERNAME}" --password-stdin docker.io
+          docker buildx build --progress plain --push -t ${CIRCLE_PROJECT_USERNAME}/k8s-sidecar-build:$TAG --platform linux/amd64,linux/arm64,linux/arm/v7 .
 
       - persist_to_workspace:
           root: /tmp
@@ -222,12 +222,19 @@ jobs:
             --tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest \
             --platform linux/amd64,linux/arm64,linux/arm/v7 \
             -
-          echo $QUAY_BOT_PASSWORD | docker login -u $QUAY_BOT_USERNAME --password-stdin quay.io
-          docker pull docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
-          docker tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
-          docker push quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
-          docker tag docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
-          docker push quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
+          echo "Copy multi arch from docker hub to quay.io..."
+          docker run --rm quay.io/skopeo/stable:v1.2.0 \
+            --all \
+            --src-creds "$DOCKER_USERNAME:$DOCKER_PASSWORD" \
+            --dest-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
+            docker://docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
+            docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+          docker run --rm quay.io/skopeo/stable:v1.2.0 \
+            --all \
+            --src-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
+            --dest-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
+            docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+            docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
 
 workflows:
   version: 2
