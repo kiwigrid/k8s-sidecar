@@ -3,70 +3,86 @@
 import os
 
 from kubernetes import client, config
-
-from resources import listResources, watchForChanges
+from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
 
 from helpers import timestamp
+from resources import list_resources, watch_for_changes
+
+METHOD = "METHOD"
+UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
+SKIP_TLS_VERIFY = "SKIP_TLS_VERIFY"
+FOLDER = "FOLDER"
+FOLDER_ANNOTATION = "FOLDER_ANNOTATION"
+LABEL = "LABEL"
+LABEL_VALUE = "LABEL_VALUE"
+RESOURCE = "RESOURCE"
+REQ_PAYLOAD = "REQ_PAYLOAD"
+REQ_URL = "REQ_URL"
+REQ_METHOD = "REQ_METHOD"
+
 
 def main():
     print(f"{timestamp()} Starting collector")
 
-    folderAnnotation = os.getenv("FOLDER_ANNOTATION")
-    if folderAnnotation is None:
+    folder_annotation = os.getenv(FOLDER_ANNOTATION)
+    if folder_annotation is None:
         print(f"{timestamp()} No folder annotation was provided, "
               "defaulting to k8s-sidecar-target-directory")
-        folderAnnotation = "k8s-sidecar-target-directory"
+        folder_annotation = "k8s-sidecar-target-directory"
 
-    label = os.getenv("LABEL")
+    label = os.getenv(LABEL)
     if label is None:
-        print(f"{timestamp()} Should have added LABEL as environment variable! Exit")
+        print(f"{timestamp()} Should have added {LABEL} as environment variable! Exit")
         return -1
 
-    labelValue = os.getenv("LABEL_VALUE")
-    if labelValue:
-        print(f"{timestamp()} Filter labels with value: {labelValue}")
+    label_value = os.getenv(LABEL_VALUE)
+    if label_value:
+        print(f"{timestamp()} Filter labels with value: {label_value}")
 
-    targetFolder = os.getenv("FOLDER")
-    if targetFolder is None:
-        print(f"{timestamp()} Should have added FOLDER as environment variable! Exit")
+    target_folder = os.getenv(FOLDER)
+    if target_folder is None:
+        print(f"{timestamp()} Should have added {FOLDER} as environment variable! Exit")
         return -1
 
-    resources = os.getenv("RESOURCE", "configmap")
-    resources = ("secret", "configmap") if resources == "both" else (resources, )
+    resources = os.getenv(RESOURCE, "configmap")
+    resources = ("secret", "configmap") if resources == "both" else (resources,)
     print(f"{timestamp()} Selected resource type: {resources}")
 
-    method = os.getenv("REQ_METHOD")
-    url = os.getenv("REQ_URL")
-    payload = os.getenv("REQ_PAYLOAD")
+    method = os.getenv(REQ_METHOD)
+    url = os.getenv(REQ_URL)
+    payload = os.getenv(REQ_PAYLOAD)
 
-    try:
-      config.load_kube_config()
-    except:
-      config.load_incluster_config()
+    # this is where kube_config is going to look for a config file
+    kube_config = os.path.expanduser(KUBE_CONFIG_DEFAULT_LOCATION)
+    if os.path.exists(kube_config):
+        config.load_kube_config(kube_config)
+    else:
+        config.load_incluster_config()
+
     print(f"{timestamp()} Config for cluster api loaded...")
-    currentNamespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
 
-    if os.getenv("SKIP_TLS_VERIFY") == "true":
+    if os.getenv(SKIP_TLS_VERIFY) == "true":
         configuration = client.Configuration()
         configuration.verify_ssl = False
         configuration.debug = False
         client.Configuration.set_default(configuration)
 
-    uniqueFilenames = os.getenv("UNIQUE_FILENAMES") 
-    if uniqueFilenames is not None and uniqueFilenames.lower() == "true":
+    unique_filenames = os.getenv(UNIQUE_FILENAMES)
+    if unique_filenames is not None and unique_filenames.lower() == "true":
         print(f"{timestamp()} Unique filenames will be enforced.")
-        uniqueFilenames = True
+        unique_filenames = True
     else:
         print(f"{timestamp()} Unique filenames will not be enforced.")
-        uniqueFilenames = False
+        unique_filenames = False
 
-    if os.getenv("METHOD") == "LIST":
+    if os.getenv(METHOD) == "LIST":
         for res in resources:
-            listResources(label, labelValue, targetFolder, url, method, payload,
-                          currentNamespace, folderAnnotation, res, uniqueFilenames)
+            list_resources(label, label_value, target_folder, url, method, payload,
+                           current_namespace, folder_annotation, res, unique_filenames)
     else:
-        watchForChanges(os.getenv("METHOD"), label, labelValue, targetFolder, url, method,
-                        payload, currentNamespace, folderAnnotation, resources, uniqueFilenames)
+        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method,
+                          payload, current_namespace, folder_annotation, resources, unique_filenames)
 
 
 if __name__ == "__main__":
