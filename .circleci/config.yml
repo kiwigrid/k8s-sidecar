@@ -225,12 +225,14 @@ jobs:
             -
           echo "Copy multi arch from docker hub to quay.io..."
           docker run --rm quay.io/skopeo/stable:v1.2.0 \
+            copy \
             --all \
             --src-creds "$DOCKER_USERNAME:$DOCKER_PASSWORD" \
             --dest-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
             docker://docker.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
             docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
           docker run --rm quay.io/skopeo/stable:v1.2.0 \
+            copy \
             --all \
             --src-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
             --dest-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
