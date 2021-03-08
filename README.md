@@ -161,3 +161,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: The default file system permission for every file. Use three digits (e.g. '500', '440', ...)
   - required: false
   - type: string
+
+- `KUBECONFIG`
+  - description: if this is given and points to a file or `~/.kube/config` is mounted k8s config will be loaded from this file, otherwise "incluster" k8s configuration is tried.
+  - required: false
+  - type: string

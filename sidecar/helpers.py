@@ -10,7 +10,7 @@ from requests.adapters import HTTPAdapter
 from datetime import datetime
 
 
-def writeTextToFile(folder, filename, data, data_type="ascii"):
+def write_text_to_file(folder, filename, data, data_type="ascii"):
     """
     Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient
     permissions to create the directory, log an error and return.
@@ -26,15 +26,15 @@ def writeTextToFile(folder, filename, data, data_type="ascii"):
                       f"Skipping {filename}.")
                 return
 
-    absolutepath = os.path.join(folder, filename)
-    if os.path.exists(absolutepath):
+    absolute_path = os.path.join(folder, filename)
+    if os.path.exists(absolute_path):
         # Compare file contents with new ones so we don't update the file if nothing changed
         if data_type == "binary":
             sha256_hash_new = hashlib.sha256(data)
         else:
             sha256_hash_new = hashlib.sha256(data.encode('utf-8'))
 
-        with open(absolutepath, 'rb') as f:
+        with open(absolute_path, 'rb') as f:
             sha256_hash_cur = hashlib.sha256()
             for byte_block in iter(lambda: f.read(4096),b""):
                 sha256_hash_cur.update(byte_block)
@@ -43,36 +43,36 @@ def writeTextToFile(folder, filename, data, data_type="ascii"):
             print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
             return False
 
-    if data_type == "ascii":
-        write_type = "w"
-    elif data_type == "binary":
+    if data_type == "binary":
         write_type = "wb"
+    else:
+        write_type = "w"
 
-    with open(absolutepath, write_type) as f:
+    with open(absolute_path, write_type) as f:
         f.write(data)
         f.close()
     if os.getenv('DEFAULT_FILE_MODE'):
         mode = int(os.getenv('DEFAULT_FILE_MODE'), base=8)
-        os.chmod(absolutepath, mode)
+        os.chmod(absolute_path, mode)
     return True
 
 
-def removeFile(folder, filename):
-    completeFile = os.path.join(folder, filename)
-    if os.path.isfile(completeFile):
-        os.remove(completeFile)
+def remove_file(folder, filename):
+    complete_file = os.path.join(folder, filename)
+    if os.path.isfile(complete_file):
+        os.remove(complete_file)
         return True
     else:
-        print(f"{timestamp()} Error: {completeFile} file not found")
+        print(f"{timestamp()} Error: {complete_file} file not found")
         return False
 
 
 def request(url, method, payload=None):
-    retryTotal = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
-    retryConnect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
+    retry_total = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
+    retry_connect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
         os.getenv("REQ_RETRY_CONNECT"))
-    retryRead = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
-    retryBackoffFactor = 0.2 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
+    retry_read = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
+    retry_backoff_factor = 0.2 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
         os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
     timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
@@ -84,10 +84,10 @@ def request(url, method, payload=None):
         auth = None
 
     r = requests.Session()
-    retries = Retry(total=retryTotal,
-                    connect=retryConnect,
-                    read=retryRead,
-                    backoff_factor=retryBackoffFactor,
+    retries = Retry(total=retry_total,
+                    connect=retry_connect,
+                    read=retry_read,
+                    backoff_factor=retry_backoff_factor,
                     status_forcelist=[500, 502, 503, 504])
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
@@ -113,7 +113,7 @@ def timestamp():
     return datetime.now().strftime("[%Y-%m-%d %X]")
 
 
-def uniqueFilename(filename, namespace, resource, resource_name):
+def unique_filename(filename, namespace, resource, resource_name):
     """Return a unique filename derived from the arguments provided, e.g.
     "namespace_{namespace}.{configmap|secret}_{resource_name}.{filename}".
 
