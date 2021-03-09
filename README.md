@@ -69,24 +69,24 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `RESOURCE`
-  - description: Resouce type, which is monitored by the sidecar. Options: configmap (default), secret, both
+  - description: Resource type, which is monitored by the sidecar. Options: configmap (default), secret, both
   - required: false
   - default: configmap
   - type: string
 
 - `METHOD`
-  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps and exit. With `SLEEP` it will list all config-maps, then sleep for `SLEEP_TIME` seconds. Default is watch.
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps/secrets and exit. With `SLEEP` it will list all config-maps/secrets, then sleep for `SLEEP_TIME` seconds. Default is watch.
   - required: false
   - type: string
 
 - `SLEEP_TIME`
-  - description: How many seconds to wait before updating config-maps when using `SLEEP` method.
+  - description: How many seconds to wait before updating config-maps/secrets when using `SLEEP` method.
   - required: false
   - default: 60
   - type: integer
 
 - `REQ_URL`
-  - description: URL to which send a request after a configmap got reloaded
+  - description: URL to which send a request after a configmap/secret got reloaded
   - required: false
   - type: URI
 
