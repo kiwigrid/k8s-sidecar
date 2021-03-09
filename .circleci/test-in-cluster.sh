@@ -62,7 +62,7 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
   }
 
   install_configmap(){
-    kubectl apply -f "${CWD}"/test/configmap.yaml
+    kubectl apply -f "${CWD}"/test/resources.yaml
   }
 
   list_pods(){
@@ -74,9 +74,14 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
     kubectl logs sidecar
   }
 
-  verify_configmap_read(){
-    kubectl exec sidecar -- ls /tmp/hello.world
-    kubectl exec sidecar -- ls /tmp/hello.binary
+  verify_resources_read(){
+    kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
+    kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
+    kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
+
+    echo -n "Hello World!" | diff - /tmp/hello.world \
+      && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
+      && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png
   }
 
   # cleanup on exit (useful for running locally)
@@ -96,7 +101,7 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
       sleep 10
       list_pods
       log_sidecar
-      verify_configmap_read
+      verify_resources_read
   }
   main
 

@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 
+import errno
 import hashlib
 import os
-import errno
-
-import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
 from datetime import datetime
 
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
-def write_text_to_file(folder, filename, data, data_type="ascii"):
+CONTENT_TYPE_TEXT = "ascii"
+CONTENT_TYPE_BASE64_BINARY = "binary"
+
+
+def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
     """
     Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient
     permissions to create the directory, log an error and return.
@@ -36,7 +39,7 @@ def write_text_to_file(folder, filename, data, data_type="ascii"):
 
         with open(absolute_path, 'rb') as f:
             sha256_hash_cur = hashlib.sha256()
-            for byte_block in iter(lambda: f.read(4096),b""):
+            for byte_block in iter(lambda: f.read(4096), b""):
                 sha256_hash_cur.update(byte_block)
 
         if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
