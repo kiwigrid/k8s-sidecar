@@ -236,7 +236,7 @@ jobs:
             --all \
             --src-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
             --dest-creds "$QUAY_BOT_USERNAME:$QUAY_BOT_PASSWORD" \
-            docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG
+            docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:$TAG \
             docker://quay.io/${CIRCLE_PROJECT_USERNAME}/k8s-sidecar:latest
 
 workflows:
