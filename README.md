@@ -140,6 +140,11 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - default: 10
   - type: float
 
+- `SCRIPT`
+  - description: Absolute path to shell script to execute after a configmap got reloaded. In runs before REQ
+  - required: false
+  - type: string
+
 - `ERROR_THROTTLE_SLEEP`
   - description: How many seconds to wait before watching resources again when an error occurs
   - required: false

@@ -19,6 +19,7 @@ RESOURCE = "RESOURCE"
 REQ_PAYLOAD = "REQ_PAYLOAD"
 REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
+SCRIPT = "SCRIPT"
 
 
 def main():
@@ -51,6 +52,7 @@ def main():
     method = os.getenv(REQ_METHOD)
     url = os.getenv(REQ_URL)
     payload = os.getenv(REQ_PAYLOAD)
+    script = os.getenv(SCRIPT)
 
     # this is where kube_config is going to look for a config file
     kube_config = os.path.expanduser(KUBE_CONFIG_DEFAULT_LOCATION)
@@ -79,10 +81,10 @@ def main():
     if os.getenv(METHOD) == "LIST":
         for res in resources:
             list_resources(label, label_value, target_folder, url, method, payload,
-                           current_namespace, folder_annotation, res, unique_filenames)
+                           current_namespace, folder_annotation, res, unique_filenames, script)
     else:
         watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method,
-                          payload, current_namespace, folder_annotation, resources, unique_filenames)
+                          payload, current_namespace, folder_annotation, resources, unique_filenames, script)
 
 
 if __name__ == "__main__":

@@ -37,7 +37,7 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
       echo "Creating cluster with kind config from ${KIND_CONFIG}"
 
       "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
-      
+
       kubectl cluster-info
       echo
 
@@ -78,10 +78,12 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
     kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
     kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
     kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
+    kubectl cp sidecar:/tmp/script_result /tmp/script_result
 
     echo -n "Hello World!" | diff - /tmp/hello.world \
       && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
-      && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png
+      && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
+      && ls /tmp/script_result
   }
 
   # cleanup on exit (useful for running locally)

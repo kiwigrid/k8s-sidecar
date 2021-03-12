@@ -38,6 +38,9 @@ spec:
     volumeMounts:
     - name: shared-volume
       mountPath: /tmp/
+    - name: script-volume
+      mountPath: /opt/script.sh
+      subPath: script.sh
     env:
     - name: LABEL
       value: "findme"
@@ -45,6 +48,12 @@ spec:
       value: /tmp/
     - name: RESOURCE
       value: both
+    - name: SCRIPT
+      value: "/opt/script.sh"
   volumes:
   - name: shared-volume
     emptyDir: {}
+  - name: script-volume
+    configMap:
+      name: script-configmap
+      defaultMode: 0777
