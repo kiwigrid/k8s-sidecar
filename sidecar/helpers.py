@@ -4,6 +4,7 @@ import errno
 import hashlib
 import os
 from datetime import datetime
+import subprocess
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -130,3 +131,14 @@ def unique_filename(filename, namespace, resource, resource_name):
     resource_name -- the name of the "configmap" or "secret" resource instance.
     """
     return "namespace_" + namespace + "." + resource + "_" + resource_name + "." + filename
+
+def execute(script_path):
+    try:
+        result = subprocess.run(["sh", script_path],
+                                capture_output=True,
+                                check=True)
+        print(f"{timestamp()} Script stdout: {result.stdout}")
+        print(f"{timestamp()} Script stderr: {result.stderr}")
+        print(f"{timestamp()} Script exit code: {result.returncode}")
+    except subprocess.CalledProcessError as e:
+        print(f"{timestamp()} Script failed with error: {e}")

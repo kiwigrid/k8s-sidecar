@@ -17,15 +17,19 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 #if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
   echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
 
+  log(){
+    echo "[$(date --rfc-3339=seconds -u)] $1"
+  }
+  
   install_kubectl(){
-    echo 'Installing kubectl...'
+    log 'Installing kubectl...'
     curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
     chmod +x ./kubectl
     sudo mv ./kubectl /usr/local/bin/kubectl
   }
 
   install_kind_release() {
-    echo 'Installing kind...'
+    log 'Installing kind...'
 
     KIND_BINARY_URL="https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
     wget -O "${KIND}" "${KIND_BINARY_URL}"
@@ -34,14 +38,14 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 
   create_kind_cluster() {
 
-      echo "Creating cluster with kind config from ${KIND_CONFIG}"
+      log "Creating cluster with kind config from ${KIND_CONFIG}"
 
       "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
-      
+
       kubectl cluster-info
       echo
 
-      echo -n 'Waiting for cluster to be ready...'
+      log 'Waiting for cluster to be ready...'
       until ! grep --quiet 'NotReady' <(kubectl get nodes --no-headers); do
           printf '.'
           sleep 1
@@ -53,35 +57,43 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
       kubectl get nodes
       echo
 
-      echo 'Cluster ready!'
+      log 'Cluster ready!'
       echo
   }
 
   install_sidecar(){
+    log "Installing sidecar..."
     kubectl apply -f "${CWD}"/test/sidecar.yaml
   }
 
   install_configmap(){
+    log "Installing resources..."
     kubectl apply -f "${CWD}"/test/resources.yaml
   }
 
   list_pods(){
+    log "Retrieving pods..."
     kubectl get pods -oyaml
   }
 
 
   log_sidecar(){
+    log "Retrieving sidecar logs..."
     kubectl logs sidecar
   }
 
   verify_resources_read(){
+    log "Downloading resource files from sidecar..."
     kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
     kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
     kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
-
+    kubectl cp sidecar:/tmp/script_result /tmp/script_result
+    
+    log "Verifying file content..."
     echo -n "Hello World!" | diff - /tmp/hello.world \
       && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
-      && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png
+      && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
+      && ls /tmp/script_result
   }
 
   # cleanup on exit (useful for running locally)
@@ -96,15 +108,11 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
       install_kind_release
       create_kind_cluster
       install_sidecar
-      sleep 5
+      sleep 15
       install_configmap
-      sleep 10
+      sleep 15
       list_pods
       log_sidecar
       verify_resources_read
   }
   main
-
-#else
-#  echo "skipped sidecar test as its not a pull request..."
-#fi

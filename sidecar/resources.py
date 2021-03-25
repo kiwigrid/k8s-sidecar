@@ -14,7 +14,7 @@ from urllib3.exceptions import MaxRetryError
 from urllib3.exceptions import ProtocolError
 
 from helpers import request, write_data_to_file, remove_file, timestamp, unique_filename, CONTENT_TYPE_TEXT, \
-    CONTENT_TYPE_BASE64_BINARY
+    CONTENT_TYPE_BASE64_BINARY, execute
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -62,7 +62,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 
 
 def list_resources(label, label_value, target_folder, url, method, payload,
-                   current_namespace, folder_annotation, resource, unique_filenames):
+                   current_namespace, folder_annotation, resource, unique_filenames, script):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
@@ -165,7 +165,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource, unique
 
 
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
-                             current_namespace, folder_annotation, resource, unique_filenames):
+                             current_namespace, folder_annotation, resource, unique_filenames, script):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
@@ -196,6 +196,9 @@ def _watch_resource_iterator(label, label_value, target_folder, url, method, pay
         else:
             files_changed |= _process_secret(dest_folder, item, resource, unique_filenames, item_removed)
 
+        if script and files_changed:
+            execute(script)
+
         if url and files_changed:
             request(url, method, payload)
 
@@ -225,9 +228,9 @@ def _watch_resource_loop(mode, *args):
 
 
 def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
-                      current_namespace, folder_annotation, resources, unique_filenames):
+                      current_namespace, folder_annotation, resources, unique_filenames, script):
     first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
-                                                    mode, payload, resources, target_folder, unique_filenames, url)
+                                                    mode, payload, resources, target_folder, unique_filenames, script, url)
 
     while True:
         if not first_proc.is_alive():
@@ -250,10 +253,10 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
 
 
 def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method, mode, payload, resources,
-                             target_folder, unique_filenames, url):
+                             target_folder, unique_filenames, script, url):
     first_proc = Process(target=_watch_resource_loop,
                          args=(mode, label, label_value, target_folder, url, method, payload,
-                               current_namespace, folder_annotation, resources[0], unique_filenames)
+                               current_namespace, folder_annotation, resources[0], unique_filenames, script)
                          )
     first_proc.daemon = True
     first_proc.start()
@@ -261,7 +264,7 @@ def _start_watcher_processes(current_namespace, folder_annotation, label, label_
     if len(resources) == 2:
         sec_proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, url, method, payload,
-                                 current_namespace, folder_annotation, resources[1], unique_filenames)
+                                 current_namespace, folder_annotation, resources[1], unique_filenames, script)
                            )
         sec_proc.daemon = True
         sec_proc.start()
