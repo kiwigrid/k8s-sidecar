@@ -54,21 +54,7 @@ def main():
     payload = os.getenv(REQ_PAYLOAD)
     script = os.getenv(SCRIPT)
 
-    # this is where kube_config is going to look for a config file
-    kube_config = os.path.expanduser(KUBE_CONFIG_DEFAULT_LOCATION)
-    if os.path.exists(kube_config):
-        config.load_kube_config(kube_config)
-    else:
-        config.load_incluster_config()
-
-    print(f"{timestamp()} Config for cluster api loaded...")
-    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-
-    if os.getenv(SKIP_TLS_VERIFY) == "true":
-        configuration = client.Configuration()
-        configuration.verify_ssl = False
-        configuration.debug = False
-        client.Configuration.set_default(configuration)
+    _initialize_kubeclient_configuration()
 
     unique_filenames = os.getenv(UNIQUE_FILENAMES)
     if unique_filenames is not None and unique_filenames.lower() == "true":
@@ -78,6 +64,7 @@ def main():
         print(f"{timestamp()} Unique filenames will not be enforced.")
         unique_filenames = False
 
+    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
     if os.getenv(METHOD) == "LIST":
         for res in resources:
             list_resources(label, label_value, target_folder, url, method, payload,
@@ -85,6 +72,29 @@ def main():
     else:
         watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method,
                           payload, current_namespace, folder_annotation, resources, unique_filenames, script)
+
+def _initialize_kubeclient_configuration():
+    """
+    Updates the default configuration of the kubernetes client. This is
+    picked up later on automatically then.
+    """
+
+    # this is where kube_config is going to look for a config file
+    kube_config = os.path.expanduser(KUBE_CONFIG_DEFAULT_LOCATION)
+    if os.path.exists(kube_config):
+        print(f"{timestamp()} Loading config from '{kube_config}'...")
+        config.load_kube_config(kube_config)
+    else:
+        print(f"{timestamp()} Loading incluster config ...")
+        config.load_incluster_config()
+
+    if os.getenv(SKIP_TLS_VERIFY) == "true":
+        configuration = client.Configuration.get_default_copy()
+        configuration.verify_ssl = False
+        configuration.debug = False
+        client.Configuration.set_default(configuration)
+    configuration = client.Configuration.get_default_copy()
+    print(f"{timestamp()} Config for cluster api at '{configuration.host}' loaded...")
 
 
 if __name__ == "__main__":
