@@ -172,10 +172,11 @@ def _watch_resource_iterator(label, label_value, target_folder, url, method, pay
     label_selector = f"{label}={label_value}" if label_value else label
 
     if namespace == "ALL":
-        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]), label_selector=label_selector)
+        stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]), label_selector=label_selector,
+                                      _request_timeout=60)
     else:
         stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace,
-                                      label_selector=label_selector)
+                                      label_selector=label_selector, _request_timeout=60)
 
     # Process events
     for event in stream:
