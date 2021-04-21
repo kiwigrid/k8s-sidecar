@@ -29,3 +29,27 @@ data:
   script.sh: |-
      #!/bin/sh
      touch /tmp/script_result
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: absolute-configmap
+  labels:
+    findme: "yup"
+  annotations:
+    k8s-sidecar-target-directory: /tmp/absolute/
+data:
+  absolute.txt: |-
+     This absolutely exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: relative-configmap
+  labels:
+    findme: "yup"
+  annotations:
+    k8s-sidecar-target-directory: relative
+data:
+  relative.txt: |-
+     This relatively exists

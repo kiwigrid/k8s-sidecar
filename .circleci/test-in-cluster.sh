@@ -88,11 +88,15 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
     kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
     kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
     kubectl cp sidecar:/tmp/script_result /tmp/script_result
+    kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
+    kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
     
     log "Verifying file content..."
     echo -n "Hello World!" | diff - /tmp/hello.world \
       && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
       && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
+      && echo -n "This absolutely exists" | diff - /tmp/absolute.txt \
+      && echo -n "This relatively exists" | diff - /tmp/relative.txt \
       && ls /tmp/script_result
   }
 
