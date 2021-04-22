@@ -59,7 +59,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `FOLDER_ANNOTATION`
-  - description: The annotation the sidecar will look for in configmaps to override the destination folder for files, defaults to "k8s-sidecar-target-directory"
+  - description: The annotation the sidecar will look for in configmaps to override the destination folder for files, defaults to "k8s-sidecar-target-directory". The annotation _value_ can be either an absolute or a relative path. Relative paths will be relative to `FOLDER`.
   - required: false
   - type: string
 

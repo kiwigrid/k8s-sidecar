@@ -54,7 +54,11 @@ def _get_file_data_and_name(full_filename, content, content_type=CONTENT_TYPE_TE
 
 def _get_destination_folder(metadata, default_folder, folder_annotation):
     if metadata.annotations and folder_annotation in metadata.annotations.keys():
-        dest_folder = metadata.annotations[folder_annotation]
+        folder_annotation = metadata.annotations[folder_annotation]
+        if os.path.isabs(folder_annotation):
+            dest_folder = folder_annotation
+        else:
+            dest_folder = os.path.join(default_folder, folder_annotation)
         print(f"{timestamp()} Found a folder override annotation, "
               f"placing the {metadata.name} in: {dest_folder}")
         return dest_folder
