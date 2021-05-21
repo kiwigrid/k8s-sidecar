@@ -37,7 +37,7 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def _get_file_data_and_name(full_filename, content, content_type=CONTENT_TYPE_TEXT):
+def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CONTENT_TYPE_TEXT):
     if content_type == CONTENT_TYPE_BASE64_BINARY:
         file_data = base64.b64decode(content)
     else:
@@ -45,7 +45,7 @@ def _get_file_data_and_name(full_filename, content, content_type=CONTENT_TYPE_TE
 
     if full_filename.endswith(".url"):
         filename = full_filename[:-4]
-        file_data = request(file_data, "GET").text
+        file_data = request(file_data, "GET", enable_5xx).text
     else:
         filename = full_filename
 
@@ -66,7 +66,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 
 
 def list_resources(label, label_value, target_folder, url, method, payload,
-                   current_namespace, folder_annotation, resource, unique_filenames, script):
+                   current_namespace, folder_annotation, resource, unique_filenames, enable_5xx, script):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
@@ -94,7 +94,7 @@ def list_resources(label, label_value, target_folder, url, method, payload,
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames)
 
     if url and files_changed:
-        request(url, method, payload)
+        request(url, method, enable_5xx, payload)
 
 
 def _process_secret(dest_folder, secret, resource, unique_filenames, is_removed=False):
@@ -169,7 +169,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource, unique
 
 
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
-                             current_namespace, folder_annotation, resource, unique_filenames, script):
+                             current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
@@ -204,7 +204,7 @@ def _watch_resource_iterator(label, label_value, target_folder, url, method, pay
             execute(script)
 
         if url and files_changed:
-            request(url, method, payload)
+            request(url, method, enable_5xx, payload)
 
 
 def _watch_resource_loop(mode, *args):
@@ -232,9 +232,10 @@ def _watch_resource_loop(mode, *args):
 
 
 def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
-                      current_namespace, folder_annotation, resources, unique_filenames, script):
-    first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
-                                                    mode, payload, resources, target_folder, unique_filenames, script, url)
+                      current_namespace, folder_annotation, resources, unique_filenames, enable_5xx, script):
+    first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
+                                                    label_value, method, mode, payload, resources,
+                                                    target_folder, unique_filenames, enable_5xx, script, url)
 
     while True:
         if not first_proc.is_alive():
@@ -256,19 +257,19 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
         sleep(5)
 
 
-def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method, mode, payload, resources,
-                             target_folder, unique_filenames, script, url):
+def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
+                             mode, payload, resources, target_folder, unique_filenames, enable_5xx, script, url):
     first_proc = Process(target=_watch_resource_loop,
                          args=(mode, label, label_value, target_folder, url, method, payload,
-                               current_namespace, folder_annotation, resources[0], unique_filenames, script)
+                               current_namespace, folder_annotation, resources[0], unique_filenames, enable_5xx, script)
                          )
     first_proc.daemon = True
     first_proc.start()
     sec_proc = None
     if len(resources) == 2:
         sec_proc = Process(target=_watch_resource_loop,
-                           args=(mode, label, label_value, target_folder, url, method, payload,
-                                 current_namespace, folder_annotation, resources[1], unique_filenames, script)
+                           args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
+                                 folder_annotation, resources[1], unique_filenames, enable_5xx, script)
                            )
         sec_proc.daemon = True
         sec_proc.start()
