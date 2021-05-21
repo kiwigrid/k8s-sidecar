@@ -171,3 +171,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: if this is given and points to a file or `~/.kube/config` is mounted k8s config will be loaded from this file, otherwise "incluster" k8s configuration is tried.
   - required: false
   - type: string
+
+- `ENABLE_5XX`
+  - description: Set to true to enable pulling of 5XX response content from config map 
+  - required: false
+  - type: boolean
