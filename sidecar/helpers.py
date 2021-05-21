@@ -71,7 +71,7 @@ def remove_file(folder, filename):
         return False
 
 
-def request(url, method, payload=None):
+def request(url, method, enable_5xx, payload=None):
     retry_total = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
     retry_connect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
         os.getenv("REQ_RETRY_CONNECT"))
@@ -88,11 +88,12 @@ def request(url, method, payload=None):
         auth = None
 
     r = requests.Session()
+
     retries = Retry(total=retry_total,
                     connect=retry_connect,
                     read=retry_read,
                     backoff_factor=retry_backoff_factor,
-                    status_forcelist=[500, 502, 503, 504])
+                    status_forcelist=list() if enable_5xx else [500, 502, 503, 504])
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
     if url is None:
