@@ -232,10 +232,10 @@ def _watch_resource_loop(mode, *args):
 
 
 def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
-                      current_namespace, folder_annotation, resources, unique_filenames, enable_5xx, script):
+                      current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
     first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
                                                     label_value, method, mode, payload, resources,
-                                                    target_folder, unique_filenames, enable_5xx, script, url)
+                                                    target_folder, unique_filenames, script, url, enable_5xx)
 
     while True:
         if not first_proc.is_alive():
@@ -258,10 +258,10 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
 
 
 def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
-                             mode, payload, resources, target_folder, unique_filenames, enable_5xx, script, url):
+                             mode, payload, resources, target_folder, unique_filenames, script, url, enable_5xx):
     first_proc = Process(target=_watch_resource_loop,
                          args=(mode, label, label_value, target_folder, url, method, payload,
-                               current_namespace, folder_annotation, resources[0], unique_filenames, enable_5xx, script)
+                               current_namespace, folder_annotation, resources[0], unique_filenames, script, enable_5xx)
                          )
     first_proc.daemon = True
     first_proc.start()
@@ -269,7 +269,7 @@ def _start_watcher_processes(current_namespace, folder_annotation, label, label_
     if len(resources) == 2:
         sec_proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
-                                 folder_annotation, resources[1], unique_filenames, enable_5xx, script)
+                                 folder_annotation, resources[1], unique_filenames, script, enable_5xx)
                            )
         sec_proc.daemon = True
         sec_proc.start()

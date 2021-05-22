@@ -71,7 +71,7 @@ def remove_file(folder, filename):
         return False
 
 
-def request(url, method, enable_5xx, payload=None):
+def request(url, method, enable_5xx=False, payload=None):
     retry_total = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
     retry_connect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
         os.getenv("REQ_RETRY_CONNECT"))

@@ -77,10 +77,10 @@ def main():
     if os.getenv(METHOD) == "LIST":
         for res in resources:
             list_resources(label, label_value, target_folder, url, method, payload,
-                           current_namespace, folder_annotation, res, unique_filenames, enable_5xx, script)
+                           current_namespace, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
-        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method,
-                          payload, current_namespace, folder_annotation, resources, unique_filenames, enable_5xx, script)
+        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method, payload,
+                          current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
 
 
 def _initialize_kubeclient_configuration():
