@@ -39,7 +39,7 @@ Example for a simple deployment can be found in [`example.yaml`](./example.yaml)
 One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
   `k8s-sidecar-target-directory: "/path/to/target/directory"`
 
-[Note](#note): If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
 
 ## Configuration Environment Variables
 
@@ -173,6 +173,6 @@ One can override the default directory that files are copied into using a config
   - type: string
 
 - `ENABLE_5XX`
-  - description: Set to true to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the <a name="note">`*.url`</a> feature here.)
+  - description: Set to true to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
   - required: false
   - type: boolean
