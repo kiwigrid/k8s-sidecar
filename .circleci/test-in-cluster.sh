@@ -16,10 +16,14 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 
 #if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
-  echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
+#  echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
 
   log(){
     echo "[$(date --rfc-3339=seconds -u)] $1"
+  }
+
+  build_dummy_server(){
+    docker build -t server -f "${CWD}/server/Dockerfile"  .
   }
   
   install_kubectl(){
@@ -125,18 +129,19 @@ SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
     "${KIND}" delete cluster || true
     rm -rf "${BIN_DIR}"
   }
-  trap cleanup EXIT
+#  trap cleanup EXIT
 
   main() {
-      install_kubectl
-      install_kind_release
-      create_kind_cluster
-      install_sidecar
-      sleep 15
-      install_configmap
-      sleep 15
-      list_pods
-      log_sidecar
-      verify_resources_read
+#      install_kubectl
+#      install_kind_release
+#      create_kind_cluster
+#      install_sidecar
+#      sleep 15
+#      install_configmap
+#      sleep 15
+#      list_pods
+#      log_sidecar
+#      verify_resources_read
+      build_dummy_server
   }
   main
