@@ -61,4 +61,4 @@ metadata:
   labels:
     findme: "yup"
 data:
-  500.txt.url: "**TBD**"
+  500.txt.url: "http://server/500"
