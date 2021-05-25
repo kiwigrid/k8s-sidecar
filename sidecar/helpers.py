@@ -79,6 +79,7 @@ def request(url, method, enable_5xx=False, payload=None):
     retry_backoff_factor = 0.2 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
         os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
     timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
+    enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
 
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
@@ -93,7 +94,7 @@ def request(url, method, enable_5xx=False, payload=None):
                     connect=retry_connect,
                     read=retry_read,
                     backoff_factor=retry_backoff_factor,
-                    status_forcelist=list() if enable_5xx else [500, 502, 503, 504])
+                    status_forcelist=enforce_status_codes)
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
     if url is None:
