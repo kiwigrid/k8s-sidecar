@@ -23,7 +23,7 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
   }
 
   build_dummy_server(){
-    docker build -t server:1.0.0 -f "${CWD}/server/Dockerfile"  .
+    docker build -t dummy-server:1.0.0 -f "${CWD}/server/Dockerfile"  .
   }
   
   install_kubectl(){

@@ -92,3 +92,16 @@ spec:
     configMap:
       name: script-configmap
       defaultMode: 0777
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dummy-server
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: dummy-server
+    image: dummy-server:1.0.0
+    ports:
+      - containerPort: 80
