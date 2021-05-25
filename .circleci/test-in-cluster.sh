@@ -15,15 +15,15 @@ CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 KIND_CONFIG="${CWD}/kind-config.yaml"
 SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 
-#if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
-#  echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
+if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
+  echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
 
   log(){
     echo "[$(date --rfc-3339=seconds -u)] $1"
   }
 
   build_dummy_server(){
-    docker build -t server -f "${CWD}/server/Dockerfile"  .
+    docker build -t server:1.0.0 -f "${CWD}/server/Dockerfile"  .
   }
   
   install_kubectl(){
@@ -64,6 +64,8 @@ SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 
       log 'Cluster ready!'
       echo
+
+      kind load docker-image  server:1.0.0 --name "${CLUSTER_NAME}"
   }
 
   install_sidecar(){
@@ -132,16 +134,16 @@ SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 #  trap cleanup EXIT
 
   main() {
-#      install_kubectl
-#      install_kind_release
-#      create_kind_cluster
-#      install_sidecar
-#      sleep 15
-#      install_configmap
-#      sleep 15
-#      list_pods
-#      log_sidecar
-#      verify_resources_read
+      install_kubectl
+      install_kind_release
       build_dummy_server
+      create_kind_cluster
+      install_sidecar
+      sleep 15
+      install_configmap
+      sleep 15
+      list_pods
+      log_sidecar
+      verify_resources_read
   }
   main
