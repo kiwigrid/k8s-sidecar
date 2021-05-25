@@ -32,14 +32,14 @@ Both are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`
 - Update/Delete on change of configmap
 - Enforce unique filenames
 
-# Usage
+# Usage 
 
 Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
 One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
   `k8s-sidecar-target-directory: "/path/to/target/directory"`
 
-If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+[Note](#note): If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
 
 ## Configuration Environment Variables
 
@@ -173,6 +173,6 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `ENABLE_5XX`
-  - description: Set to true to enable pulling of 5XX response content from config map 
+  - description: Set to true to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the <a name="note">`*.url`</a> feature here.)
   - required: false
   - type: boolean
