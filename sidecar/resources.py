@@ -66,7 +66,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 
 
 def list_resources(label, label_value, target_folder, url, method, payload,
-                   current_namespace, folder_annotation, resource, unique_filenames, enable_5xx, script):
+                   current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
