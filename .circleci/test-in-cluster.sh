@@ -134,7 +134,7 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
     "${KIND}" delete cluster || true
     rm -rf "${BIN_DIR}"
   }
-#  trap cleanup EXIT
+  trap cleanup EXIT
 
   main() {
       install_kubectl
