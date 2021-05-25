@@ -53,3 +53,12 @@ metadata:
 data:
   relative.txt: |-
      This relatively exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-configmap-500
+  labels:
+    findme: "yup"
+data:
+  500.txt.url: "**TBD**"

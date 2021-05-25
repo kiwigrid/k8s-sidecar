@@ -13,6 +13,7 @@ BIN_DIR="$(mktemp -d)"
 KIND="${BIN_DIR}/kind"
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 KIND_CONFIG="${CWD}/kind-config.yaml"
+SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 
 #if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
   echo -e "\\nTesting in Kubernetes ${K8S_VERSION}\\n"
@@ -63,7 +64,7 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
 
   install_sidecar(){
     log "Installing sidecar..."
-    kubectl apply -f "${CWD}"/test/sidecar.yaml
+    kubectl apply -f "${SIDECAR_MANIFEST}"
   }
 
   install_configmap(){
@@ -89,14 +90,33 @@ KIND_CONFIG="${CWD}/kind-config.yaml"
     kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
     kubectl cp sidecar:/tmp/script_result /tmp/script_result
     kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
-    kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
+    kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
     
-    log "Verifying file content..."
+    log "Verifying file content from sidecar..."
     echo -n "Hello World!" | diff - /tmp/hello.world \
       && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
       && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
       && echo -n "This absolutely exists" | diff - /tmp/absolute.txt \
       && echo -n "This relatively exists" | diff - /tmp/relative.txt \
+      && [ ! -f /tmp/500.txt ] && echo "No 5xx file created" \
+      && ls /tmp/script_result
+
+
+    log "Downloading resource files from sidecar-5xx..."
+    kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp-5xx/hello.world
+    kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp-5xx/cm-kubelogo.png
+    kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp-5xx/secret-kubelogo.png
+    kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp-5xx/script_result
+    kubectl cp sidecar-5xx:/tmp-5xx/absolute/absolute.txt /tmp-5xx/absolute.txt
+    kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp-5xx/500.txt
+
+    log "Verifying file content from sidecar 5xx..."
+    echo -n "Hello World!" | diff - /tmp-5xx/hello.world \
+      && diff ${CWD}/kubelogo.png /tmp-5xx/cm-kubelogo.png \
+      && diff ${CWD}/kubelogo.png /tmp-5xx/secret-kubelogo.png \
+      && echo -n "This absolutely exists" | diff - /tmp-5xx/absolute.txt \
+      && echo -n "This relatively exists" | diff - /tmp-5xx/relative.txt \
+      && echo -n "500" | diff - /tmp-5xx/500.txt \
       && ls /tmp/script_result
   }
 
