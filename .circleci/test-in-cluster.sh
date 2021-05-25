@@ -90,6 +90,7 @@ SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
     kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
     kubectl cp sidecar:/tmp/script_result /tmp/script_result
     kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
+    kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
     kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
     
     log "Verifying file content from sidecar..."
@@ -108,6 +109,7 @@ SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
     kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp-5xx/secret-kubelogo.png
     kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp-5xx/script_result
     kubectl cp sidecar-5xx:/tmp-5xx/absolute/absolute.txt /tmp-5xx/absolute.txt
+    kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp-5xx/relative.txt
     kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp-5xx/500.txt
 
     log "Verifying file content from sidecar 5xx..."
