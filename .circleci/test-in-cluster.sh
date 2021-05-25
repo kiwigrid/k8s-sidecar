@@ -116,7 +116,6 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
     kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp-5xx/script_result
     kubectl cp sidecar-5xx:/tmp-5xx/absolute/absolute.txt /tmp-5xx/absolute.txt
     kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp-5xx/relative.txt
-
     kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp-5xx/500.txt
 
     log "Verifying file content from sidecar 5xx..."
@@ -126,7 +125,7 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
       && echo -n "This absolutely exists" | diff - /tmp-5xx/absolute.txt \
       && echo -n "This relatively exists" | diff - /tmp-5xx/relative.txt \
       && echo -n "500" | diff - /tmp-5xx/500.txt \
-      && ls /tmp/script_result
+      && ls /tmp-5xx/script_result
   }
 
   # cleanup on exit (useful for running locally)
