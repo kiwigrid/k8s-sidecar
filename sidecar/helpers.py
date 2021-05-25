@@ -3,8 +3,8 @@
 import errno
 import hashlib
 import os
-from datetime import datetime
 import subprocess
+from datetime import datetime
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -133,6 +133,7 @@ def unique_filename(filename, namespace, resource, resource_name):
     resource_name -- the name of the "configmap" or "secret" resource instance.
     """
     return "namespace_" + namespace + "." + resource + "_" + resource_name + "." + filename
+
 
 def execute(script_path):
     try:
