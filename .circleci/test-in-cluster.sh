@@ -65,7 +65,7 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
       log 'Cluster ready!'
       echo
 
-      kind load docker-image  server:1.0.0 --name "${CLUSTER_NAME}"
+      kind load docker-image  dummy-server:1.0.0 --name "${CLUSTER_NAME}"
   }
 
   install_sidecar(){
@@ -149,3 +149,4 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
       verify_resources_read
   }
   main
+
