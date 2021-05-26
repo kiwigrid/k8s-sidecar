@@ -149,3 +149,4 @@ if [ -n "${CIRCLE_PULL_REQUEST}" ]; then
       verify_resources_read
   }
   main
+
