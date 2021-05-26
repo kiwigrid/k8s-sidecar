@@ -32,7 +32,7 @@ Both are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`
 - Update/Delete on change of configmap
 - Enforce unique filenames
 
-# Usage
+# Usage 
 
 Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)`
 
@@ -171,3 +171,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: if this is given and points to a file or `~/.kube/config` is mounted k8s config will be loaded from this file, otherwise "incluster" k8s configuration is tried.
   - required: false
   - type: string
+
+- `ENABLE_5XX`
+  - description: Set to true to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
+  - required: false
+  - type: boolean

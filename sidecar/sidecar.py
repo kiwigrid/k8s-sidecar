@@ -20,6 +20,7 @@ REQ_PAYLOAD = "REQ_PAYLOAD"
 REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
+ENABLE_5XX = "ENABLE_5XX"
 
 
 def main():
@@ -64,14 +65,23 @@ def main():
         print(f"{timestamp()} Unique filenames will not be enforced.")
         unique_filenames = False
 
+    enable_5xx = os.getenv(ENABLE_5XX)
+    if enable_5xx is not None and enable_5xx.lower() == "true":
+        print(f"{timestamp()} 5xx response content will be enabled.")
+        enable_5xx = True
+    else:
+        print(f"{timestamp()} 5xx response content will not be enabled.")
+        enable_5xx = False
+
     current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
     if os.getenv(METHOD) == "LIST":
         for res in resources:
             list_resources(label, label_value, target_folder, url, method, payload,
-                           current_namespace, folder_annotation, res, unique_filenames, script)
+                           current_namespace, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
-        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method,
-                          payload, current_namespace, folder_annotation, resources, unique_filenames, script)
+        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method, payload,
+                          current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
+
 
 def _initialize_kubeclient_configuration():
     """

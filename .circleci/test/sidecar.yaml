@@ -57,3 +57,51 @@ spec:
     configMap:
       name: script-configmap
       defaultMode: 0777
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-5xx
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: CIRCLE_PROJECT_USERNAME/k8s-sidecar-build:SIDECAR_VERSION
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp-5xx/
+    - name: script-volume
+      mountPath: /opt-5xx/script.sh
+      subPath: script.sh
+    env:
+    - name: LABEL
+      value: "findme"
+    - name: FOLDER
+      value: /tmp-5xx/
+    - name: RESOURCE
+      value: both
+    - name: SCRIPT
+      value: "/opt-5xx/script.sh"
+    - name: ENABLE_5XX
+        value: "true"
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+  - name: script-volume
+    configMap:
+      name: script-configmap
+      defaultMode: 0777
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dummy-server
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: dummy-server
+    image: dummy-server:1.0.0
+    ports:
+      - containerPort: 80
