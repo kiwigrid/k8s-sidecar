@@ -21,6 +21,7 @@ REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
+DYNAMIC_URL = "DYNAMIC_URL"
 
 
 def main():
@@ -65,6 +66,14 @@ def main():
         print(f"{timestamp()} Unique filenames will not be enforced.")
         unique_filenames = False
 
+    dynamic_url = os.getenv(DYNAMIC_URL)
+    if dynamic_url is not None and dynamic_url.lower() == "true":
+        print(f"{timestamp()} dynamic_url content reload will be enabled.")
+        dynamic_url = True
+    else:
+        print(f"{timestamp()} dynamic_url content reload will not be enabled.")
+        dynamic_url = False
+
     enable_5xx = os.getenv(ENABLE_5XX)
     if enable_5xx is not None and enable_5xx.lower() == "true":
         print(f"{timestamp()} 5xx response content will be enabled.")
@@ -79,7 +88,7 @@ def main():
             list_resources(label, label_value, target_folder, url, method, payload,
                            current_namespace, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
-        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method, payload,
+        watch_for_changes(os.getenv(METHOD), dynamic_url, label, label_value, target_folder, url, method, payload,
                           current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
 
 
