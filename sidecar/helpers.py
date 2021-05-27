@@ -46,6 +46,8 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
         if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
             print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
             return False
+        else:
+            print(f"{timestamp()} Contents of {filename} changed. overwriting existing file {absolute_path}")
 
     if data_type == "binary":
         write_type = "wb"
