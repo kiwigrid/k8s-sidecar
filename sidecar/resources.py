@@ -175,6 +175,45 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         return remove_file(dest_folder, filename)
 
 
+def _watch_url_iterator(label, label_value, target_folder, url, method, payload, current_namespace,
+                        folder_annotation, resources, unique_filenames, script, enable_5xx):
+    v1_url = client.CoreV1Api()
+    namespace = os.getenv("NAMESPACE", current_namespace)
+    # Filter resources based on label and value or just label
+    label_selector = f"{label}={label_value}" if label_value else label
+
+    while True:
+        configmap_list = list()
+        secret_list = list()
+        if namespace == "ALL":
+            for resource in resources:
+                if resource == RESOURCE_CONFIGMAP:
+                    configmap_list.append(
+                        getattr(v1_url, _list_for_all_namespaces[resource])(label_selector=label_selector))
+                else:
+                    secret_list.append(
+                        getattr(v1_url, _list_for_all_namespaces[resource])(label_selector=label_selector))
+
+        else:
+            for resource in resources:
+                if resource == RESOURCE_CONFIGMAP:
+                    configmap_list.append(
+                        getattr(v1_url, _list_namespaced[resource])(label_selector=label_selector, namespace=namespace))
+                else:
+                    secret_list.append(
+                        getattr(v1_url, _list_namespaced[resource])(label_selector=label_selector, namespace=namespace))
+
+        for conf in configmap_list:
+            for config_maps in conf.items:
+                dest_folder = _get_destination_folder(config_maps.metadata, target_folder, folder_annotation)
+                for data_key, value in config_maps.data.items():
+                    _update_file(data_key, value, dest_folder, config_maps.metadata,
+                                 RESOURCE_CONFIGMAP, unique_filenames, content_type=CONTENT_TYPE_TEXT,
+                                 enable_5xx=enable_5xx, remove=False)
+
+        sleep(7)
+
+
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
                              current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
@@ -223,6 +262,8 @@ def _watch_resource_loop(mode, *args):
             if mode == "SLEEP":
                 list_resources(*args)
                 sleep(int(os.getenv("SLEEP_TIME", 60)))
+            elif mode == "URL":
+                _watch_url_iterator(*args)
             else:
                 _watch_resource_iterator(*args)
         except ApiException as e:
@@ -239,11 +280,12 @@ def _watch_resource_loop(mode, *args):
             traceback.print_exc()
 
 
-def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
+def watch_for_changes(mode, dynamic_url, label, label_value, target_folder, url, method, payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
-    first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
-                                                    label_value, method, mode, payload, resources,
-                                                    target_folder, unique_filenames, script, url, enable_5xx)
+    first_proc, sec_proc, third_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
+                                                                label_value, method, mode, payload, resources,
+                                                                target_folder, unique_filenames, script, url,
+                                                                enable_5xx, dynamic_url)
 
     while True:
         if not first_proc.is_alive():
@@ -262,18 +304,26 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
                 print(f"{timestamp()} Process for {resources[0]}  also died...")
             raise Exception("Loop died")
 
+        if dynamic_url and not third_proc.is_alive():
+            print(f"{timestamp()} Process for url watcher died. Stopping and exiting")
+            raise Exception("Loop died")
+
         sleep(5)
 
 
-def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
-                             mode, payload, resources, target_folder, unique_filenames, script, url, enable_5xx):
+def _start_watcher_processes(current_namespace, folder_annotation, label, label_value,
+                             method, mode, payload, resources, target_folder,
+                             unique_filenames, script, url, enable_5xx, dynamic_url):
     first_proc = Process(target=_watch_resource_loop,
-                         args=(mode, label, label_value, target_folder, url, method, payload,
-                               current_namespace, folder_annotation, resources[0], unique_filenames, script, enable_5xx)
+                         args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
+                               folder_annotation, resources[0], unique_filenames, script, enable_5xx)
                          )
     first_proc.daemon = True
     first_proc.start()
+
     sec_proc = None
+    third_proc = None
+
     if len(resources) == 2:
         sec_proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
@@ -281,4 +331,14 @@ def _start_watcher_processes(current_namespace, folder_annotation, label, label_
                            )
         sec_proc.daemon = True
         sec_proc.start()
-    return first_proc, sec_proc
+
+    if dynamic_url:
+        third_proc = Process(target=_watch_resource_loop,
+                             args=("URL", label, label_value, target_folder, url, method, payload, current_namespace,
+                                   folder_annotation, resources, unique_filenames, script, enable_5xx)
+                             )
+
+        third_proc.daemon = True
+        third_proc.start()
+
+    return first_proc, sec_proc, third_proc
