@@ -176,3 +176,8 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - description: Set to true to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
   - required: false
   - type: boolean
+
+- `DYNAMIC_URL`
+  - description: Set to true to enable a dynamic update of *.url content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
+  - required: false
+  - type: boolean
