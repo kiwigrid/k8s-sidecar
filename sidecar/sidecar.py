@@ -66,9 +66,13 @@ def main():
         print(f"{timestamp()} Unique filenames will not be enforced.")
         unique_filenames = False
 
-    url_refresh_interval = os.getenv(URL_REFRESH_INTERVAL)
-    if url_refresh_interval is not None or url_refresh_interval != 0:
-        print(f"{timestamp()} dynamic_url content reload will be enabled. with refresh interval {url_refresh_interval}")
+    try:
+        url_refresh_interval = int(os.getenv(URL_REFRESH_INTERVAL))
+    except ValueError:
+        print(f"{timestamp()} cannot convert {URL_REFRESH_INTERVAL} to integer! Exit")
+        return -1
+    if (url_refresh_interval is not None) or (url_refresh_interval != 0):
+        print(f"{timestamp()} dynamic_url content reload will be enabled. Refresh interval {url_refresh_interval}")
     else:
         print(f"{timestamp()} dynamic_url content reload will not be enabled.")
         url_refresh_interval = None
