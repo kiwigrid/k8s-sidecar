@@ -177,7 +177,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - required: false
   - type: boolean
 
-- `DYNAMIC_URL`
-  - description: Set to true to enable a dynamic update of *.url content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
+- `URL_REFRESH_INTERVAL`
+  - description: Set with integer value of seconds, where 0 means `once`. set value `> 0` to enable a dynamic update with refresh interval `URL_REFRESH_INTERVAL` of *.url content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)
   - required: false
-  - type: boolean
+  - type: integer

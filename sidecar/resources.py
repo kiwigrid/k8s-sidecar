@@ -176,7 +176,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
 
 
 def _watch_url_iterator(label, label_value, target_folder, url, method, payload, current_namespace,
-                        folder_annotation, resources, unique_filenames, script, enable_5xx):
+                        folder_annotation, resources, unique_filenames, script, enable_5xx, url_refresh_interval):
     v1_url = client.CoreV1Api()
     namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
@@ -211,7 +211,7 @@ def _watch_url_iterator(label, label_value, target_folder, url, method, payload,
                                  RESOURCE_CONFIGMAP, unique_filenames, content_type=CONTENT_TYPE_TEXT,
                                  enable_5xx=enable_5xx, remove=False)
 
-        sleep(7)
+        sleep(url_refresh_interval)
 
 
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
@@ -280,12 +280,12 @@ def _watch_resource_loop(mode, *args):
             traceback.print_exc()
 
 
-def watch_for_changes(mode, dynamic_url, label, label_value, target_folder, url, method, payload,
+def watch_for_changes(mode, url_refresh_interval, label, label_value, target_folder, url, method, payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
     first_proc, sec_proc, third_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
                                                                 label_value, method, mode, payload, resources,
                                                                 target_folder, unique_filenames, script, url,
-                                                                enable_5xx, dynamic_url)
+                                                                enable_5xx, url_refresh_interval)
 
     while True:
         if not first_proc.is_alive():
@@ -304,7 +304,7 @@ def watch_for_changes(mode, dynamic_url, label, label_value, target_folder, url,
                 print(f"{timestamp()} Process for {resources[0]}  also died...")
             raise Exception("Loop died")
 
-        if dynamic_url and not third_proc.is_alive():
+        if url_refresh_interval and not third_proc.is_alive():
             print(f"{timestamp()} Process for url watcher died. Stopping and exiting")
             raise Exception("Loop died")
 
@@ -313,7 +313,7 @@ def watch_for_changes(mode, dynamic_url, label, label_value, target_folder, url,
 
 def _start_watcher_processes(current_namespace, folder_annotation, label, label_value,
                              method, mode, payload, resources, target_folder,
-                             unique_filenames, script, url, enable_5xx, dynamic_url):
+                             unique_filenames, script, url, enable_5xx, url_refresh_interval):
     first_proc = Process(target=_watch_resource_loop,
                          args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
                                folder_annotation, resources[0], unique_filenames, script, enable_5xx)
@@ -332,10 +332,11 @@ def _start_watcher_processes(current_namespace, folder_annotation, label, label_
         sec_proc.daemon = True
         sec_proc.start()
 
-    if dynamic_url:
+    if url_refresh_interval:
         third_proc = Process(target=_watch_resource_loop,
                              args=("URL", label, label_value, target_folder, url, method, payload, current_namespace,
-                                   folder_annotation, resources, unique_filenames, script, enable_5xx)
+                                   folder_annotation, resources, unique_filenames, script, enable_5xx,
+                                   url_refresh_interval)
                              )
 
         third_proc.daemon = True
