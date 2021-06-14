@@ -135,7 +135,7 @@ main() {
     build_dummy_server
     create_kind_cluster
     install_sidecar
-    sleep 15
+    sleep 30
     install_configmap
     sleep 15
     list_pods
