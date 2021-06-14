@@ -26,6 +26,17 @@ subjects:
   namespace: default
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: script-configmap
+  labels:
+    somelabel: "somesome"
+data:
+  script.sh: |-
+    #!/bin/sh
+    touch /tmp/script_result
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: sidecar
