@@ -96,7 +96,16 @@ verify_resources_read(){
   kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
   kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
 
-  log "Verifying file content from sidecar..."
+  log "Downloading resource files from sidecar-5xx..."
+  kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
+  kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
+  kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
+  kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp/5xx/script_result
+  kubectl cp sidecar-5xx:/tmp-5xx/absolute/absolute.txt /tmp/5xx/absolute.txt
+  kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
+  kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
+
+  log "Verifying file content from sidecar and sidecar-5xx ..."
   echo -n "Hello World!" | diff - /tmp/hello.world \
     && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
     && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
@@ -104,25 +113,13 @@ verify_resources_read(){
     && echo -n "This relatively exists" | diff - /tmp/relative.txt \
     && [ ! -f /tmp/500.txt ] && echo "No 5xx file created" \
     && ls /tmp/script_result
-
-
-  log "Downloading resource files from sidecar-5xx..."
-  kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp-5xx/hello.world
-  kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp-5xx/cm-kubelogo.png
-  kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp-5xx/secret-kubelogo.png
-  kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp-5xx/script_result
-  kubectl cp sidecar-5xx:/tmp-5xx/absolute/absolute.txt /tmp-5xx/absolute.txt
-  kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp-5xx/relative.txt
-  kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp-5xx/500.txt
-
-  log "Verifying file content from sidecar 5xx..."
-  echo -n "Hello World!" | diff - /tmp-5xx/hello.world \
-    && diff ${CWD}/kubelogo.png /tmp-5xx/cm-kubelogo.png \
-    && diff ${CWD}/kubelogo.png /tmp-5xx/secret-kubelogo.png \
-    && echo -n "This absolutely exists" | diff - /tmp-5xx/absolute.txt \
-    && echo -n "This relatively exists" | diff - /tmp-5xx/relative.txt \
-    && echo -n "500" | diff - /tmp-5xx/500.txt \
-    && ls /tmp-5xx/script_result
+    && -n "Hello World!" | diff - /tmp/5xx/hello.world \
+    && diff ${CWD}/kubelogo.png /tmp/5xx/cm-kubelogo.png \
+    && diff ${CWD}/kubelogo.png /tmp/5xx/secret-kubelogo.png \
+    && echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt \
+    && echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt \
+    && echo -n "500" | diff - /tmp/5xx/500.txt \
+    && ls /tmp/5xx/script_result
 }
 
 # cleanup on exit (useful for running locally)
