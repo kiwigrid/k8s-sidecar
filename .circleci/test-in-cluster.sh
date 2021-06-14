@@ -68,6 +68,10 @@ create_kind_cluster() {
 install_sidecar(){
   log "Installing sidecar..."
   kubectl apply -f "${SIDECAR_MANIFEST}"
+  while [[ $(kubectl get pods sidecar -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod 'sidecar' to become ready..." && sleep 1; done
+  log "Pod 'sidecar' ready."
+  while [[ $(kubectl get pods sidecar-5xx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod 'sidecar-5xx' to become ready..." && sleep 1; done
+  log "Pod 'sidecar-5xx' ready."
 }
 
 install_configmap(){
@@ -135,7 +139,6 @@ main() {
     build_dummy_server
     create_kind_cluster
     install_sidecar
-    sleep 30
     install_configmap
     sleep 15
     list_pods
