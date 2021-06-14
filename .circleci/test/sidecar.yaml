@@ -84,7 +84,7 @@ spec:
     - name: SCRIPT
       value: "/opt-5xx/script.sh"
     - name: ENABLE_5XX
-        value: "true"
+      value: "true"
   volumes:
   - name: shared-volume
     emptyDir: {}
