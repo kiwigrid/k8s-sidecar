@@ -62,7 +62,7 @@ create_kind_cluster() {
     log 'Cluster ready!'
     echo
 
-    kind load docker-image  dummy-server:1.0.0 --name "${CLUSTER_NAME}"
+    "${KIND}" load docker-image  dummy-server:1.0.0 --name "${CLUSTER_NAME}"
 }
 
 install_sidecar(){
