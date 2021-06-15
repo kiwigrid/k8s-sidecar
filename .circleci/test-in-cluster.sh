@@ -117,7 +117,7 @@ verify_resources_read(){
     && echo -n "This relatively exists" | diff - /tmp/relative.txt \
     && [ ! -f /tmp/500.txt ] && echo "No 5xx file created" \
     && ls /tmp/script_result \
-    && -n "Hello World!" | diff - /tmp/5xx/hello.world \
+    && echo -n "Hello World!" | diff - /tmp/5xx/hello.world \
     && diff ${CWD}/kubelogo.png /tmp/5xx/cm-kubelogo.png \
     && diff ${CWD}/kubelogo.png /tmp/5xx/secret-kubelogo.png \
     && echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt \
