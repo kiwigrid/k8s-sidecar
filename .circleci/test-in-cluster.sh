@@ -110,7 +110,8 @@ verify_resources_read(){
   kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
   kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
   kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
-  kubectl cp sidecar-5xx:/tmp-5xx/script_result /tmp/5xx/script_result
+  # script also generates into '/tmp'
+  kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
   # absolute path in configmap points to /tmp in 'absolute-configmap'
   kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
   kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
