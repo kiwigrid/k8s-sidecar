@@ -64,14 +64,16 @@ create_kind_cluster() {
 
     "${KIND}" load docker-image  dummy-server:1.0.0 --name "${CLUSTER_NAME}"
 }
-
+wait_for_pod_ready() {
+  while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod '$1' to become ready..." && sleep 1; done
+  log "Pod '$1' ready."
+}
 install_sidecar(){
   log "Installing sidecar..."
   kubectl apply -f "${SIDECAR_MANIFEST}"
-  while [[ $(kubectl get pods sidecar -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod 'sidecar' to become ready..." && sleep 1; done
-  log "Pod 'sidecar' ready."
-  while [[ $(kubectl get pods sidecar-5xx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod 'sidecar-5xx' to become ready..." && sleep 1; done
-  log "Pod 'sidecar-5xx' ready."
+  wait_for_pod_ready "sidecar"
+  wait_for_pod_ready "sidecar-5xx"
+  wait_for_pod_ready "dummy-server-pod"
 }
 
 install_configmap(){
@@ -85,9 +87,13 @@ list_pods(){
 }
 
 
-log_sidecar(){
-  log "Retrieving sidecar logs..."
+pod_logs(){
+  log "Retrieving logs of 'sidecar'..."
   kubectl logs sidecar
+  log "Retrieving logs of 'sidecar-5xx'..."
+  kubectl logs sidecar-5xx
+  log "Retrieving logs of 'dummy-server-pod'..."
+  kubectl logs dummy-server-pod
 }
 
 verify_resources_read(){
@@ -110,6 +116,8 @@ verify_resources_read(){
   kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
 
   log "Verifying file content from sidecar and sidecar-5xx ..."
+
+  # this needs to be the last statement so that it defines the script exit code
   echo -n "Hello World!" | diff - /tmp/hello.world \
     && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
     && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
@@ -142,7 +150,7 @@ main() {
     install_configmap
     sleep 15
     list_pods
-    log_sidecar
+    pod_logs
     verify_resources_read
 }
 main
