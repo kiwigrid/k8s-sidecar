@@ -169,10 +169,14 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
                                    namespace=metadata.namespace,
                                    resource=resource,
                                    resource_name=metadata.name)
-    if not remove:
-        return write_data_to_file(dest_folder, filename, file_data, content_type)
-    else:
-        return remove_file(dest_folder, filename)
+    try:
+        if not remove:
+            return write_data_to_file(dest_folder, filename, file_data, content_type)
+        else:
+            return remove_file(dest_folder, filename)
+    except Exception as e:
+        print(f"{timestamp()} Error when updating ${filename} in ${dest_folder}: ${e}")
+        return False
 
 
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
