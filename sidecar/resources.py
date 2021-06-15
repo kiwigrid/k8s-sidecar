@@ -160,16 +160,16 @@ def _iterate_data(data, dest_folder, metadata, resource, unique_filenames, conte
 
 def _update_file(data_key, data_content, dest_folder, metadata, resource,
                  unique_filenames, content_type, enable_5xx, remove=False):
-    filename, file_data = _get_file_data_and_name(data_key,
-                                                  data_content,
-                                                  enable_5xx,
-                                                  content_type)
-    if unique_filenames:
-        filename = unique_filename(filename=filename,
-                                   namespace=metadata.namespace,
-                                   resource=resource,
-                                   resource_name=metadata.name)
     try:
+        filename, file_data = _get_file_data_and_name(data_key,
+                                                      data_content,
+                                                      enable_5xx,
+                                                      content_type)
+        if unique_filenames:
+            filename = unique_filename(filename=filename,
+                                       namespace=metadata.namespace,
+                                       resource=resource,
+                                       resource_name=metadata.name)
         if not remove:
             return write_data_to_file(dest_folder, filename, file_data, content_type)
         else:
