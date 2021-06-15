@@ -175,7 +175,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         else:
             return remove_file(dest_folder, filename)
     except Exception as e:
-        print(f"{timestamp()} Error when updating ${filename} in ${dest_folder}: ${e}")
+        print(f"{timestamp()} Error when updating from ${data_key} into ${dest_folder}: ${e}")
         return False
 
 
