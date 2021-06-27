@@ -73,10 +73,10 @@ def remove_file(folder, filename):
 
 def request(url, method, enable_5xx=False, payload=None):
     retry_total = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
-    retry_connect = 5 if os.getenv("REQ_RETRY_CONNECT") is None else int(
+    retry_connect = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(
         os.getenv("REQ_RETRY_CONNECT"))
     retry_read = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
-    retry_backoff_factor = 0.2 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
+    retry_backoff_factor = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
         os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
     timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
