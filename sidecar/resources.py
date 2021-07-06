@@ -68,14 +68,13 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 def list_resources(label, label_value, target_folder, url, method, payload,
                    current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
 
-    if namespace == "ALL":
+    if current_namespace == "ALL":
         ret = getattr(v1, _list_for_all_namespaces[resource])(label_selector=label_selector)
     else:
-        ret = getattr(v1, _list_namespaced[resource])(namespace=namespace, label_selector=label_selector)
+        ret = getattr(v1, _list_namespaced[resource])(namespace=current_namespace, label_selector=label_selector)
 
     files_changed = False
 
@@ -182,14 +181,13 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
 def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
                              current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
-    namespace = os.getenv("NAMESPACE", current_namespace)
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
 
-    if namespace == "ALL":
+    if current_namespace == "ALL":
         stream = watch.Watch().stream(getattr(v1, _list_for_all_namespaces[resource]), label_selector=label_selector)
     else:
-        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=namespace,
+        stream = watch.Watch().stream(getattr(v1, _list_namespaced[resource]), namespace=current_namespace,
                                       label_selector=label_selector)
 
     # Process events
@@ -245,25 +243,21 @@ def _watch_resource_loop(mode, *args):
 
 def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
-    first_proc, sec_proc = _start_watcher_processes(current_namespace, folder_annotation, label,
-                                                    label_value, method, mode, payload, resources,
-                                                    target_folder, unique_filenames, script, url, enable_5xx)
+    processes = _start_watcher_processes(current_namespace, folder_annotation, label,
+                                         label_value, method, mode, payload, resources,
+                                         target_folder, unique_filenames, script, url, enable_5xx)
 
     while True:
-        if not first_proc.is_alive():
-            print(f"{timestamp()} Process for {resources[0]} died. Stopping and exiting")
-            if len(resources) == 2 and sec_proc.is_alive():
-                sec_proc.terminate()
-            elif len(resources) == 2:
-                print(f"{timestamp()} Process for {resources[1]}  also died...")
-            raise Exception("Loop died")
-
-        if len(resources) == 2 and not sec_proc.is_alive():
-            print(f"{timestamp()} Process for {resources[1]} died. Stopping and exiting")
-            if first_proc.is_alive():
-                first_proc.terminate()
-            else:
-                print(f"{timestamp()} Process for {resources[0]}  also died...")
+        died = False
+        for proc, ns, resource in processes:
+            if not proc.is_alive():
+                print(f"{timestamp()} Process for {ns}/{resource} died")
+                died = True
+        if died:
+            print(f"{timestamp()} At least one process died. Stopping and exiting")
+            for proc, ns, resource in processes:
+                if proc.is_alive():
+                    proc.terminate()
             raise Exception("Loop died")
 
         sleep(5)
@@ -271,18 +265,25 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
 
 def _start_watcher_processes(current_namespace, folder_annotation, label, label_value, method,
                              mode, payload, resources, target_folder, unique_filenames, script, url, enable_5xx):
-    first_proc = Process(target=_watch_resource_loop,
-                         args=(mode, label, label_value, target_folder, url, method, payload,
-                               current_namespace, folder_annotation, resources[0], unique_filenames, script, enable_5xx)
-                         )
-    first_proc.daemon = True
-    first_proc.start()
-    sec_proc = None
-    if len(resources) == 2:
-        sec_proc = Process(target=_watch_resource_loop,
-                           args=(mode, label, label_value, target_folder, url, method, payload, current_namespace,
-                                 folder_annotation, resources[1], unique_filenames, script, enable_5xx)
+    processes = []
+    namespace = os.getenv("NAMESPACE", current_namespace)
+    for resource in resources:
+        if namespace == "ALL":
+            proc = Process(target=_watch_resource_loop,
+                           args=(mode, label, label_value, target_folder, url, method, payload,
+                                 current_namespace, folder_annotation, resource, unique_filenames, script, enable_5xx)
                            )
-        sec_proc.daemon = True
-        sec_proc.start()
-    return first_proc, sec_proc
+            proc.daemon = True
+            proc.start()
+            processes.append((proc, "ALL", resource))
+        else:
+            for ns in namespace.split(','):
+                proc = Process(target=_watch_resource_loop,
+                               args=(mode, label, label_value, target_folder, url, method, payload,
+                                     ns, folder_annotation, resource, unique_filenames, script, enable_5xx)
+                               )
+                proc.daemon = True
+                proc.start()
+                processes.append((proc, ns, resource))
+
+    return processes
