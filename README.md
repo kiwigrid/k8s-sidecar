@@ -64,7 +64,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `NAMESPACE`
-  - description: Comma separated list of namespaces. If specified, the sidecar will search for config-maps/secrets inside these namespaces. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
+  - description: Comma separated list of namespaces. If specified, the sidecar will search for config-maps inside these namespaces. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
   - required: false
   - type: string
 
