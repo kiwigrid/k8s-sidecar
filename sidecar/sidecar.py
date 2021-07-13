@@ -73,14 +73,18 @@ def main():
         print(f"{timestamp()} 5xx response content will not be enabled.")
         enable_5xx = False
 
-    current_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-    if os.getenv(METHOD) == "LIST":
+    with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+        namespace = os.getenv("NAMESPACE", f.read())
+
+    method = os.getenv(METHOD)
+    if method == "LIST":
         for res in resources:
-            list_resources(label, label_value, target_folder, url, method, payload,
-                           current_namespace, folder_annotation, res, unique_filenames, script, enable_5xx)
+            for ns in namespace.split(','):
+                list_resources(label, label_value, target_folder, url, method, payload,
+                               ns, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
-        watch_for_changes(os.getenv(METHOD), label, label_value, target_folder, url, method, payload,
-                          current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
+        watch_for_changes(method, label, label_value, target_folder, url, method, payload,
+                          namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
 
 
 def _initialize_kubeclient_configuration():
