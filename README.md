@@ -64,7 +64,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `NAMESPACE`
-  - description: If specified, the sidecar will search for config-maps inside this namespace. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
+  - description: Comma separated list of namespaces. If specified, the sidecar will search for config-maps inside these namespaces. Otherwise the namespace in which the sidecar is running will be used. It's also possible to specify `ALL` to search in all namespaces.
   - required: false
   - type: string
 
@@ -75,7 +75,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
   - type: string
 
 - `METHOD`
-  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps/secrets and exit. With `SLEEP` it will list all config-maps/secrets, then sleep for `SLEEP_TIME` seconds. Default is watch.
+  - description: If `METHOD` is set with `LIST`, the sidecar will just list config-maps/secrets and exit. With `SLEEP` it will list all config-maps/secrets, then sleep for `SLEEP_TIME` seconds. Anything else will continuously watch for changes (see https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes). Default is watch.
   - required: false
   - type: string
 
