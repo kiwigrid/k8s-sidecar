@@ -119,7 +119,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 - `REQ_RETRY_CONNECT`
   - description: How many connection-related errors to retry on
   - required: false
-  - default: 5
+  - default: 10
   - type: integer
 
 - `REQ_RETRY_READ`
@@ -131,7 +131,7 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 - `REQ_RETRY_BACKOFF_FACTOR`
   - description: A backoff factor to apply between attempts after the second try
   - required: false
-  - default: 0.2
+  - default: 1.1
   - type: float
 
 - `REQ_TIMEOUT`
