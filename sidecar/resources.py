@@ -95,6 +95,9 @@ def list_resources(label, label_value, target_folder, url, method, payload,
         else:
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
 
+    if script and files_changed:
+        execute(script)
+
     if url and files_changed:
         request(url, method, enable_5xx, payload)
 
