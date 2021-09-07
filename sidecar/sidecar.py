@@ -4,8 +4,9 @@ import os
 
 from kubernetes import client, config
 from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
+from requests.packages.urllib3.util.retry import Retry
 
-from helpers import timestamp
+from helpers import timestamp, REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 from resources import list_resources, watch_for_changes
 
 METHOD = "METHOD"
@@ -107,7 +108,15 @@ def _initialize_kubeclient_configuration():
         configuration.verify_ssl = False
         configuration.debug = False
         client.Configuration.set_default(configuration)
+
+    # push urllib3 retries to k8s client config
     configuration = client.Configuration.get_default_copy()
+    configuration.retries = Retry(total=REQ_RETRY_TOTAL,
+                                  connect=REQ_RETRY_CONNECT,
+                                  read=REQ_RETRY_READ,
+                                  backoff_factor=REQ_RETRY_BACKOFF_FACTOR)
+    client.Configuration.set_default(configuration)
+
     print(f"{timestamp()} Config for cluster api at '{configuration.host}' loaded...")
 
 

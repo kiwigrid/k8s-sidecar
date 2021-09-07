@@ -5,27 +5,26 @@
 
 set -o errexit
 set -o pipefail
-set -o nounset;
-
+set -o nounset
 
 CLUSTER_NAME="sidecar-testing"
 BIN_DIR="$(mktemp -d)"
 KIND="${BIN_DIR}/kind"
-CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+CWD="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 KIND_CONFIG="${CWD}/kind-config.yaml"
 SIDECAR_MANIFEST="${CWD}/test/sidecar.yaml"
 
-log(){
+log() {
   echo "[$(date --rfc-3339=seconds -u)] $1"
 }
 
-build_dummy_server(){
-  docker build -t dummy-server:1.0.0 -f "${CWD}/server/Dockerfile"  .
+build_dummy_server() {
+  docker build -t dummy-server:1.0.0 -f "${CWD}/server/Dockerfile" .
 }
 
-install_kubectl(){
+install_kubectl() {
   log 'Installing kubectl...'
-  curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+  curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
   chmod +x ./kubectl
   sudo mv ./kubectl /usr/local/bin/kubectl
 }
@@ -40,54 +39,55 @@ install_kind_release() {
 
 create_kind_cluster() {
 
-    log "Creating cluster with kind config from ${KIND_CONFIG}"
+  log "Creating cluster with kind config from ${KIND_CONFIG}"
 
-    "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
+  "${KIND}" create cluster --name "${CLUSTER_NAME}" --loglevel=debug --config "${KIND_CONFIG}" --image "kindest/node:${K8S_VERSION}"
 
-    kubectl cluster-info
-    echo
+  kubectl cluster-info
+  echo
 
-    log 'Waiting for cluster to be ready...'
-    until ! grep --quiet 'NotReady' <(kubectl get nodes --no-headers); do
-        printf '.'
-        sleep 1
-    done
+  log 'Waiting for cluster to be ready...'
+  until ! grep --quiet 'NotReady' <(kubectl get nodes --no-headers); do
+    printf '.'
+    sleep 1
+  done
 
-    echo '✔︎'
-    echo
+  echo '✔︎'
+  echo
 
-    kubectl get nodes
-    echo
+  kubectl get nodes
+  echo
 
-    log 'Cluster ready!'
-    echo
+  log 'Cluster ready!'
+  echo
 
-    "${KIND}" load docker-image  dummy-server:1.0.0 --name "${CLUSTER_NAME}"
+  "${KIND}" load docker-image dummy-server:1.0.0 --name "${CLUSTER_NAME}"
 }
 wait_for_pod_ready() {
   while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do log "waiting for pod '$1' to become ready..." && sleep 1; done
   log "Pod '$1' ready."
 }
-install_sidecar(){
+install_sidecar() {
   log "Installing sidecar..."
   kubectl apply -f "${SIDECAR_MANIFEST}"
   wait_for_pod_ready "sidecar"
   wait_for_pod_ready "sidecar-5xx"
   wait_for_pod_ready "dummy-server-pod"
+  # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
+  sleep 15
 }
 
-install_configmap(){
+install_resources() {
   log "Installing resources..."
   kubectl apply -f "${CWD}"/test/resources.yaml
 }
 
-list_pods(){
+list_pods() {
   log "Retrieving pods..."
   kubectl get pods -oyaml
 }
 
-
-pod_logs(){
+pod_logs() {
   log "Retrieving logs of 'sidecar'..."
   kubectl logs sidecar
   log "Retrieving logs of 'sidecar-5xx'..."
@@ -96,7 +96,7 @@ pod_logs(){
   kubectl logs dummy-server-pod
 }
 
-verify_resources_read(){
+verify_resources_read() {
   log "Downloading resource files from sidecar..."
   kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
   kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
@@ -120,20 +120,20 @@ verify_resources_read(){
   log "Verifying file content from sidecar and sidecar-5xx ..."
 
   # this needs to be the last statement so that it defines the script exit code
-  echo -n "Hello World!" | diff - /tmp/hello.world \
-    && diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png \
-    && diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png \
-    && echo -n "This absolutely exists" | diff - /tmp/absolute.txt \
-    && echo -n "This relatively exists" | diff - /tmp/relative.txt \
-    && [ ! -f /tmp/500.txt ] && echo "No 5xx file created" \
-    && ls /tmp/script_result \
-    && echo -n "Hello World!" | diff - /tmp/5xx/hello.world \
-    && diff ${CWD}/kubelogo.png /tmp/5xx/cm-kubelogo.png \
-    && diff ${CWD}/kubelogo.png /tmp/5xx/secret-kubelogo.png \
-    && echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt \
-    && echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt \
-    && echo -n "500" | diff - /tmp/5xx/500.txt \
-    && ls /tmp/5xx/script_result
+  echo -n "Hello World!" | diff - /tmp/hello.world &&
+    diff ${CWD}/kubelogo.png /tmp/cm-kubelogo.png &&
+    diff ${CWD}/kubelogo.png /tmp/secret-kubelogo.png &&
+    echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
+    echo -n "This relatively exists" | diff - /tmp/relative.txt &&
+    [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
+    ls /tmp/script_result &&
+    echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
+    diff ${CWD}/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
+    diff ${CWD}/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
+    echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
+    echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
+    echo -n "500" | diff - /tmp/5xx/500.txt &&
+    ls /tmp/5xx/script_result
 }
 
 # cleanup on exit (useful for running locally)
@@ -144,15 +144,16 @@ cleanup() {
 trap cleanup EXIT
 
 main() {
-    install_kubectl
-    install_kind_release
-    build_dummy_server
-    create_kind_cluster
-    install_sidecar
-    install_configmap
-    sleep 15
-    list_pods
-    pod_logs
-    verify_resources_read
+  install_kubectl
+  install_kind_release
+  build_dummy_server
+  create_kind_cluster
+  install_sidecar
+  install_resources
+  sleep 15
+  list_pods
+  pod_logs
+  # important: this is needs to be the last function in the script so that the response code is picked up by CI
+  verify_resources_read
 }
 main

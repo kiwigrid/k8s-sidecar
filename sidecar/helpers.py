@@ -13,6 +13,11 @@ from requests.packages.urllib3.util.retry import Retry
 CONTENT_TYPE_TEXT = "ascii"
 CONTENT_TYPE_BASE64_BINARY = "binary"
 
+REQ_RETRY_TOTAL = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
+REQ_RETRY_CONNECT = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(os.getenv("REQ_RETRY_CONNECT"))
+REQ_RETRY_READ = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
+REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
+REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
 def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
     """
@@ -72,13 +77,6 @@ def remove_file(folder, filename):
 
 
 def request(url, method, enable_5xx=False, payload=None):
-    retry_total = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
-    retry_connect = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(
-        os.getenv("REQ_RETRY_CONNECT"))
-    retry_read = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
-    retry_backoff_factor = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
-        os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
-    timeout = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
 
     username = os.getenv("REQ_USERNAME")
@@ -90,10 +88,10 @@ def request(url, method, enable_5xx=False, payload=None):
 
     r = requests.Session()
 
-    retries = Retry(total=retry_total,
-                    connect=retry_connect,
-                    read=retry_read,
-                    backoff_factor=retry_backoff_factor,
+    retries = Retry(total=REQ_RETRY_TOTAL,
+                    connect=REQ_RETRY_CONNECT,
+                    read=REQ_RETRY_READ,
+                    backoff_factor=REQ_RETRY_BACKOFF_FACTOR,
                     status_forcelist=enforce_status_codes)
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
@@ -103,9 +101,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=timeout)
+        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=timeout)
+        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
         print(f"{timestamp()} {method} request sent to {url}. "
               f"Response: {res.status_code} {res.reason} {res.text}")
     else:
