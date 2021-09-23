@@ -51,9 +51,9 @@ def main():
     resources = ("secret", "configmap") if resources == "both" else (resources,)
     print(f"{timestamp()} Selected resource type: {resources}")
 
-    method = os.getenv(REQ_METHOD)
-    url = os.getenv(REQ_URL)
-    payload = os.getenv(REQ_PAYLOAD)
+    request_method = os.getenv(REQ_METHOD)
+    request_url = os.getenv(REQ_URL)
+    request_payload = os.getenv(REQ_PAYLOAD)
     script = os.getenv(SCRIPT)
 
     _initialize_kubeclient_configuration()
@@ -81,10 +81,10 @@ def main():
     if method == "LIST":
         for res in resources:
             for ns in namespace.split(','):
-                list_resources(label, label_value, target_folder, url, method, payload,
+                list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
-        watch_for_changes(method, label, label_value, target_folder, url, method, payload,
+        watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
 
 
