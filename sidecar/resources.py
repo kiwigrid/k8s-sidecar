@@ -65,7 +65,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
     return default_folder
 
 
-def list_resources(label, label_value, target_folder, url, method, payload,
+def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
@@ -98,8 +98,8 @@ def list_resources(label, label_value, target_folder, url, method, payload,
     if script and files_changed:
         execute(script)
 
-    if url and files_changed:
-        request(url, method, enable_5xx, payload)
+    if request_url and files_changed:
+        request(request_url, request_method, enable_5xx, request_payload)
 
 
 def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx, is_removed=False):
@@ -184,7 +184,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         return False
 
 
-def _watch_resource_iterator(label, label_value, target_folder, url, method, payload,
+def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
@@ -221,8 +221,8 @@ def _watch_resource_iterator(label, label_value, target_folder, url, method, pay
         if script and files_changed:
             execute(script)
 
-        if url and files_changed:
-            request(url, method, enable_5xx, payload)
+        if request_url and files_changed:
+            request(request_url, request_method, enable_5xx, request_payload)
 
 
 def _watch_resource_loop(mode, *args):
@@ -249,11 +249,11 @@ def _watch_resource_loop(mode, *args):
             traceback.print_exc()
 
 
-def watch_for_changes(mode, label, label_value, target_folder, url, method, payload,
+def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
-                                         label_value, method, mode, payload, resources,
-                                         target_folder, unique_filenames, script, url, enable_5xx)
+                                         label_value, request_method, mode, request_payload, resources,
+                                         target_folder, unique_filenames, script, request_url, enable_5xx)
 
     while True:
         died = False
@@ -271,13 +271,13 @@ def watch_for_changes(mode, label, label_value, target_folder, url, method, payl
         sleep(5)
 
 
-def _start_watcher_processes(namespace, folder_annotation, label, label_value, method,
-                             mode, payload, resources, target_folder, unique_filenames, script, url, enable_5xx):
+def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
+                             mode, request_payload, resources, target_folder, unique_filenames, script, request_url, enable_5xx):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
-                           args=(mode, label, label_value, target_folder, url, method, payload,
+                           args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx)
                            )
             proc.daemon = True
