@@ -92,6 +92,7 @@ def request(url, method, enable_5xx=False, payload=None):
                     connect=REQ_RETRY_CONNECT,
                     read=REQ_RETRY_READ,
                     backoff_factor=REQ_RETRY_BACKOFF_FACTOR,
+                    allowed_methods=["GET", "POST"],
                     status_forcelist=enforce_status_codes)
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))

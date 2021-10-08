@@ -22,3 +22,8 @@ async def read_item():
 @app.get("/500", status_code=500)
 async def read_item():
     return 500
+
+
+@app.post("/503", status_code=503)
+async def read_item():
+    return 503
