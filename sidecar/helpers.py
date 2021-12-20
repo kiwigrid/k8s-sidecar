@@ -19,6 +19,22 @@ REQ_RETRY_READ = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("RE
 REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
 REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
+# Tune default timeouts as outlined in
+# https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
+# https://github.com/kubernetes-client/python/blob/master/examples/watch/timeout-settings.md
+# I picked 60 and 66 due to https://github.com/nolar/kopf/issues/847#issuecomment-971651446
+
+# 60 is a polite request to the server, asking it to cleanly close the connection after that.
+# If you have a network outage, this does nothing.
+# You can set this number much higher, maybe to 3600 seconds (1h).
+WATCH_SERVER_TIMEOUT = os.environ.get("WATCH_SERVER_TIMEOUT", 60)
+
+# 66 is a client-side timeout, configuring your local socket.
+# If you have a network outage dropping all packets with no RST/FIN,
+# this is how long your client waits before realizing & dropping the connection.
+# You can keep this number low, maybe 60 seconds.
+WATCH_CLIENT_TIMEOUT = os.environ.get("WATCH_CLIENT_TIMEOUT", 66)
+
 def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
     """
     Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient

@@ -70,3 +70,5 @@ If the filename ends with `.url` suffix, the content will be processed as an URL
 | `DEFAULT_FILE_MODE` | The default file system permission for every file. Use three digits (e.g. '500', '440', ...) | false | - | string
 | `KUBECONFIG` | if this is given and points to a file or `~/.kube/config` is mounted k8s config will be loaded from this file, otherwise "incluster" k8s configuration is tried. | false | - | string
 |`ENABLE_5XX` | Set to `true` to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.) | false | - | boolean
+| `WATCH_SERVER_TIMEOUT` | polite request to the server, asking it to cleanly close watch connections after this amount of seconds ([#85](https://github.com/kiwigrid/k8s-sidecar/issues/85))| false | `60` | integer
+| `WATCH_CLIENT_TIMEOUT` | If you have a network outage dropping all packets with no RST/FIN, this is how many seconds your client waits on watches before realizing & dropping the connection. You can keep this number low. ([#85](https://github.com/kiwigrid/k8s-sidecar/issues/85)) | false | `66` | integer
