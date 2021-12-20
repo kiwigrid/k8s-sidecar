@@ -15,7 +15,7 @@ from urllib3.exceptions import MaxRetryError
 from urllib3.exceptions import ProtocolError
 
 from helpers import request, write_data_to_file, remove_file, timestamp, unique_filename, CONTENT_TYPE_TEXT, \
-    CONTENT_TYPE_BASE64_BINARY, execute
+    CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -191,7 +191,9 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
     label_selector = f"{label}={label_value}" if label_value else label
 
     additional_args = {
-        'label_selector': label_selector
+        'label_selector': label_selector,
+        'timeout_seconds': WATCH_SERVER_TIMEOUT,
+        '_request_timeout': WATCH_CLIENT_TIMEOUT,
     }
     if namespace != "ALL":
         additional_args['namespace'] = namespace
