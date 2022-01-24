@@ -1,0 +1,58 @@
+name: Release
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: "Set up QEMU"
+        uses: docker/setup-qemu-action@v1
+      -
+        name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v1
+      -
+        name: "Login to DockerHub"
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKER_USERNAME }}
+      -
+        name: "Login to Quay.io"
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_BOT_USERNAME }}
+          password: ${{ secrets.QUAY_BOT_PASSWORD }}
+      -
+        name: "Build and push"
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: |
+            docker.io/kiwigrid/k8s-sidecar:latest
+            docker.io/kiwigrid/k8s-sidecar:{{ github.ref_name }}
+            quay.io/kiwigrid/k8s-sidecar:latest
+            quay.io/kiwigrid/k8s-sidecar:{{ github.ref_name }}
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v2.7.2
+        with:
+          configuration: ".github/workflows/release-notes-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: v${{ github.ref }}
+          body: ${{steps.build_changelog.outputs.changelog}}
+          draft: false
+          prerelease: false

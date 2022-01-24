@@ -123,6 +123,7 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
     if config_map.data is None and config_map.binary_data is None:
         print(f"{timestamp()} No data/binaryData field in {resource}")
     if config_map.data is not None:
+        print(f"{timestamp()} Found 'data' on {resource}")
         files_changed |= _iterate_data(
             config_map.data,
             dest_folder,
@@ -133,6 +134,7 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if config_map.binary_data is not None:
+        print(f"{timestamp()} Found 'binary_data' on {resource}")
         files_changed |= _iterate_data(
             config_map.binary_data,
             dest_folder,
@@ -176,8 +178,10 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
                                        resource=resource,
                                        resource_name=metadata.name)
         if not remove:
+            print(f"{timestamp()} Writing {filename}")
             return write_data_to_file(dest_folder, filename, file_data, content_type)
         else:
+            print(f"{timestamp()} Deleting {filename}")
             return remove_file(dest_folder, filename)
     except Exception as e:
         print(f"{timestamp()} Error when updating from ${data_key} into ${dest_folder}: ${e}")
@@ -202,9 +206,9 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
     # Process events
     for event in stream:
-        item = event["object"]
+        item = event['object']
         metadata = item.metadata
-        event_type = event["type"]
+        event_type = event['type']
 
         print(f"{timestamp()} Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
 

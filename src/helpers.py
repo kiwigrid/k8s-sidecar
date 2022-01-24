@@ -121,11 +121,11 @@ def request(url, method, enable_5xx=False, payload=None):
         res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
     elif method == "POST":
         res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
-        print(f"{timestamp()} {method} request sent to {url}. "
-              f"Response: {res.status_code} {res.reason} {res.text}")
     else:
         print(f"{timestamp()} Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
+    print(f"{timestamp()} {method} request sent to {url}. "
+          f"Response: {res.status_code} {res.reason} {res.text}")
     return res
 
 
@@ -151,6 +151,7 @@ def unique_filename(filename, namespace, resource, resource_name):
 
 
 def execute(script_path):
+    print(f"{timestamp()} Executing script from {script_path}")
     try:
         result = subprocess.run(["sh", script_path],
                                 capture_output=True,
