@@ -45,7 +45,7 @@ spec:
   serviceAccountName: sample-acc
   containers:
   - name: sidecar
-    image: CIRCLE_PROJECT_USERNAME/k8s-sidecar-build:SIDECAR_VERSION
+    image: kiwigrid/k8s-sidecar:testing
     volumeMounts:
     - name: shared-volume
       mountPath: /tmp/
@@ -78,7 +78,7 @@ spec:
   serviceAccountName: sample-acc
   containers:
   - name: sidecar
-    image: CIRCLE_PROJECT_USERNAME/k8s-sidecar-build:SIDECAR_VERSION
+    image: kiwigrid/k8s-sidecar:testing
     volumeMounts:
     - name: shared-volume
       mountPath: /tmp-5xx/

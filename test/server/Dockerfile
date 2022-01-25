@@ -1,11 +1,5 @@
-FROM python:3.7
-
+FROM python:3.9-alpine
 RUN pip install fastapi uvicorn
-
 EXPOSE 80
-
-ARG SERVER_FILE="./.circleci/server/server.py"
-
-COPY $SERVER_FILE /server.py
-
+COPY server.py /server.py
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]

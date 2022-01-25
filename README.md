@@ -1,7 +1,7 @@
 
 
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kiwigrid/k8s-sidecar?style=plastic)](https://github.com/kiwigrid/k8s-sidecar/releases)
-[![CircleCI](https://img.shields.io/circleci/project/github/kiwigrid/k8s-sidecar/master.svg?style=plastic)](https://circleci.com/gh/kiwigrid/k8s-sidecar)
+[![Build and Test](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/build_and_test.yaml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=plastic)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
 # What?
 
@@ -9,11 +9,11 @@ This is a docker container intended to run inside a kubernetes cluster to collec
 
 # Why?
 
-Currently (April 2018) there is no simple way to hand files in configmaps to a service and keep them updated during runtime.
+This is our simple way to provide files from configmaps or secrets to a service and keep them updated during runtime.
 
 # How?
 
-Run the container created by this repo together with your application in an single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
+Run the container created by this repo together with your application in a single pod with a shared volume. Specify which label should be monitored and where the files should be stored.
 By adding additional env variables the container can send an HTTP request to specified URL.
 
 # Where?
@@ -27,19 +27,26 @@ Both are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`
 
 # Features
 
-- Extract files from config maps
+- Extract files from config maps and secrets
 - Filter based on label
-- Update/Delete on change of configmap
+- Update/Delete on change of configmap or secret
 - Enforce unique filenames
 
 # Usage 
 
-Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first: `kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)`
+Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
+```shell
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)
+```
 
-One can override the default directory that files are copied into using a configmap annotation defined by the environment variable "FOLDER_ANNOTATION" (if not present it will default to "k8s-sidecar-target-directory"). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
-  `k8s-sidecar-target-directory: "/path/to/target/directory"`
+One can override the default directory that files are copied into using a configmap annotation defined by the environment variable `FOLDER_ANNOTATION` (if not present it will default to `k8s-sidecar-target-directory`). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
+```yaml
+metadata:
+  annotations:
+    k8s-sidecar-target-directory: "/path/to/target/directory"
+```
 
-If the filename ends with `.url` suffix, the content will be processed as an URL the target file will be downloaded and used as the content file.
+If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from.
 
 ## Configuration Environment Variables
 
