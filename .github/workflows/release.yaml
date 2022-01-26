@@ -1,12 +1,22 @@
 name: Release
 on:
   push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      - name: Bump version and push tag
+        id: tagging
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INITIAL_VERSION: 1.0.0
+          DEFAULT_BUMP: none
       -
         name: "Set up QEMU"
         uses: docker/setup-qemu-action@v1
@@ -35,9 +45,9 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
             docker.io/kiwigrid/k8s-sidecar:latest
-            docker.io/kiwigrid/k8s-sidecar:{{ github.ref_name }}
+            docker.io/kiwigrid/k8s-sidecar:{{ steps.tagging.outputs.tag }}
             quay.io/kiwigrid/k8s-sidecar:latest
-            quay.io/kiwigrid/k8s-sidecar:{{ github.ref_name }}
+            quay.io/kiwigrid/k8s-sidecar:{{ steps.tagging.outputs.tag }}
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v2.7.2
@@ -45,14 +55,14 @@ jobs:
           configuration: ".github/workflows/release-notes-config.json"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Release
+      - name: "Create Github Release"
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.ref }}
-          release_name: v${{ github.ref }}
+          tag_name: ${{ steps.tagging.outputs.tag }}
+          release_name: v${{ steps.tagging.outputs.tag }}
           body: ${{steps.build_changelog.outputs.changelog}}
           draft: false
           prerelease: false
