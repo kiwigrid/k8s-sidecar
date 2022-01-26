@@ -19,18 +19,22 @@ jobs:
           DEFAULT_BUMP: none
       -
         name: "Set up QEMU"
+        if: steps.tagging.outputs.newTag
         uses: docker/setup-qemu-action@v1
       -
         name: "Set up Docker Buildx"
+        if: steps.tagging.outputs.newTag
         uses: docker/setup-buildx-action@v1
       -
         name: "Login to DockerHub"
+        if: steps.tagging.outputs.newTag
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       -
         name: "Login to Quay.io"
+        if: steps.tagging.outputs.newTag
         uses: docker/login-action@v1
         with:
           registry: quay.io
@@ -38,6 +42,7 @@ jobs:
           password: ${{ secrets.QUAY_BOT_PASSWORD }}
       -
         name: "Build and push"
+        if: steps.tagging.outputs.newTag
         id: docker_build
         uses: docker/build-push-action@v2
         with:
@@ -49,6 +54,7 @@ jobs:
             quay.io/kiwigrid/k8s-sidecar:latest
             quay.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}
       - name: "Build Changelog"
+        if: steps.tagging.outputs.newTag
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v2.7.2
         with:
@@ -56,7 +62,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Create Github Release"
-        id: create_release
+        if: steps.tagging.outputs.newTag
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
