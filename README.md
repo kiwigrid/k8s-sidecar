@@ -1,8 +1,9 @@
 
 
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kiwigrid/k8s-sidecar?style=plastic)](https://github.com/kiwigrid/k8s-sidecar/releases)
-[![Build and Test](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/build_and_test.yaml)
-[![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=plastic)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kiwigrid/k8s-sidecar?style=flat)](https://github.com/kiwigrid/k8s-sidecar/releases)
+[![Release](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml/badge.svg)](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=flat)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
+![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/kiwigrid/k8s-sidecar)
 # What?
 
 This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained Python script is working from Kubernetes API 1.10.
