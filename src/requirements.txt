@@ -1,2 +1,2 @@
-kubernetes==21.7.0
+kubernetes==22.6.0
 requests==2.27.1
