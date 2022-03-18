@@ -1,5 +1,4 @@
-FROM python:3.10.2-alpine as base
-RUN apk upgrade --no-cache
+FROM python:3.10.3-alpine as base
 
 FROM base as builder
 WORKDIR /app
