@@ -45,7 +45,7 @@ jobs:
         cluster_name: sidecar-testing
         wait: 5m
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: images
         path: /tmp
