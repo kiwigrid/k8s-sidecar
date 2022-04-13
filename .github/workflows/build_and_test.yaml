@@ -22,7 +22,7 @@ jobs:
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: images
           path: /tmp/*.tar
@@ -83,7 +83,7 @@ jobs:
         kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
         kubectl logs dummy-server-pod > /tmp/dummy-server.log
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: pod-logs_${{ matrix.k8s }}
         path: /tmp/*.log
