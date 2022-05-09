@@ -103,7 +103,7 @@ def request(url, method, enable_5xx=False, payload=None):
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
     if username and password:
-        auth = (username, password)
+        auth = (username.encode('utf-8'), password.encode('utf-8'))
     else:
         auth = None
 
