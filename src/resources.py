@@ -28,6 +28,8 @@ _list_namespace = defaultdict(lambda: {
     RESOURCE_CONFIGMAP: "list_config_map_for_all_namespaces"
 }})
 
+_resources_version_map = {}
+
 
 def signal_handler(signum, frame):
     print(f"{timestamp()} Subprocess exiting gracefully")
@@ -66,7 +68,8 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 
 
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
-                   namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
+                   namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                   ignore_already_processed):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -84,6 +87,15 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     # For all the found resources
     for item in ret.items:
         metadata = item.metadata
+
+        # Ignore already processed resource
+        # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
+        if ignore_already_processed:
+            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
+                # print(f"{timestamp()} Ignoring {resource} {metadata.namespace}/{metadata.name}")
+                continue
+
+            _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
 
         print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
 
@@ -189,7 +201,8 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
 
 
 def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
-                             namespace, folder_annotation, resource, unique_filenames, script, enable_5xx):
+                             namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                             ignore_already_processed):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -209,6 +222,19 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         item = event['object']
         metadata = item.metadata
         event_type = event['type']
+
+        # Ignore already processed resource
+        # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
+        if ignore_already_processed:
+            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
+                if event_type == "ADDED" or event_type == "MODIFIED":
+                    # print(f"{timestamp()} Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
+                    continue
+                elif event_type == "DELETED":
+                    _resources_version_map.pop(metadata.namespace + metadata.name)
+
+            if event_type == "ADDED" or event_type == "MODIFIED":
+                _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
 
         print(f"{timestamp()} Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
 
@@ -256,10 +282,12 @@ def _watch_resource_loop(mode, *args):
 
 
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
-                      current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx):
+                      current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
+                      ignore_already_processed):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
                                          label_value, request_method, mode, request_payload, resources,
-                                         target_folder, unique_filenames, script, request_url, enable_5xx)
+                                         target_folder, unique_filenames, script, request_url, enable_5xx,
+                                         ignore_already_processed)
 
     while True:
         died = False
@@ -278,13 +306,15 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
 
 
 def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
-                             mode, request_payload, resources, target_folder, unique_filenames, script, request_url, enable_5xx):
+                             mode, request_payload, resources, target_folder, unique_filenames, script, request_url,
+                             enable_5xx, ignore_already_processed):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
-                                 ns, folder_annotation, resource, unique_filenames, script, enable_5xx)
+                                 ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                                 ignore_already_processed)
                            )
             proc.daemon = True
             proc.start()
