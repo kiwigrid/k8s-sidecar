@@ -80,15 +80,15 @@ def main():
         # Check API version
         version = client.VersionApi().get_code()
         if int(version.major) > 1 or (int(version.major) == 1 and int(version.minor) >= 19):
-            print(f"{timestamp()} ignore already processed resource will be enabled.")
+            print(f"{timestamp()} Ignore already processed resource version will be enabled.")
             ignore_already_processed = True
         else:
             print(
-                f"{timestamp()} Can't enable 'ignore already processed resource' option, kubernetes api version is "
+                f"{timestamp()} Can't enable 'ignore already processed resource version', kubernetes api version is "
                 f"lower than v1.19.")
             ignore_already_processed = False
     else:
-        print(f"{timestamp()} ignore already processed resource will not be enabled.")
+        print(f"{timestamp()} Ignore already processed resource version will not be enabled.")
         ignore_already_processed = False
 
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
