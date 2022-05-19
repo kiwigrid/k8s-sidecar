@@ -22,6 +22,7 @@ REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
+IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 
 
 def main():
@@ -74,6 +75,22 @@ def main():
         print(f"{timestamp()} 5xx response content will not be enabled.")
         enable_5xx = False
 
+    ignore_already_processed = os.getenv(IGNORE_ALREADY_PROCESSED)
+    if ignore_already_processed is not None and ignore_already_processed.lower() == "true":
+        # Check API version
+        version = client.VersionApi().get_code()
+        if int(version.major) > 1 or (int(version.major) == 1 and int(version.minor) >= 19):
+            print(f"{timestamp()} Ignore already processed resource version will be enabled.")
+            ignore_already_processed = True
+        else:
+            print(
+                f"{timestamp()} Can't enable 'ignore already processed resource version', kubernetes api version is "
+                f"lower than v1.19.")
+            ignore_already_processed = False
+    else:
+        print(f"{timestamp()} Ignore already processed resource version will not be enabled.")
+        ignore_already_processed = False
+
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
 
@@ -85,7 +102,8 @@ def main():
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx)
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
-                          namespace, folder_annotation, resources, unique_filenames, script, enable_5xx)
+                          namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
+                          ignore_already_processed)
 
 
 def _initialize_kubeclient_configuration():
