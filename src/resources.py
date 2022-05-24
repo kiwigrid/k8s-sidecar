@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 import traceback
+import logging
 from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
@@ -16,6 +17,12 @@ from urllib3.exceptions import ProtocolError
 
 from helpers import request, write_data_to_file, remove_file, timestamp, unique_filename, CONTENT_TYPE_TEXT, \
     CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
+
+log_level = os.getenv("LOG_LEVEL", logging.INFO)
+
+# Initialize Logger
+logger = logging.getLogger(__name__)
+logger.setLevel(log_level)
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -32,7 +39,7 @@ _resources_version_map = {}
 
 
 def signal_handler(signum, frame):
-    print(f"{timestamp()} Subprocess exiting gracefully")
+    logger.info("Subprocess exiting gracefully")
     sys.exit(0)
 
 
@@ -61,8 +68,8 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
             dest_folder = folder_annotation
         else:
             dest_folder = os.path.join(default_folder, folder_annotation)
-        print(f"{timestamp()} Found a folder override annotation, "
-              f"placing the {metadata.name} in: {dest_folder}")
+        logger.info(f"Found a folder override annotation, "
+                    f"placing the {metadata.name} in: {dest_folder}")
         return dest_folder
     return default_folder
 
@@ -92,12 +99,12 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
         if ignore_already_processed:
             if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
-                # print(f"{timestamp()} Ignoring {resource} {metadata.namespace}/{metadata.name}")
+                # logger.debug(f"{timestamp()} Ignoring {resource} {metadata.namespace}/{metadata.name}")
                 continue
 
             _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
 
-        print(f"{timestamp()} Working on {resource}: {metadata.namespace}/{metadata.name}")
+        logger.debug(f"Working on {resource}: {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
         dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation)
@@ -116,7 +123,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
 
 def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx, is_removed=False):
     if secret.data is None:
-        print(f"{timestamp()} No data field in {resource}")
+        logger.warning(f"No data field in {resource}")
         return False
     else:
         return _iterate_data(
@@ -133,9 +140,9 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
 def _process_config_map(dest_folder, config_map, resource, unique_filenames, enable_5xx, is_removed=False):
     files_changed = False
     if config_map.data is None and config_map.binary_data is None:
-        print(f"{timestamp()} No data/binaryData field in {resource}")
+        logger.debug(f"No data/binaryData field in {resource}")
     if config_map.data is not None:
-        print(f"{timestamp()} Found 'data' on {resource}")
+        logger.debug(f"Found 'data' on {resource}")
         files_changed |= _iterate_data(
             config_map.data,
             dest_folder,
@@ -146,7 +153,7 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if config_map.binary_data is not None:
-        print(f"{timestamp()} Found 'binary_data' on {resource}")
+        logger.debug(f"Found 'binary_data' on {resource}")
         files_changed |= _iterate_data(
             config_map.binary_data,
             dest_folder,
@@ -190,13 +197,13 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
                                        resource=resource,
                                        resource_name=metadata.name)
         if not remove:
-            print(f"{timestamp()} Writing {filename}")
+            logger.debug(f"Writing {filename}")
             return write_data_to_file(dest_folder, filename, file_data, content_type)
         else:
-            print(f"{timestamp()} Deleting {filename}")
+            logger.debug(f"Deleting {filename}")
             return remove_file(dest_folder, filename)
     except Exception as e:
-        print(f"{timestamp()} Error when updating from ${data_key} into ${dest_folder}: ${e}")
+        logger.error(f"Error when updating from ${data_key} into ${dest_folder}: ${e}")
         return False
 
 
@@ -228,7 +235,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         if ignore_already_processed:
             if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
                 if event_type == "ADDED" or event_type == "MODIFIED":
-                    # print(f"{timestamp()} Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
+                    # logger.debug(f"{timestamp()} Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
                     continue
                 elif event_type == "DELETED":
                     _resources_version_map.pop(metadata.namespace + metadata.name)
@@ -236,7 +243,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
             if event_type == "ADDED" or event_type == "MODIFIED":
                 _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
 
-        print(f"{timestamp()} Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
+        logger.debug(f"Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
 
         files_changed = False
 
@@ -269,15 +276,15 @@ def _watch_resource_loop(mode, *args):
                 _watch_resource_iterator(*args)
         except ApiException as e:
             if e.status != 500:
-                print(f"{timestamp()} ApiException when calling kubernetes: {e}\n")
+                logger.error(f"ApiException when calling kubernetes: {e}\n")
             else:
                 raise
         except ProtocolError as e:
-            print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
+            logger.error(f"ProtocolError when calling kubernetes: {e}\n")
         except MaxRetryError as e:
-            print(f"{timestamp()} MaxRetryError when calling kubernetes: {e}\n")
+            logger.error(f"MaxRetryError when calling kubernetes: {e}\n")
         except Exception as e:
-            print(f"{timestamp()} Received unknown exception: {e}\n")
+            logger.error(f"Received unknown exception: {e}\n")
             traceback.print_exc()
 
 
@@ -293,10 +300,10 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
         died = False
         for proc, ns, resource in processes:
             if not proc.is_alive():
-                print(f"{timestamp()} Process for {ns}/{resource} died")
+                logger.fatal(f"Process for {ns}/{resource} died")
                 died = True
         if died:
-            print(f"{timestamp()} At least one process died. Stopping and exiting")
+            logger.fatal("At least one process died. Stopping and exiting")
             for proc, ns, resource in processes:
                 if proc.is_alive():
                     proc.terminate()
