@@ -86,7 +86,7 @@ def main():
             v_major = re.sub(r'\D', '', version.major)
             v_minor = re.sub(r'\D', '', version.minor)
 
-            if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(version.major) == 1 and int(v_minor) >= 19)):
+            if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
                 print(f"{timestamp()} Ignore already processed resource version will be enabled.")
                 ignore_already_processed = True
             else:
