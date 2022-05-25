@@ -1,21 +1,14 @@
 #!/usr/bin/env python
 
 import os
-import logging
 from kubernetes import client, config
 from kubernetes.client import ApiException
 from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
 from requests.packages.urllib3.util.retry import Retry
 
-from helpers import timestamp, REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
+from helpers import get_logger, REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 from resources import list_resources, watch_for_changes
 import re
-
-log_level = os.getenv("LOG_LEVEL", logging.INFO)
-
-# Initialize Logger
-logger = logging.getLogger(__name__)
-logger.setLevel(log_level)
 
 METHOD = "METHOD"
 UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
@@ -31,6 +24,9 @@ REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
+
+# Instantiate a logger
+logger = get_logger(__name__)
 
 
 def main():

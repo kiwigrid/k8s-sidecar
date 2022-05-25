@@ -5,7 +5,6 @@ import os
 import signal
 import sys
 import traceback
-import logging
 from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
@@ -15,14 +14,8 @@ from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError
 from urllib3.exceptions import ProtocolError
 
-from helpers import request, write_data_to_file, remove_file, timestamp, unique_filename, CONTENT_TYPE_TEXT, \
+from helpers import get_logger, request, write_data_to_file, remove_file, unique_filename, CONTENT_TYPE_TEXT, \
     CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
-
-log_level = os.getenv("LOG_LEVEL", logging.INFO)
-
-# Initialize Logger
-logger = logging.getLogger(__name__)
-logger.setLevel(log_level)
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -36,6 +29,9 @@ _list_namespace = defaultdict(lambda: {
 }})
 
 _resources_version_map = {}
+
+# Instantiate a logger
+logger = get_logger(__name__)
 
 
 def signal_handler(signum, frame):
