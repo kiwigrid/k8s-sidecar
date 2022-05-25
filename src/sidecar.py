@@ -3,11 +3,13 @@
 import os
 
 from kubernetes import client, config
+from kubernetes.client import ApiException
 from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
 from requests.packages.urllib3.util.retry import Retry
 
 from helpers import timestamp, REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 from resources import list_resources, watch_for_changes
+import re
 
 METHOD = "METHOD"
 UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
@@ -75,21 +77,27 @@ def main():
         print(f"{timestamp()} 5xx response content will not be enabled.")
         enable_5xx = False
 
-    ignore_already_processed = os.getenv(IGNORE_ALREADY_PROCESSED)
-    if ignore_already_processed is not None and ignore_already_processed.lower() == "true":
+    ignore_already_processed = False
+    if os.getenv(IGNORE_ALREADY_PROCESSED) is not None and os.getenv(IGNORE_ALREADY_PROCESSED).lower() == "true":
         # Check API version
-        version = client.VersionApi().get_code()
-        if int(version.major) > 1 or (int(version.major) == 1 and int(version.minor) >= 19):
-            print(f"{timestamp()} Ignore already processed resource version will be enabled.")
-            ignore_already_processed = True
-        else:
-            print(
-                f"{timestamp()} Can't enable 'ignore already processed resource version', kubernetes api version is "
-                f"lower than v1.19.")
-            ignore_already_processed = False
-    else:
+        try:
+            version = client.VersionApi().get_code()
+            # Filter version content and retain only numbers
+            v_major = re.sub(r'\D', '', version.major)
+            v_minor = re.sub(r'\D', '', version.minor)
+
+            if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
+                print(f"{timestamp()} Ignore already processed resource version will be enabled.")
+                ignore_already_processed = True
+            else:
+                print(f"{timestamp()} Can't enable 'ignore already processed resource version', "
+                      f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
+
+        except ApiException as e:
+            print(f"{timestamp()} Exception when calling VersionApi->get_code: %s\n" % e)
+
+    if not ignore_already_processed:
         print(f"{timestamp()} Ignore already processed resource version will not be enabled.")
-        ignore_already_processed = False
 
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
@@ -99,7 +107,8 @@ def main():
         for res in resources:
             for ns in namespace.split(','):
                 list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
-                               ns, folder_annotation, res, unique_filenames, script, enable_5xx)
+                               ns, folder_annotation, res, unique_filenames, script, enable_5xx,
+                               ignore_already_processed)
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
