@@ -90,12 +90,11 @@ def main():
                 print(f"{timestamp()} Ignore already processed resource version will be enabled.")
                 ignore_already_processed = True
             else:
-                print(
-                    f"{timestamp()} Can't enable 'ignore already processed resource version', "
-                    f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
+                print(f"{timestamp()} Can't enable 'ignore already processed resource version', "
+                      f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
 
         except ApiException as e:
-            print("Exception when calling VersionApi->get_code: %s\n" % e)
+            print(f"{timestamp()} Exception when calling VersionApi->get_code: %s\n" % e)
 
     if not ignore_already_processed:
         print(f"{timestamp()} Ignore already processed resource version will not be enabled.")
