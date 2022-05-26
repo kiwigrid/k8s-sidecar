@@ -27,6 +27,8 @@ class BaseFormatter(ABC, logging.Formatter):
          - time: ISO 8601 format with milliseconds (from datetime.isoFormat)
          - level: Log level in uppercase letter
          - msg: the log message
+         - exception: exception if the logger is specifying exc_info=True
+         - stack: stack information if the logger is specifying stack_info=True
         """
         fields = dict()
         fields['time'] = self.formatTime(record)
