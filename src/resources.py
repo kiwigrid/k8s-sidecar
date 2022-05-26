@@ -13,8 +13,9 @@ from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError
 from urllib3.exceptions import ProtocolError
+from logger import get_logger
 
-from helpers import get_logger, request, write_data_to_file, remove_file, unique_filename, CONTENT_TYPE_TEXT, \
+from helpers import request, write_data_to_file, remove_file, unique_filename, CONTENT_TYPE_TEXT, \
     CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
 
 RESOURCE_SECRET = "secret"

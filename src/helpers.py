@@ -5,7 +5,7 @@ import hashlib
 import os
 import subprocess
 from datetime import datetime
-import logging
+from logger import get_logger
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -35,25 +35,6 @@ WATCH_SERVER_TIMEOUT = os.environ.get("WATCH_SERVER_TIMEOUT", 60)
 # this is how long your client waits before realizing & dropping the connection.
 # You can keep this number low, maybe 60 seconds.
 WATCH_CLIENT_TIMEOUT = os.environ.get("WATCH_CLIENT_TIMEOUT", 66)
-
-
-def get_logger(name):
-    """
-    Instantiate a logger with the specified name, ensuring the LOG_LEVEL environment variable is valid.
-
-    :param name: logger name
-    :return: a logger instance
-    """
-    log = logging.getLogger(name)
-    try:
-        log_level = os.getenv("LOG_LEVEL", logging.INFO)
-        log_level = log_level.upper() if isinstance(log_level, str) else log_level
-        log.setLevel(log_level)
-        return log
-    except (ValueError, TypeError) as e:
-        log.error(f"Unable to set log level: {e}")
-        exit(1)
-
 
 # Instantiate a logger
 logger = get_logger(__name__)
