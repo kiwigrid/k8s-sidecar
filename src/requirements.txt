@@ -1,2 +1,4 @@
 kubernetes==23.6.0
 requests==2.27.1
+python-json-logger==2.0.2
+logfmter==0.0.6

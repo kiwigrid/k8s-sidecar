@@ -1,108 +1,77 @@
-import json
-import os
-import time
 import logging
-import datetime
-from enum import Enum
-from abc import ABC
+import os
+from datetime import datetime
 
+from dateutil.tz import tzlocal, tzutc
+from logfmter import Logfmter
+from pythonjsonlogger import jsonlogger
 
-class BaseFormatter(ABC, logging.Formatter):
-
-    def formatTime(self, record):
-        """
-        Return the creation time of the specified LogRecord as formatted text.
-        This method should be called from format() by a formatter which
-        wants to make use of a formatted time.
-        It provides an ISO 8601 format with milliseconds.
-        """
-        ct = self.converter(record.created)
-        ct_with_ms = time.mktime(ct) + (record.msecs / 1000)
-        ct_full = datetime.datetime.fromtimestamp(ct_with_ms)
-        return ct_full.isoformat()
-
-    def get_fields(self, record):
-        """
-        Return a dict wth the following fields:
-         - time: ISO 8601 format with milliseconds (from datetime.isoFormat)
-         - level: Log level in uppercase letter
-         - msg: the log message
-         - exception: exception if the logger is specifying exc_info=True
-         - stack: stack information if the logger is specifying stack_info=True
-        """
-        fields = dict()
-        fields['time'] = self.formatTime(record)
-        fields['level'] = record.levelname
-        fields['msg'] = record.getMessage()
-        if record.exc_info:
-            fields['exception'] = self.formatException(record.exc_info)
-        if record.stack_info:
-            fields['stack'] = self.formatStack(record.exc_info)
-        return fields
-
-
-class LogfmtFormatter(BaseFormatter):
-    """
-    Formatter in logfmt format.
-
-    Example:
-        time=2021-03-02T17:11:04.632448 level=INFO msg="Service is running!"
-    """
-    def format(self, record):
-        fields = super().get_fields(record)
-        log_format_msg = list(
-            map(lambda key:
-                '%s="%s"' % (key, fields.get(key).replace('"', '\\"').replace('\n', '\\n'))
-                if key in ('msg', 'exception', 'stack')
-                else '%s=%s' % (key, fields.get(key)), fields.keys())
-        )
-        return " ".join(log_format_msg)
-
-
-class JsonFormatter(BaseFormatter):
-    """
-    Formatter in json format.
-
-    Example:
-        {"time": "2021-03-02T17:11:04.632448", "level":"INFO", "msg": "Service is running!"}
-    """
-    def format(self, record):
-        fields = super().get_fields(record)
-        return json.dumps(fields)
-
-
-LogFormatters = {
-    'JSON': JsonFormatter(),
-    'LOGFMT': LogfmtFormatter(),
-    'DEFAULT': LogfmtFormatter(),
+# Supported Timezones for time format (in ISO 8601)
+LogTimezones = {
+    'LOCAL': tzlocal(),
+    'UTC': tzutc()
 }
 
-default_level = os.getenv("LOG_LEVEL", logging.INFO)
-default_fmt = os.getenv("LOG_FORMAT", 'DEFAULT')
+# Get configuration
+level = os.getenv("LOG_LEVEL", logging.INFO)
+fmt = os.getenv("LOG_FORMAT", 'JSON')
+tz = os.getenv("LOG_TZ", 'LOCAL')
+
+# Initialize logger
+root_logger = logging.getLogger("k8s-sidecar")
+log_handler = logging.StreamHandler()
+log_level = level.upper() if isinstance(level, str) else level
+log_tz = LogTimezones[tz.upper()] if LogTimezones.get(tz.upper()) else LogTimezones['LOCAL']
 
 
-def get_logger(name, level=default_level, fmt=default_fmt):
-    """
-    Instantiate a logger with the specified name, level and formatter.
+# Base Formatter to enforce time format in ISO8601 with UTC Timezone
+class BaseFormatter(logging.Formatter):
+    def formatTime(self, record, timeFormat=None):
+        if timeFormat is not None:
+            return super(BaseFormatter, self).formatTime(record, timeFormat)
+        return datetime.fromtimestamp(record.created, log_tz).isoformat()
 
-    :param name: logger name
-    :param level: logger level (default INFO)
-    :param fmt: logger formatter (default LOGFMT)
-    :return: a logger instance
-    """
-    log = logging.getLogger(name)
-    ch = logging.StreamHandler()
-    log_level = level.upper() if isinstance(level, str) else level
-    log_format = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogFormatters['DEFAULT']
 
-    try:
-        ch.setFormatter(log_format)
-        log.addHandler(ch)
-        log.setLevel(log_level)
-    except (ValueError, TypeError) as e:
-        log.warning(f"Initializing default logger", exc_info=True)
-        log.setLevel(logging.INFO)
-        ch.setFormatter(log_format)
+# Define formatter using LogFmt format (time in ISO8601)
+class LogfmtFormatter(Logfmter, BaseFormatter):
+    def __init__(self, keys, mapping):
+        super(LogfmtFormatter, self).__init__(keys, mapping)
 
-    log.addHandler(ch)
-    return log
+
+# Define formatter using Json format (time in ISO8601)
+class JsonFormatter(BaseFormatter, jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        super(JsonFormatter, self).add_fields(log_record, record, message_dict)
+        if not log_record.get('msg'):
+            log_record['msg'] = log_record['message']
+        if not log_record.get('time'):
+            log_record['time'] = self.formatTime(record)
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
+        else:
+            log_record['level'] = record.levelname
+
+
+# Supported Log Formatters
+LogFormatters = {
+    'JSON': (JsonFormatter('%(time)s %(level)s %(msg)s')),
+    'LOGFMT': (LogfmtFormatter(keys=["time", "level", "msg", "exception"],
+                               mapping={"time": "asctime", "level": "levelname", "msg": "message"}))
+}
+
+log_fmt = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogFormatters['DEFAULT']
+
+try:
+    log_handler.setFormatter(log_fmt)
+    root_logger.addHandler(log_handler)
+    root_logger.setLevel(log_level)
+except (ValueError, TypeError) as e:
+    root_logger.warning(f"Initializing default logger", exc_info=True)
+    root_logger.setLevel(logging.INFO)
+    log_handler.setFormatter(log_fmt)
+
+root_logger.addHandler(log_handler)
+
+
+def get_logger():
+    return root_logger
