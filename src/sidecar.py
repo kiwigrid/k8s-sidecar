@@ -27,8 +27,8 @@ SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 
-# Instantiate a logger
-logger = get_logger(__name__)
+# Get logger
+logger = get_logger()
 
 
 def main():
@@ -91,17 +91,17 @@ def main():
             v_minor = re.sub(r'\D', '', version.minor)
 
             if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
-                print(f"{timestamp()} Ignore already processed resource version will be enabled.")
+                logger.debug("Ignore already processed resource version will be enabled.")
                 ignore_already_processed = True
             else:
-                print(f"{timestamp()} Can't enable 'ignore already processed resource version', "
-                      f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
+                logger.debug("Can't enable 'ignore already processed resource version', "
+                             f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
 
         except ApiException as e:
-            print(f"{timestamp()} Exception when calling VersionApi->get_code: %s\n" % e)
+            logger.error("Exception when calling VersionApi", exc_info=True)
 
     if not ignore_already_processed:
-        print(f"{timestamp()} Ignore already processed resource version will not be enabled.")
+        logger.debug("Ignore already processed resource version will not be enabled.")
 
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())

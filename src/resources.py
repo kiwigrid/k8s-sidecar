@@ -31,8 +31,8 @@ _list_namespace = defaultdict(lambda: {
 
 _resources_version_map = {}
 
-# Instantiate a logger
-logger = get_logger(__name__)
+# Get logger
+logger = get_logger()
 
 
 def signal_handler(signum, frame):
@@ -96,7 +96,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
         if ignore_already_processed:
             if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
-                # logger.debug(f"{timestamp()} Ignoring {resource} {metadata.namespace}/{metadata.name}")
+                logger.debug(f"Ignoring {resource} {metadata.namespace}/{metadata.name}")
                 continue
 
             _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
@@ -232,7 +232,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         if ignore_already_processed:
             if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
                 if event_type == "ADDED" or event_type == "MODIFIED":
-                    # logger.debug(f"{timestamp()} Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
+                    logger.debug(f"Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
                     continue
                 elif event_type == "DELETED":
                     _resources_version_map.pop(metadata.namespace + metadata.name)

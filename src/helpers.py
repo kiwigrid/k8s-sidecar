@@ -36,8 +36,8 @@ WATCH_SERVER_TIMEOUT = os.environ.get("WATCH_SERVER_TIMEOUT", 60)
 # You can keep this number low, maybe 60 seconds.
 WATCH_CLIENT_TIMEOUT = os.environ.get("WATCH_CLIENT_TIMEOUT", 66)
 
-# Instantiate a logger
-logger = get_logger(__name__)
+# Get logger
+logger = get_logger()
 
 
 def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
@@ -70,7 +70,7 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
                 sha256_hash_cur.update(byte_block)
 
         if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
-            logger.warning(f"Contents of {filename} haven't changed. Not overwriting existing file")
+            logger.debug(f"Contents of {filename} haven't changed. Not overwriting existing file")
             return False
 
     if data_type == "binary":
