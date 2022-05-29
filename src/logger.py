@@ -59,7 +59,7 @@ LogFormatters = {
                                mapping={"time": "asctime", "level": "levelname", "msg": "message"}))
 }
 
-log_fmt = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogFormatters['DEFAULT']
+log_fmt = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogFormatters['JSON']
 
 try:
     log_handler.setFormatter(log_fmt)
