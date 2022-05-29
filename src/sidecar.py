@@ -91,10 +91,10 @@ def main():
             v_minor = re.sub(r'\D', '', version.minor)
 
             if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
-                logger.debug("Ignore already processed resource version will be enabled.")
+                logger.info("Ignore already processed resource version will be enabled.")
                 ignore_already_processed = True
             else:
-                logger.debug("Can't enable 'ignore already processed resource version', "
+                logger.info("Can't enable 'ignore already processed resource version', "
                              f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
 
         except ApiException as e:
