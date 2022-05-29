@@ -24,7 +24,7 @@ log_level = level.upper() if isinstance(level, str) else level
 log_tz = LogTimezones[tz.upper()] if LogTimezones.get(tz.upper()) else LogTimezones['LOCAL']
 
 
-# Base Formatter to enforce time format in ISO8601 with UTC Timezone
+# Base Formatter to enforce time format in ISO8601 with LOCAL or UTC Timezone
 class BaseFormatter(logging.Formatter):
     def formatTime(self, record, timeFormat=None):
         if timeFormat is not None:
@@ -55,7 +55,7 @@ class JsonFormatter(BaseFormatter, jsonlogger.JsonFormatter):
 # Supported Log Formatters
 LogFormatters = {
     'JSON': (JsonFormatter('%(time)s %(level)s %(msg)s')),
-    'LOGFMT': (LogfmtFormatter(keys=["time", "level", "msg", "exception"],
+    'LOGFMT': (LogfmtFormatter(keys=["time", "level", "msg"],
                                mapping={"time": "asctime", "level": "levelname", "msg": "message"}))
 }
 
