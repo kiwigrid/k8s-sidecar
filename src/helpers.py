@@ -5,6 +5,7 @@ import hashlib
 import os
 import subprocess
 from datetime import datetime
+from logger import get_logger
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -35,6 +36,10 @@ WATCH_SERVER_TIMEOUT = os.environ.get("WATCH_SERVER_TIMEOUT", 60)
 # You can keep this number low, maybe 60 seconds.
 WATCH_CLIENT_TIMEOUT = os.environ.get("WATCH_CLIENT_TIMEOUT", 66)
 
+# Get logger
+logger = get_logger()
+
+
 def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
     """
     Write text to a file. If the parent folder doesn't exist, create it. If there are insufficient
@@ -47,8 +52,8 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
             if e.errno not in (errno.EACCES, errno.EEXIST):
                 raise
             if e.errno == errno.EACCES:
-                print(f"{timestamp()} Error: insufficient privileges to create {folder}. "
-                      f"Skipping {filename}.")
+                logger.error(f"Error: insufficient privileges to create {folder}. "
+                             f"Skipping {filename}.")
                 return
 
     absolute_path = os.path.join(folder, filename)
@@ -65,7 +70,7 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
                 sha256_hash_cur.update(byte_block)
 
         if sha256_hash_new.hexdigest() == sha256_hash_cur.hexdigest():
-            print(f"{timestamp()} Contents of {filename} haven't changed. Not overwriting existing file")
+            logger.debug(f"Contents of {filename} haven't changed. Not overwriting existing file")
             return False
 
     if data_type == "binary":
@@ -113,7 +118,7 @@ def request(url, method, enable_5xx=False, payload=None):
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
     if url is None:
-        print(f"{timestamp()} No url provided. Doing nothing.")
+        logger.warning(f"No url provided. Doing nothing.")
         return
 
     # If method is not provided use GET as default
@@ -122,10 +127,10 @@ def request(url, method, enable_5xx=False, payload=None):
     elif method == "POST":
         res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
     else:
-        print(f"{timestamp()} Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
+        logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
-    print(f"{timestamp()} {method} request sent to {url}. "
-          f"Response: {res.status_code} {res.reason} {res.text}")
+    logger.debug(f"{method} request sent to {url}. "
+                 f"Response: {res.status_code} {res.reason} {res.text}")
     return res
 
 
@@ -151,13 +156,13 @@ def unique_filename(filename, namespace, resource, resource_name):
 
 
 def execute(script_path):
-    print(f"{timestamp()} Executing script from {script_path}")
+    logger.debug(f"Executing script from {script_path}")
     try:
         result = subprocess.run(["sh", script_path],
                                 capture_output=True,
                                 check=True)
-        print(f"{timestamp()} Script stdout: {result.stdout}")
-        print(f"{timestamp()} Script stderr: {result.stderr}")
-        print(f"{timestamp()} Script exit code: {result.returncode}")
+        logger.debug(f"Script stdout: {result.stdout}")
+        logger.debug(f"Script stderr: {result.stderr}")
+        logger.debug(f"Script exit code: {result.returncode}")
     except subprocess.CalledProcessError as e:
-        print(f"{timestamp()} Script failed with error: {e}")
+        logger.error(f"Script failed with error: {e}")
