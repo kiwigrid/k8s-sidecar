@@ -102,10 +102,21 @@ def request(url, method, enable_5xx=False, payload=None):
 
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
-    if username and password:
+    req_token_name = os.getenv("REQ_TOKEN_KEY")
+    req_token_value = os.getenv("REQ_TOKEN_VALUE")
+
+    if req_token_value and not req_token_name:
+      req_token_name = "private-token"
+
+    if req_token_name and req_token_value:
+        auth = None
+        headers= { req_token_name, req_token_value }    
+    elif username and password:
         auth = (username, password)
+        headers= None
     else:
         auth = None
+        headers= None
 
     r = requests.Session()
 
@@ -123,9 +134,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
+        res = r.get("%s" % url, auth=auth, headers=headers, timeout=REQ_TIMEOUT)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
+        res = r.post("%s" % url, auth=auth, headers=headers, json=payload, timeout=REQ_TIMEOUT)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
