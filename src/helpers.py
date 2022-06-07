@@ -102,21 +102,33 @@ def request(url, method, enable_5xx=False, payload=None):
 
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
-    req_token_name = os.getenv("REQ_TOKEN_KEY")
+    req_token_key = os.getenv("REQ_TOKEN_KEY")
     req_token_value = os.getenv("REQ_TOKEN_VALUE")
+    params=dict()
 
-    if req_token_value and not req_token_name:
-      req_token_name = "private-token"
+    if req_token_value and not req_token_key:
+      req_token_key = "private_token"
+      logger.info(f"Request token value is set, but key is not. Setting request token key to default value {req_token_key}.")
 
-    if req_token_name and req_token_value:
+    if req_token_key and req_token_value:
         auth = None
-        headers= { req_token_name, req_token_value }    
+        params[ str(req_token_key) ] = req_token_value
+        logger.info(f"Token based authorization configured. Token key: {req_token_key}.")
+        logger.debug(f"Token value {params[str(req_token_key)]}.")
     elif username and password:
         auth = (username, password)
-        headers= None
+        params = None
+        logger.info(f"Basic-auth configured.  username: {username}.")
+        logger.debug(f"Basic-auth configured.  password: {password}.")
     else:
+        logger.info(f"No authorization tokens set (no basic-auth and no private token).")
         auth = None
-        headers= None
+        params = None
+
+    if params:
+      logger.debug(f"Request params are set as follows: {params}")
+    else:
+      logger.info(f"No request params are set.")
 
     r = requests.Session()
 
@@ -134,9 +146,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, headers=headers, timeout=REQ_TIMEOUT)
+        res = r.get("%s" % url, auth=auth, params=params, timeout=REQ_TIMEOUT)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, headers=headers, json=payload, timeout=REQ_TIMEOUT)
+        res = r.post("%s" % url, auth=auth, params=params, json=payload, timeout=REQ_TIMEOUT)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
