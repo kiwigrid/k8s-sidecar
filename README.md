@@ -47,7 +47,7 @@ metadata:
     k8s-sidecar-target-directory: "/path/to/target/directory"
 ```
 
-If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from. If the source requires authentication, currently http basic-auth and header based token authentication are supported. Please see the variables below for details. 
+If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from. If the source requires authentication, currently http basic-auth and token based authentication via query param are supported. Please see the variables below for details. 
 
 ## Configuration Environment Variables
 
