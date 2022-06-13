@@ -68,6 +68,7 @@ jobs:
 
         wait_for_pod_ready "sidecar"
         wait_for_pod_ready "sidecar-5xx"
+        wait_for_pod_ready "sidecar-api_key"
         wait_for_pod_ready "dummy-server-pod"
 
     - name: Install Configmaps and Secrets
@@ -80,6 +81,7 @@ jobs:
     - name: Retrieve pod logs
       run: |
         kubectl logs sidecar > /tmp/sidecar.log
+        kubectl logs sidecar > /tmp/sidecar-api_key.log
         kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
         kubectl logs dummy-server-pod > /tmp/dummy-server.log
     - name: Upload artifacts
@@ -109,6 +111,9 @@ jobs:
         kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
         kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
 
+        echo "Downloading resource files from sidecar-api_key..."
+        kubectl cp sidecar-api_key:/tmp/api_key.txt /tmp/api-key/api_key.txt || true
+
     - name: Verify files
       run: |
         echo "Verifying file content from sidecar and sidecar-5xx ..."
@@ -126,4 +131,6 @@ jobs:
           echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
           echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
           echo -n "500" | diff - /tmp/5xx/500.txt &&
-          ls /tmp/5xx/script_result
+          ls /tmp/5xx/script_result &&
+          [ -f /tmp/api-key/api_key.txt ] && echo "api_key used for aouthentication"
+          
