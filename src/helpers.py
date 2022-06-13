@@ -113,22 +113,15 @@ def request(url, method, enable_5xx=False, payload=None):
     if req_token_key and req_token_value:
         auth = None
         params[ str(req_token_key) ] = req_token_value
-        logger.info(f"Token based authorization configured. Token key: {req_token_key}.")
-        logger.debug(f"Token value {params[str(req_token_key)]}.")
+        logger.debug(f"Token based authorization configured. Token key: {req_token_key}.")
     elif username and password:
         auth = (username, password)
         params = None
-        logger.info(f"Basic-auth configured.  username: {username}.")
-        logger.debug(f"Basic-auth configured.  password: {password}.")
+        logger.debug(f"Basic-auth configured.  username: {username}.")
     else:
-        logger.info(f"No authorization tokens set (no basic-auth and no private token).")
+        logger.debug(f"No authorization tokens set (no basic-auth and no private token).")
         auth = None
         params = None
-
-    if params:
-      logger.debug(f"Request params are set as follows: {params}")
-    else:
-      logger.info(f"No request params are set.")
 
     r = requests.Session()
 
