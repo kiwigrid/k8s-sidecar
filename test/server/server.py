@@ -1,7 +1,5 @@
-#from http.client import HTTPException, HTTPResponse
 from fastapi import FastAPI, Security, Depends, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKey
-#import uvicorn
 
 API_KEY_NAME="private_token"
 API_KEY="super-duper-secret"

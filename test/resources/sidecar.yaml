@@ -110,7 +110,7 @@ metadata:
   name: token-auth-sample-secret
 type: Opaque
 data:
-    REQ_TOKEN_KEY: private_token
+    REQ_TOKEN_KEY: cHJpdmF0ZV90b2tlbg==
     #REQ_TOKEN_VALUE: base64 enc "super-duper-secret"
     REQ_TOKEN_VALUE: c3VwZXItZHVwZXItc2VjcmV0
 ---
@@ -147,7 +147,7 @@ metadata:
   name: token-auth-sample-secret-fails
 type: Opaque
 data:
-    REQ_TOKEN_KEY: private_token
+    REQ_TOKEN_KEY: cHJpdmF0ZV90b2tlbg==
     #REQ_TOKEN_VALUE base64 enc "I-will-fail"
     REQ_TOKEN_VALUE: SS13aWxsLWZhaWw=
 ---
