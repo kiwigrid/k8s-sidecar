@@ -137,6 +137,6 @@ jobs:
           echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
           echo -n "500" | diff - /tmp/5xx/500.txt &&
           ls /tmp/5xx/script_result &&
-          grep "200" /tmp/api-key/api-key.txt && echo "api-key used successfully for authentication" &&
-          grep "Forbidden" /tmp/api-key-fails/api-key.txt && echo "api-key-fails expectedly with wrong credentials" 
+          grep -i "success" /tmp/api-key/api-key.txt && echo "api-key used successfully for authentication" &&
+          [ ! -f /tmp/api-key-fails/api-key.txt ] && echo "api-key-fails expectedly with wrong credentials" 
           

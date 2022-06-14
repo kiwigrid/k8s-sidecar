@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Security, Depends, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKey
+from fastapi.responses import FileResponse
+
 
 API_KEY_NAME="private_token"
 API_KEY="super-duper-secret"
@@ -38,6 +40,6 @@ async def read_item():
     return 503
 
 
-@app.get("/200/api-key")
+@app.get("/200/api-key.txt", response_class=FileResponse)
 def read_root(api_key: APIKey = Depends(get_api_key)):
-    return 200
+    return "api-key.txt"

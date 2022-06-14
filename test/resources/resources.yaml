@@ -59,4 +59,4 @@ metadata:
   labels:
     findme: "sure"
 data:
-  api-key.txt.url: "http://dummy-server/200/api-key"
+  api-key.txt.url: "http://dummy-server/200/api-key.txt"
