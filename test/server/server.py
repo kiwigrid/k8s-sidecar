@@ -40,7 +40,6 @@ async def read_item():
     return 503
 
 
-@app.get("/200/api_key")
+@app.get("/200/api-key")
 def read_root(api_key: APIKey = Depends(get_api_key)):
     return 200
-    

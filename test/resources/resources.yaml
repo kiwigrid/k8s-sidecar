@@ -55,8 +55,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: url-configmap-api_key
+  name: url-configmap-api-key
   labels:
     findme: "sure"
 data:
-  api_key.txt.url: "http://dummy-server/200/api_key"
+  api-key.txt.url: "http://dummy-server/200/api-key"
