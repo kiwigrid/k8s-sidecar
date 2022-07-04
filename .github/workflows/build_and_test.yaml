@@ -114,11 +114,21 @@ jobs:
         kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
 
         echo "Downloading resource files from sidecar-api-key..."
-        kubectl cp sidecar-api-key:/tmp/api-key.txt /tmp/api-key/api-key.txt || true
+        kubectl cp sidecar-api-key:/tmp/api-key.txt /tmp/sidecar-api-key/api-key.txt || true
         
         echo "Downloading resource files from sidecar-api-key-fails..."
-        kubectl cp sidecar-api-key-fails:/tmp/api-key.txt /tmp/api-key-fails/api-key.txt || true
-
+        kubectl cp sidecar-api-key-fails:/tmp/api-key.txt /tmp/sidecar-api-key-fails/api-key.txt || true
+    - name: DEBUG
+      run: |
+        echo "#############################################################"
+        echo "#############################################################"
+        echo "#############################################################"
+        kubectl logs sidecar-api-key
+        ls -la /tmp/
+        ls -la /tmp/api-key/
+        echo "#############################################################"
+        echo "#############################################################"
+        echo "#############################################################"
     - name: Verify files
       run: |
         echo "Verifying file content from different sidecar pods ..."
@@ -137,6 +147,6 @@ jobs:
           echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
           echo -n "500" | diff - /tmp/5xx/500.txt &&
           ls /tmp/5xx/script_result &&
-          grep -i "success" /tmp/api-key/api-key.txt && echo "api-key used successfully for authentication" &&
-          [ ! -f /tmp/api-key-fails/api-key.txt ] && echo "api-key-fails expectedly with wrong credentials" 
+          grep -i "success" /tmp/sidecar-api-key/api-key.txt && echo "api-key used successfully for authentication" &&
+          [ ! -f /tmp/sidecar-api-key-fails/api-key.txt ] && echo "api-key fails expectedly with wrong credentials" 
           
