@@ -51,3 +51,12 @@ metadata:
     findme: "yup"
 data:
   500.txt.url: "http://dummy-server/500"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-configmap-basic-auth
+  labels:
+    findme: "yup"
+data:
+  secured.txt.url: "http://dummy-server/secured"

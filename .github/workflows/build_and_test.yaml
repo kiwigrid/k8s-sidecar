@@ -97,6 +97,7 @@ jobs:
         kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
         kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
         kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
+        kubectl cp sidecar:/tmp/secured.txt /tmp/secured.txt
 
         echo "Downloading resource files from sidecar-5xx..."
         kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
@@ -118,6 +119,7 @@ jobs:
           diff test/kubelogo.png /tmp/secret-kubelogo.png &&
           echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
           echo -n "This relatively exists" | diff - /tmp/relative.txt &&
+          echo -n "allowed" | diff - /tmp/secured.txt &&
           [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
           ls /tmp/script_result &&
           echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&

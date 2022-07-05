@@ -53,14 +53,20 @@ spec:
       mountPath: /opt/script.sh
       subPath: script.sh
     env:
-    - name: LABEL
-      value: "findme"
-    - name: FOLDER
-      value: /tmp/
-    - name: RESOURCE
-      value: both
-    - name: SCRIPT
-      value: "/opt/script.sh"
+      - name: LABEL
+        value: "findme"
+      - name: FOLDER
+        value: /tmp/
+      - name: RESOURCE
+        value: both
+      - name: SCRIPT
+        value: "/opt/script.sh"
+      - name: REQ_USERNAME
+        value: "se§ure"
+      - name: REQ_PASSWORD
+        value: "s§cröt"
+      - name: LOG_LEVEL
+        value: "DEBUG"
   volumes:
   - name: shared-volume
     emptyDir: {}
