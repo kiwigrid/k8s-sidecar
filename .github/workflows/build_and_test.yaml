@@ -72,11 +72,23 @@ jobs:
 
     - name: Install Configmaps and Secrets
       run: |
+        wait_for_pod_log() {
+          while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
+          echo "Pod '$1' logs contains '$2'"
+        }
         # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
-        sleep 15
+        sleep 20
         echo "Installing resources..."
         kubectl apply -f "test/resources/resources.yaml"
-        sleep 15
+        pods=("sidecar" "sidecar-5xx")
+        resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+        for p in ${pods[*]}; do
+          for r in ${resources[*]}; do
+            wait_for_pod_log $p $r
+          done
+        done
+        # 5 more seconds after the last thing appeared in the logs.
+        sleep 5
     - name: Retrieve pod logs
       run: |
         kubectl logs sidecar > /tmp/sidecar.log
