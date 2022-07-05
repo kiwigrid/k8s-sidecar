@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, Response
+from fastapi import Depends, FastAPI, status, HTTPException
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
@@ -32,8 +32,12 @@ async def read_item():
 
 
 @app.get("/secured", status_code=200)
-async def read_secure_data(response: Response, auth: HTTPBasicCredentials = Depends(basic_auth_scheme)):
-    if auth.username != 'se§ure' or auth.password != 's§cröt':
-        response.status_code = 403
-        return 'forbidden'
+async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_scheme)):
+    if auth.username != 'foo' or auth.password != 'bar':
+        print(f"wrong auth: ${auth.username} : ${auth.password}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
     return 'allowed'

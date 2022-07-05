@@ -5,11 +5,13 @@ import hashlib
 import os
 import subprocess
 from datetime import datetime
-from logger import get_logger
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.util.retry import Retry
+
+from logger import get_logger
 
 CONTENT_TYPE_TEXT = "ascii"
 CONTENT_TYPE_BASE64_BINARY = "binary"
@@ -17,7 +19,8 @@ CONTENT_TYPE_BASE64_BINARY = "binary"
 REQ_RETRY_TOTAL = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
 REQ_RETRY_CONNECT = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(os.getenv("REQ_RETRY_CONNECT"))
 REQ_RETRY_READ = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
-REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
+REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
+    os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
 REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
 # Tune default timeouts as outlined in
@@ -102,8 +105,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
+    encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
     if username and password:
-        auth = (username.encode('utf-8'), password.encode('utf-8'))
+        auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
     else:
         auth = None
 

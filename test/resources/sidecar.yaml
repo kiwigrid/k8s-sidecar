@@ -104,6 +104,8 @@ spec:
         value: "true"
       - name: LOG_LEVEL
         value: "DEBUG"
+      - name: REQ_BASIC_AUTH_ENCODING
+        value: 'ascii'
   volumes:
   - name: shared-volume
     emptyDir: {}
