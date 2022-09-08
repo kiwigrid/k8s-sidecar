@@ -82,3 +82,12 @@ metadata:
 binaryData:
   # Base64 encoded url is 'http://dummy-server/static/kubelogo.png'
   url-downloaded-kubelogo.png.url: "aHR0cDovL2R1bW15LXNlcnZlci9zdGF0aWMva3ViZWxvZ28ucG5n"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-configmap-headers
+  labels:
+    findme: "yup"
+data:
+  secured.url: "http://dummy-server/secured-token"

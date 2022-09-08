@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, status, HTTPException
 from fastapi.logger import logger
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, JSONResponse
 
 app = FastAPI()
 
@@ -46,3 +46,9 @@ async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_schem
             headers={"WWW-Authenticate": "Basic"},
         )
     return 'allowed'
+
+@app.get("/secured-token")
+async def read_secure_header(x_apitoken: str | None = Header(default=None)):
+  if x_apitoken is None:
+    return 400
+  return 200
