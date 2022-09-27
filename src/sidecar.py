@@ -23,6 +23,7 @@ RESOURCE = "RESOURCE"
 REQ_PAYLOAD = "REQ_PAYLOAD"
 REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
+REQ_IGNORE_INITIAL_EVENT = "REQ_IGNORE_INITIAL_EVENT"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
@@ -103,6 +104,11 @@ def main():
     if not ignore_already_processed:
         logger.debug("Ignore already processed resource version will not be enabled.")
 
+    request_ignore_initial_event = os.getenv(REQ_IGNORE_INITIAL_EVENT) and ignore_already_processed
+
+    if request_ignore_initial_event:
+        logger.debug("Initial list or first event for a given resource will skip requests to a given URL.")
+
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
 
@@ -116,7 +122,7 @@ def main():
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed)
+                          ignore_already_processed, request_ignore_initial_event)
 
 
 def _initialize_kubeclient_configuration():
