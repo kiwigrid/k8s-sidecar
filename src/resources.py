@@ -87,7 +87,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
 
     files_changed = False
-    ignore_request = False
+    should_do_request = False
 
     # For all the found resources
     for item in ret.items:
@@ -96,13 +96,16 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
         if ignore_already_processed:
-            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
-                logger.debug(f"Ignoring {resource} {metadata.namespace}/{metadata.name}")
+            resource_version_map_key = metadata.namespace + metadata.name
+            if _resources_version_map.get(resource_version_map_key) == metadata.resource_version:
+                logger.debug(f"Ignoring already processed resource version for {resource} {metadata.namespace}/{metadata.name}")
                 continue
 
-            logger.debug(f"Initial list for {resource} {metadata.namespace}/{metadata.name}")
-            ignore_request = True
-            _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
+            if resource_version_map_key in _resources_version_map:
+                logger.debug(f"Item is already in the resource version map: {resource} {metadata.namespace}/{metadata.name}")
+                should_do_request = True
+
+            _resources_version_map[resource_version_map_key] = metadata.resource_version
 
         logger.debug(f"Working on {resource}: {metadata.namespace}/{metadata.name}")
 
@@ -117,11 +120,12 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     if script and files_changed:
         execute(script)
 
-    if request_ignore_initial_event and ignore_request:
-        logger.debug(f"Ignoring sending request for initial list {resource} {metadata.namespace}/{metadata.name}")
+    if request_ignore_initial_event and not should_do_request:
+        logger.debug(f"Ignoring sending request for initial list for all items")
         return
 
     if request_url and files_changed:
+        logger.debug("Doing request as files changed")
         request(request_url, request_method, enable_5xx, request_payload)
 
 
@@ -226,12 +230,11 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
     if namespace != "ALL":
         additional_args['namespace'] = namespace
 
-    ignore_request = False
-
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
     # Process events
     for event in stream:
+        should_do_request = False
         item = event['object']
         metadata = item.metadata
         event_type = event['type']
@@ -239,18 +242,20 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
         if ignore_already_processed:
-            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
+            resource_version_map_key = metadata.namespace + metadata.name
+            if _resources_version_map.get(resource_version_map_key) == metadata.resource_version:
                 if event_type == "ADDED" or event_type == "MODIFIED":
-                    logger.debug(f"Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
+                    logger.debug(f"Ignoring already processed resource version for {event_type} {resource} {metadata.namespace}/{metadata.name}")
                     continue
                 elif event_type == "DELETED":
-                    _resources_version_map.pop(metadata.namespace + metadata.name)
+                    _resources_version_map.pop(resource_version_map_key)
+
+            if resource_version_map_key in _resources_version_map:
+                logger.debug(f"Item is already in the resource version map: {resource} {metadata.namespace}/{metadata.name}")
+                should_do_request = True
 
             if event_type == "ADDED" or event_type == "MODIFIED":
-                if request_ignore_initial_event and _resources_version_map.get(metadata.namespace + metadata.name) is None:
-                    logger.debug(f"Initial event for {event_type} {resource} {metadata.namespace}/{metadata.name}")
-                    ignore_request = True
-                _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
+                _resources_version_map[resource_version_map_key] = metadata.resource_version
 
         logger.debug(f"Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
 
@@ -269,11 +274,12 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         if script and files_changed:
             execute(script)
 
-        if request_ignore_initial_event and ignore_request:
-            logger.debug(f"Ignoring sending request for initial {event_type} {resource} {metadata.namespace}/{metadata.name}")
+        if request_ignore_initial_event and not should_do_request:
+            logger.debug(f"Ignoring sending request for initial event for all items")
             return
 
         if request_url and files_changed:
+            logger.debug("Doing request as files changed")
             request(request_url, request_method, enable_5xx, request_payload)
 
 

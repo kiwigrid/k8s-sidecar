@@ -107,7 +107,7 @@ def main():
     request_ignore_initial_event = os.getenv(REQ_IGNORE_INITIAL_EVENT) and ignore_already_processed
 
     if request_ignore_initial_event:
-        logger.debug("Initial list or first event for a given resource will skip requests to a given URL.")
+        logger.debug("Requests for initial list or first event for every resource will be skipped.")
 
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
