@@ -52,6 +52,9 @@ def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CON
     if full_filename.endswith(".url"):
         filename = full_filename[:-4]
         file_data = request(file_data, "GET", enable_5xx).text
+    elif full_filename.endswith(".script"):
+        filename = full_filename[:-7]
+        file_data = execute(file_data).stdout
     else:
         filename = full_filename
 

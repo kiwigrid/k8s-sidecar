@@ -160,9 +160,11 @@ def execute(script_path):
     try:
         result = subprocess.run(["sh", script_path],
                                 capture_output=True,
-                                check=True)
+                                check=True,
+                                text=True)
         logger.debug(f"Script stdout: {result.stdout}")
         logger.debug(f"Script stderr: {result.stderr}")
         logger.debug(f"Script exit code: {result.returncode}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Script failed with error: {e}")
+    return result
