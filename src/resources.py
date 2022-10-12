@@ -43,17 +43,17 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CONTENT_TYPE_TEXT):
+def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CONTENT_TYPE_TEXT, remove=False):
     if content_type == CONTENT_TYPE_BASE64_BINARY:
         file_data = base64.b64decode(content)
     else:
         file_data = content
 
-    if full_filename.endswith(".url"):
+    if full_filename.endswith(".url") and not remove:
         filename = full_filename[:-4]
         file_data = request(file_data, "GET", enable_5xx).text
-    elif full_filename.endswith(".script"):
-        filename = full_filename[:-7]
+    elif full_filename.endswith(".command") and not remove:
+        filename = full_filename[:-8]
         file_data = execute(file_data).stdout
     else:
         filename = full_filename
@@ -190,7 +190,8 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         filename, file_data = _get_file_data_and_name(data_key,
                                                       data_content,
                                                       enable_5xx,
-                                                      content_type)
+                                                      content_type,
+                                                      remove)
         if unique_filenames:
             filename = unique_filename(filename=filename,
                                        namespace=metadata.namespace,

@@ -158,7 +158,7 @@ def unique_filename(filename, namespace, resource, resource_name):
 def execute(script_path):
     logger.debug(f"Executing script from {script_path}")
     try:
-        result = subprocess.run(["sh", script_path],
+        result = subprocess.run(script_path, shell=True,
                                 capture_output=True,
                                 check=True,
                                 text=True)
