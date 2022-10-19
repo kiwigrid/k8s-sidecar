@@ -100,10 +100,10 @@ def remove_file(folder, filename):
 def request(url, method, enable_5xx=False, payload=None):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
 
-    username = os.getenv("REQ_USERNAME")
-    password = os.getenv("REQ_PASSWORD")
-    req_token_key = os.getenv("REQ_TOKEN_KEY")
-    req_token_value = os.getenv("REQ_TOKEN_VALUE")
+    username = {} if os.getenv("REQ_USERNAME") is None else os.getenv("REQ_USERNAME") 
+    password = {} if os.getenv("REQ_PASSWORD") is None else os.getenv("REQ_PASSWORD")
+    req_token_key = {} if os.getenv("REQ_TOKEN_KEY") is None else os.getenv("REQ_TOKEN_KEY")
+    req_token_value = {} if os.getenv("REQ_TOKEN_VALUE") is None else os.getenv("REQ_TOKEN_VALUE")
     params=dict()
 
     if req_token_value and not req_token_key:
