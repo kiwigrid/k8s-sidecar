@@ -4,6 +4,7 @@ import base64
 import os
 import signal
 import sys
+import copy
 import traceback
 from collections import defaultdict
 from multiprocessing import Process
@@ -30,6 +31,7 @@ _list_namespace = defaultdict(lambda: {
 }})
 
 _resources_version_map = {}
+_resources_object_map = {}
 
 # Get logger
 logger = get_logger()
@@ -87,10 +89,12 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
 
     files_changed = False
+    exist_keys = set()
 
     # For all the found resources
     for item in ret.items:
         metadata = item.metadata
+        exist_keys.add(metadata.namespace + metadata.name)
 
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
@@ -111,6 +115,15 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         else:
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
 
+    # Clear the cache that is not listed.
+    for key in set(_resources_object_map.keys()) - exist_keys:
+        item = _resources_object_map.get(key)
+
+        if resource == RESOURCE_CONFIGMAP:
+            files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx, True)
+        else:
+            files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx, True)
+            
     if script and files_changed:
         execute(script)
 
@@ -119,11 +132,19 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
 
 
 def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx, is_removed=False):
+    files_changed = False
+
+    old_secret = _resources_object_map.get(secret.metadata.namespace + secret.metadata.name) or copy.deepcopy(secret)
+    if is_removed:
+        _resources_object_map.pop(secret.metadata.namespace + secret.metadata.name, None)
+    else:
+        _resources_object_map[secret.metadata.namespace + secret.metadata.name] = copy.deepcopy(secret)
+
     if secret.data is None:
         logger.warning(f"No data field in {resource}")
-        return False
-    else:
-        return _iterate_data(
+
+    if secret.data is not None:
+        files_changed |= _iterate_data(
             secret.data,
             dest_folder,
             secret.metadata,
@@ -132,12 +153,33 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
             CONTENT_TYPE_BASE64_BINARY,
             enable_5xx,
             is_removed)
+    if old_secret.data is not None and not is_removed:
+        for key in set(old_secret.data.keys()) & set(secret.data or {}):
+            old_secret.data.pop(key)
+        files_changed |= _iterate_data(
+            old_secret.data,
+            dest_folder,
+            old_secret.metadata,
+            resource,
+            unique_filenames,
+            CONTENT_TYPE_BASE64_BINARY,
+            enable_5xx,
+            True)
+    return files_changed
 
 
 def _process_config_map(dest_folder, config_map, resource, unique_filenames, enable_5xx, is_removed=False):
     files_changed = False
+
+    old_config_map = _resources_object_map.get(config_map.metadata.namespace + config_map.metadata.name) or copy.deepcopy(config_map)
+    if is_removed:
+        _resources_object_map.pop(config_map.metadata.namespace + config_map.metadata.name, None)
+    else:
+        _resources_object_map[config_map.metadata.namespace + config_map.metadata.name] = copy.deepcopy(config_map)
+
     if config_map.data is None and config_map.binary_data is None:
-        logger.debug(f"No data/binaryData field in {resource}")
+        logger.warning(f"No data/binaryData field in {resource}")
+
     if config_map.data is not None:
         logger.debug(f"Found 'data' on {resource}")
         files_changed |= _iterate_data(
@@ -149,6 +191,18 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             CONTENT_TYPE_TEXT,
             enable_5xx,
             is_removed)
+    if old_config_map.data is not None and not is_removed:
+        for key in set(old_config_map.data.keys()) & set(config_map.data or {}):
+            old_config_map.data.pop(key)
+        files_changed |= _iterate_data(
+            old_config_map.data,
+            dest_folder,
+            old_config_map.metadata,
+            resource,
+            unique_filenames,
+            CONTENT_TYPE_TEXT,
+            enable_5xx,
+            True)
     if config_map.binary_data is not None:
         logger.debug(f"Found 'binary_data' on {resource}")
         files_changed |= _iterate_data(
@@ -160,6 +214,18 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             CONTENT_TYPE_BASE64_BINARY,
             enable_5xx,
             is_removed)
+    if old_config_map.binary_data is not None and not is_removed:
+        for key in set(old_config_map.binary_data.keys()) & set(config_map.binary_data or {}):
+            old_config_map.binary_data.pop(key)
+        files_changed |= _iterate_data(
+            old_config_map.binary_data,
+            dest_folder,
+            old_config_map.metadata,
+            resource,
+            unique_filenames,
+            CONTENT_TYPE_BASE64_BINARY,
+            enable_5xx,
+            True)
     return files_changed
 
 
