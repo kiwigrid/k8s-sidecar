@@ -100,12 +100,28 @@ def remove_file(folder, filename):
 def request(url, method, enable_5xx=False, payload=None):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
 
-    username = os.getenv("REQ_USERNAME")
-    password = os.getenv("REQ_PASSWORD")
-    if username and password:
-        auth = (username, password)
-    else:
+    username = {} if os.getenv("REQ_USERNAME") is None else os.getenv("REQ_USERNAME") 
+    password = {} if os.getenv("REQ_PASSWORD") is None else os.getenv("REQ_PASSWORD")
+    req_token_key = {} if os.getenv("REQ_TOKEN_KEY") is None else os.getenv("REQ_TOKEN_KEY")
+    req_token_value = {} if os.getenv("REQ_TOKEN_VALUE") is None else os.getenv("REQ_TOKEN_VALUE")
+    params=dict()
+
+    if req_token_value and not req_token_key:
+      req_token_key = "private_token"
+      logger.info(f"Request token value is set, but key is not. Setting request token key to default value {req_token_key}.")
+
+    if req_token_key and req_token_value:
         auth = None
+        params[ str(req_token_key) ] = req_token_value
+        logger.debug(f"Token based authorization configured. Token key: {req_token_key}.")
+    elif username and password:
+        auth = (username, password)
+        params = None
+        logger.debug(f"Basic-auth configured.  username: {username}.")
+    else:
+        logger.debug(f"No authorization tokens set (no basic-auth and no private token).")
+        auth = None
+        params = None
 
     r = requests.Session()
 
@@ -123,9 +139,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
+        res = r.get("%s" % url, auth=auth, params=params, timeout=REQ_TIMEOUT)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
+        res = r.post("%s" % url, auth=auth, params=params, json=payload, timeout=REQ_TIMEOUT)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return

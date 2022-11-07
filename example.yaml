@@ -28,6 +28,10 @@ spec:
         volumeMounts:
         - name: shared-volume
           mountPath: /tmp/
+         # Only relevant for token based auth (like with git)
+#        envFrom:
+#        - secretRef:
+#            name: token-auth-sample-secret
         env:
         - name: LABEL
           value: "findme"
@@ -70,6 +74,18 @@ type: Opaque
 data:
   # base64 encoded: my super cool \n multiline \ secret
   secret.world: bXkgc3VwZXIgY29vbAptdWx0aWxpbmUKc2VjcmV0
+---
+# This secret is only necessary for token based authentication of http requests.
+# Refer to README.md for details on the two parameters REQ_TOKEN_KEY and REQ_TOKEN_VALUE
+apiVersion: v1
+kind: Secret
+metadata:
+  name: token-auth-sample-secret
+type: Opaque
+data:
+    #REQ_TOKEN_KEY: private_token
+    # base64 encoded super-duper-secret authentication token
+    REQ_TOKEN_VALUE: c3VwZXItZHVwZXItc2VjcmV0
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

@@ -68,6 +68,8 @@ jobs:
 
         wait_for_pod_ready "sidecar"
         wait_for_pod_ready "sidecar-5xx"
+        wait_for_pod_ready "sidecar-api-key"
+        wait_for_pod_ready "sidecar-api-key-fails"
         wait_for_pod_ready "dummy-server-pod"
 
     - name: Install Configmaps and Secrets
@@ -81,6 +83,8 @@ jobs:
       run: |
         kubectl logs sidecar > /tmp/sidecar.log
         kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
+        kubectl logs sidecar-api-key > /tmp/sidecar-api-key.log
+        kubectl logs sidecar-api-key-fails > /tmp/sidecar-api-key-fails.log
         kubectl logs dummy-server-pod > /tmp/dummy-server.log
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -109,9 +113,24 @@ jobs:
         kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
         kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
 
+        echo "Downloading resource files from sidecar-api-key..."
+        kubectl cp sidecar-api-key:/tmp/api-key.txt /tmp/sidecar-api-key.txt || true
+        
+        echo "Downloading resource files from sidecar-api-key-fails..."
+        kubectl cp sidecar-api-key-fails:/tmp/api-key.txt /tmp/sidecar-api-key-fails.txt || true
+    - name: DEBUG
+      run: |
+        echo "#############################################################"
+        echo "#############################################################"
+        echo "#############################################################"
+        kubectl logs sidecar-api-key
+        ls -la /tmp/
+        echo "#############################################################"
+        echo "#############################################################"
+        echo "#############################################################"
     - name: Verify files
       run: |
-        echo "Verifying file content from sidecar and sidecar-5xx ..."
+        echo "Verifying file content from different sidecar pods ..."
         # this needs to be the last statement so that it defines the script exit code
         echo -n "Hello World!" | diff - /tmp/hello.world &&
           diff test/kubelogo.png /tmp/cm-kubelogo.png &&
@@ -126,4 +145,7 @@ jobs:
           echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
           echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
           echo -n "500" | diff - /tmp/5xx/500.txt &&
-          ls /tmp/5xx/script_result
+          ls /tmp/5xx/script_result &&
+          grep -i "success" /tmp/sidecar-api-key.txt && echo "api-key used successfully for authentication." &&
+          [ ! -f /tmp/sidecar-api-key-fails.txt ] && echo "api-key fails expectedly with wrong credentials." 
+          

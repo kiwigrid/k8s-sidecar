@@ -105,6 +105,80 @@ spec:
       defaultMode: 0777
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: token-auth-sample-secret
+type: Opaque
+data:
+    REQ_TOKEN_KEY: cHJpdmF0ZV90b2tlbg==
+    #REQ_TOKEN_VALUE: base64 enc "super-duper-secret"
+    REQ_TOKEN_VALUE: c3VwZXItZHVwZXItc2VjcmV0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-api-key
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    envFrom:
+    - secretRef:
+        name: token-auth-sample-secret      
+    env:
+    - name: LABEL
+      value: "findme"
+    - name: FOLDER
+      value: /tmp/
+    - name: RESOURCE
+      value: configmap
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: token-auth-sample-secret-fails
+type: Opaque
+data:
+    REQ_TOKEN_KEY: cHJpdmF0ZV90b2tlbg==
+    #REQ_TOKEN_VALUE base64 enc "I-will-fail"
+    REQ_TOKEN_VALUE: SS13aWxsLWZhaWw=
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-api-key-fails
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    envFrom:
+    - secretRef:
+        name: token-auth-sample-secret-fails      
+    env:
+    - name: LABEL
+      value: "findme"
+    - name: FOLDER
+      value: /tmp/
+    - name: RESOURCE
+      value: configmap
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: dummy-server-pod
