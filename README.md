@@ -33,7 +33,7 @@ Both are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc6
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
 
-# Usage 
+# Usage
 
 Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
 ```shell
@@ -48,6 +48,7 @@ metadata:
 ```
 
 If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from.
+If the filename ends with `.command` suffix, the content will be processed as a shell command which will be executed. Stdout of the command will be stored in the file.
 
 ## Configuration Environment Variables
 

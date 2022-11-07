@@ -158,11 +158,13 @@ def unique_filename(filename, namespace, resource, resource_name):
 def execute(script_path):
     logger.debug(f"Executing script from {script_path}")
     try:
-        result = subprocess.run(["sh", script_path],
+        result = subprocess.run(script_path, shell=True,
                                 capture_output=True,
-                                check=True)
+                                check=True,
+                                text=True)
         logger.debug(f"Script stdout: {result.stdout}")
         logger.debug(f"Script stderr: {result.stderr}")
         logger.debug(f"Script exit code: {result.returncode}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Script failed with error: {e}")
+    return result
