@@ -121,6 +121,7 @@ jobs:
         kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
         kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
         kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
+        kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/5xx/secured.txt
 
     - name: Verify files
       run: |
@@ -132,6 +133,7 @@ jobs:
           echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
           echo -n "This relatively exists" | diff - /tmp/relative.txt &&
           echo -n "allowed" | diff - /tmp/secured.txt &&
+          echo -n '{"detail":"Not authenticated"}' | diff - /tmp/5xx/secured.txt &&
           [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
           ls /tmp/script_result &&
           echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&

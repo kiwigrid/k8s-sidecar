@@ -1,5 +1,7 @@
 from fastapi import Depends, FastAPI, status, HTTPException
+from fastapi.logger import logger
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from starlette.responses import PlainTextResponse
 
 app = FastAPI()
 
@@ -31,13 +33,13 @@ async def read_item():
     return 503
 
 
-@app.get("/secured", status_code=200)
+@app.get("/secured", status_code=200, response_class=PlainTextResponse)
 async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_scheme)):
-    if auth.username != 'foo' or auth.password != 'bar':
-        print(f"wrong auth: ${auth.username} : ${auth.password}")
+    if auth.username != 'user1' or auth.password != 'abcdefghijklmnopqrstuvwxyz':
+        logger.warning("[WARN] wrong auth: %s : %s ", auth.username, auth.password)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=f"Incorrect user (${auth.username}) or password (${auth.password})",
             headers={"WWW-Authenticate": "Basic"},
         )
     return 'allowed'
