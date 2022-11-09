@@ -31,115 +31,152 @@ jobs:
       - build
     strategy:
       matrix:
-        k8s: [ v1.14.10, v1.15.12, v1.16.15, v1.17.17, v1.18.19, v1.19.11, v1.20.7, v1.21.2, v1.22.5, v1.23.3 ]
+        k8s:
+          [
+            v1.14.10,
+            v1.15.12,
+            v1.16.15,
+            v1.17.17,
+            v1.18.19,
+            v1.19.11,
+            v1.20.7,
+            v1.21.2,
+            v1.22.5,
+            v1.23.3,
+          ]
     name: "Test on k8s ${{ matrix.k8s }}"
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Create k8s Kind Cluster
-      uses: helm/kind-action@v1.3.0
-      with:
-        node_image: kindest/node:${{ matrix.k8s }}
-        config: test/kind-config.yaml
-        cluster_name: sidecar-testing
-        wait: 5m
-    - name: Download artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: images
-        path: /tmp
-    - name: Load images into kind cluster
-      run : |
-        kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
-        kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
-    - name: Install Sidecar and Dummy Server
-      run: |
-        wait_for_pod_ready() {
-          while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
-          echo "Pod '$1' ready."
-        }
-        echo "Installing sidecar..."
-        kubectl apply -f "test/resources/sidecar.yaml"
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          node_image: kindest/node:${{ matrix.k8s }}
+          config: test/kind-config.yaml
+          cluster_name: sidecar-testing
+          wait: 5m
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: images
+          path: /tmp
+      - name: Load images into kind cluster
+        run: |
+          kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
+          kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
+      - name: Install Sidecar and Dummy Server
+        run: |
+          wait_for_pod_ready() {
+            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
+            echo "Pod '$1' ready."
+          }
+          echo "Installing sidecar..."
+          kubectl apply -f "test/resources/sidecar.yaml"
 
-        sleep 10
+          sleep 10
 
-        kubectl get pods
+          kubectl get pods
 
-        wait_for_pod_ready "sidecar"
-        wait_for_pod_ready "sidecar-5xx"
-        wait_for_pod_ready "dummy-server-pod"
+          wait_for_pod_ready "sidecar"
+          wait_for_pod_ready "sidecar-5xx"
+          wait_for_pod_ready "dummy-server-pod"
 
-    - name: Install Configmaps and Secrets
-      run: |
-        wait_for_pod_log() {
-          while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-          echo "Pod '$1' logs contains '$2'"
-        }
-        # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
-        sleep 20
-        echo "Installing resources..."
-        kubectl apply -f "test/resources/resources.yaml"
-        pods=("sidecar" "sidecar-5xx")
-        resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
-        for p in ${pods[*]}; do
-          for r in ${resources[*]}; do
-            wait_for_pod_log $p $r
+      - name: Install Configmaps and Secrets
+        run: |
+          wait_for_pod_log() {
+            while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
+            echo "Pod '$1' logs contains '$2'"
+          }
+          # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
+          sleep 20
+          echo "Installing resources..."
+          kubectl apply -f "test/resources/resources.yaml"
+          pods=("sidecar" "sidecar-5xx")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
           done
-        done
-        # 5 more seconds after the last thing appeared in the logs.
-        sleep 5
-    - name: Retrieve pod logs
-      run: |
-        kubectl logs sidecar > /tmp/sidecar.log
-        kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
-        kubectl logs dummy-server-pod > /tmp/dummy-server.log
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: pod-logs_${{ matrix.k8s }}
-        path: /tmp/*.log
-    - name: Download expected files from cluster
-      run: |
-        echo "Downloading resource files from sidecar..."
-        kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
-        kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
-        kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
-        kubectl cp sidecar:/tmp/script_result /tmp/script_result
-        kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
-        kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
-        kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
-        kubectl cp sidecar:/tmp/secured.txt /tmp/secured.txt
+          # 5 more seconds after the last thing appeared in the logs.
+          sleep 5
+      - name: Retrieve pod logs
+        run: |
+          kubectl logs sidecar > /tmp/sidecar.log
+          kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
+          kubectl logs dummy-server-pod > /tmp/dummy-server.log
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pod-logs_${{ matrix.k8s }}
+          path: /tmp/*.log
+      - name: Download expected files from cluster
+        run: |
+          echo "Downloading resource files from sidecar..."
+          kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
+          kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
+          kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
+          kubectl cp sidecar:/tmp/script_result /tmp/script_result
+          kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
+          kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
+          kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
+          kubectl cp sidecar:/tmp/secured.txt /tmp/secured.txt
 
-        echo "Downloading resource files from sidecar-5xx..."
-        kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
-        kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
-        kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
-        # script also generates into '/tmp'
-        kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
-        # absolute path in configmap points to /tmp in 'absolute-configmap'
-        kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
-        kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
-        kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
-        kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/5xx/secured.txt
+          echo "Downloading resource files from sidecar-5xx..."
+          kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
+          kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
+          # script also generates into '/tmp'
+          kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
+          # absolute path in configmap points to /tmp in 'absolute-configmap'
+          kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/5xx/secured.txt
 
-    - name: Verify files
-      run: |
-        echo "Verifying file content from sidecar and sidecar-5xx ..."
-        # this needs to be the last statement so that it defines the script exit code
-        echo -n "Hello World!" | diff - /tmp/hello.world &&
-          diff test/kubelogo.png /tmp/cm-kubelogo.png &&
-          diff test/kubelogo.png /tmp/secret-kubelogo.png &&
-          echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
-          echo -n "This relatively exists" | diff - /tmp/relative.txt &&
-          echo -n "allowed" | diff - /tmp/secured.txt &&
-          echo -n '{"detail":"Not authenticated"}' | diff - /tmp/5xx/secured.txt &&
-          [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
-          ls /tmp/script_result &&
-          echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
-          diff test/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
-          diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
-          echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
-          echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
-          echo -n "500" | diff - /tmp/5xx/500.txt &&
-          ls /tmp/5xx/script_result
+      - name: Update Configmaps and Secrets
+        run: |
+          sleep 5
+          current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          wait_for_pod_log() {
+            while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
+            echo "Pod '$1' logs contains '$2'"
+          }
+          echo "Updating resources..."
+          kubectl apply -f "test/resources/change_resources.yaml"
+          pods=("sidecar" "sidecar-5xx")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+          # 20 more seconds after the last thing appeared in the logs.
+          sleep 20
+      - name: Verify files
+        run: |
+          echo "Verifying file content from sidecar and sidecar-5xx ..."
+          # this needs to be the last statement so that it defines the script exit code
+          echo -n "Hello World!" | diff - /tmp/hello.world &&
+            diff test/kubelogo.png /tmp/cm-kubelogo.png &&
+            diff test/kubelogo.png /tmp/secret-kubelogo.png &&
+            echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
+            echo -n "This relatively exists" | diff - /tmp/relative.txt &&
+            echo -n "allowed" | diff - /tmp/secured.txt &&
+            echo -n '{"detail":"Not authenticated"}' | diff - /tmp/5xx/secured.txt &&
+            [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
+            ls /tmp/script_result &&
+            echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
+            diff test/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
+            diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
+            echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
+            echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
+            echo -n "500" | diff - /tmp/5xx/500.txt && 
+            ls /tmp/5xx/script_result &&
+            kubectl exec sidecar -- sh -c "ls /tmp/" &&
+            kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
+            kubectl exec sidecar -- sh -c "! test -e /tmp/cm-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e  /tmp/change-cm-kubelogo.png" &&
+            kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
+            kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
+            kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt"
