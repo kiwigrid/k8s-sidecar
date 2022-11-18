@@ -8,7 +8,7 @@ RUN apk add --no-cache gcc && \
 	.venv/bin/pip install --no-cache-dir -r requirements.txt && \
     rm requirements.txt && \
 	find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
-
+RUN apk add --upgrade expat
 
 FROM base
 ENV         PYTHONUNBUFFERED=1
