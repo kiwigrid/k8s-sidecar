@@ -93,7 +93,7 @@ jobs:
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
           pods=("sidecar" "sidecar-5xx")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
@@ -120,6 +120,7 @@ jobs:
           kubectl cp sidecar:/tmp/script_result /tmp/script_result
           kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
           kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
+          kubectl cp sidecar:/tmp/old-dir/change-dir.txt /tmp/change-dir.txt
           kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
           kubectl cp sidecar:/tmp/secured.txt /tmp/secured.txt
 
@@ -132,6 +133,7 @@ jobs:
           # absolute path in configmap points to /tmp in 'absolute-configmap'
           kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
           kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/old-dir/change-dir.txt /tmp/5xx/change-dir.txt
           kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
           kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/5xx/secured.txt
 
@@ -146,7 +148,7 @@ jobs:
           echo "Updating resources..."
           kubectl apply -f "test/resources/change_resources.yaml"
           pods=("sidecar" "sidecar-5xx")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
@@ -163,6 +165,7 @@ jobs:
             diff test/kubelogo.png /tmp/secret-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/relative.txt &&
+            echo -n "This new-dir exists" | diff - /tmp/change-dir.txt &&
             echo -n "allowed" | diff - /tmp/secured.txt &&
             echo -n '{"detail":"Not authenticated"}' | diff - /tmp/5xx/secured.txt &&
             [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
@@ -172,7 +175,8 @@ jobs:
             diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
-            echo -n "500" | diff - /tmp/5xx/500.txt && 
+            echo -n "This new-dir exists" | diff - /tmp/5xx/change-dir.txt &&
+            echo -n "500" | diff - /tmp/5xx/500.txt &&
             ls /tmp/5xx/script_result &&
             kubectl exec sidecar -- sh -c "ls /tmp/" &&
             kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
@@ -180,3 +184,5 @@ jobs:
             kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
             kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
             kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt"
+            kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt"
+            kubectl exec sidecar -- sh -c "! test -e /tmp/old-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt"
