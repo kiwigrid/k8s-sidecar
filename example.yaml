@@ -17,7 +17,7 @@ spec:
       serviceAccountName: sample-acc
       containers:
       - name: bash
-        image: bash:4.4.19
+        image: bash:5.2.12
         volumeMounts:
         - name: shared-volume
           mountPath: /tmp/
