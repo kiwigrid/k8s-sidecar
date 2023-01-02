@@ -53,4 +53,4 @@ metadata:
     k8s-sidecar-target-directory: new-dir
 data:
   change-dir.txt: |-
-     This new-dir exists
+     This change-dir exists

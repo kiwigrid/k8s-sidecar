@@ -53,7 +53,7 @@ metadata:
     k8s-sidecar-target-directory: orig-dir
 data:
   change-dir.txt: |-
-     This orig-dir exists
+     This change-dir exists
 ---
 apiVersion: v1
 kind: ConfigMap
