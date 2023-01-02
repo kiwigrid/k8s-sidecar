@@ -32,6 +32,7 @@ Both are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc6
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
+- CI tests for k8s v1.19-v1.26
 
 # Usage 
 
