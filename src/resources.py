@@ -124,7 +124,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
             files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx, True)
         else:
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx, True)
-            
+
     if script and files_changed:
         execute(script)
 
@@ -157,8 +157,8 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
             enable_5xx,
             is_removed)
     if old_secret.data is not None and not is_removed:
-        for key in set(old_secret.data.keys()) & set(secret.data or {}):
-            if old_dest_folder == dest_folder:
+        if old_dest_folder == dest_folder:
+            for key in set(old_secret.data.keys()) & set(secret.data or {}):
                 old_secret.data.pop(key)
         files_changed |= _iterate_data(
             old_secret.data,
@@ -198,8 +198,8 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if old_config_map.data is not None and not is_removed:
-        for key in set(old_config_map.data.keys()) & set(config_map.data or {}):
-            if old_dest_folder == dest_folder:
+        if old_dest_folder == dest_folder:
+            for key in set(old_config_map.data.keys()) & set(config_map.data or {}):
                 old_config_map.data.pop(key)
         files_changed |= _iterate_data(
             old_config_map.data,
@@ -222,8 +222,8 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if old_config_map.binary_data is not None and not is_removed:
-        for key in set(old_config_map.binary_data.keys()) & set(config_map.binary_data or {}):
-            if old_dest_folder == dest_folder:
+        if old_dest_folder == dest_folder:
+            for key in set(old_config_map.binary_data.keys()) & set(config_map.binary_data or {}):
                 old_config_map.binary_data.pop(key)
         files_changed |= _iterate_data(
             old_config_map.binary_data,
