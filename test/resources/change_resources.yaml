@@ -42,3 +42,15 @@ metadata:
 data:
   change-relative.txt: |-
      This relatively exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: change-dir-configmap
+  labels:
+    findme: "yup"
+  annotations:
+    k8s-sidecar-target-directory: new-dir
+data:
+  change-dir.txt: |-
+     This change-dir exists

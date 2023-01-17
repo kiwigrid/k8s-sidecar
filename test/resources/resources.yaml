@@ -46,6 +46,18 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: change-dir-configmap
+  labels:
+    findme: "yup"
+  annotations:
+    k8s-sidecar-target-directory: orig-dir
+data:
+  change-dir.txt: |-
+     This change-dir exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: url-configmap-500
   labels:
     findme: "yup"

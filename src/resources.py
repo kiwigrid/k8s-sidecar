@@ -32,6 +32,7 @@ _list_namespace = defaultdict(lambda: {
 
 _resources_version_map = {}
 _resources_object_map = {}
+_resources_dest_folder_map = {}
 
 # Get logger
 logger = get_logger()
@@ -123,7 +124,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
             files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx, True)
         else:
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx, True)
-            
+
     if script and files_changed:
         execute(script)
 
@@ -135,10 +136,12 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
     files_changed = False
 
     old_secret = _resources_object_map.get(secret.metadata.namespace + secret.metadata.name) or copy.deepcopy(secret)
+    old_dest_folder = _resources_dest_folder_map.get(secret.metadata.namespace + secret.metadata.name) or dest_folder
     if is_removed:
         _resources_object_map.pop(secret.metadata.namespace + secret.metadata.name, None)
     else:
         _resources_object_map[secret.metadata.namespace + secret.metadata.name] = copy.deepcopy(secret)
+        _resources_dest_folder_map[secret.metadata.namespace + secret.metadata.name] = dest_folder
 
     if secret.data is None:
         logger.warning(f"No data field in {resource}")
@@ -154,11 +157,12 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
             enable_5xx,
             is_removed)
     if old_secret.data is not None and not is_removed:
-        for key in set(old_secret.data.keys()) & set(secret.data or {}):
-            old_secret.data.pop(key)
+        if old_dest_folder == dest_folder:
+            for key in set(old_secret.data.keys()) & set(secret.data or {}):
+                old_secret.data.pop(key)
         files_changed |= _iterate_data(
             old_secret.data,
-            dest_folder,
+            old_dest_folder,
             old_secret.metadata,
             resource,
             unique_filenames,
@@ -172,10 +176,12 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
     files_changed = False
 
     old_config_map = _resources_object_map.get(config_map.metadata.namespace + config_map.metadata.name) or copy.deepcopy(config_map)
+    old_dest_folder = _resources_dest_folder_map.get(config_map.metadata.namespace + config_map.metadata.name) or dest_folder
     if is_removed:
         _resources_object_map.pop(config_map.metadata.namespace + config_map.metadata.name, None)
     else:
         _resources_object_map[config_map.metadata.namespace + config_map.metadata.name] = copy.deepcopy(config_map)
+        _resources_dest_folder_map[config_map.metadata.namespace + config_map.metadata.name] = dest_folder
 
     if config_map.data is None and config_map.binary_data is None:
         logger.warning(f"No data/binaryData field in {resource}")
@@ -192,11 +198,12 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if old_config_map.data is not None and not is_removed:
-        for key in set(old_config_map.data.keys()) & set(config_map.data or {}):
-            old_config_map.data.pop(key)
+        if old_dest_folder == dest_folder:
+            for key in set(old_config_map.data.keys()) & set(config_map.data or {}):
+                old_config_map.data.pop(key)
         files_changed |= _iterate_data(
             old_config_map.data,
-            dest_folder,
+            old_dest_folder,
             old_config_map.metadata,
             resource,
             unique_filenames,
@@ -215,11 +222,12 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
             enable_5xx,
             is_removed)
     if old_config_map.binary_data is not None and not is_removed:
-        for key in set(old_config_map.binary_data.keys()) & set(config_map.binary_data or {}):
-            old_config_map.binary_data.pop(key)
+        if old_dest_folder == dest_folder:
+            for key in set(old_config_map.binary_data.keys()) & set(config_map.binary_data or {}):
+                old_config_map.binary_data.pop(key)
         files_changed |= _iterate_data(
             old_config_map.binary_data,
-            dest_folder,
+            old_dest_folder,
             old_config_map.metadata,
             resource,
             unique_filenames,
