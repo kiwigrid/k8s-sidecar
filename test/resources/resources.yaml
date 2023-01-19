@@ -72,3 +72,13 @@ metadata:
     findme: "yup"
 data:
   secured.txt.url: "http://dummy-server/secured"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-configmap-binary-download
+  labels:
+    findme: "yup"
+binaryData:
+  # Base64 encoded url is 'https://github.com/kiwigrid/k8s-sidecar/raw/master/test/kubelogo.png'
+  url-downloaded-kubelogo.png.url: "aHR0cHM6Ly9naXRodWIuY29tL2tpd2lncmlkL2s4cy1zaWRlY2FyL3Jhdy9tYXN0ZXIvdGVzdC9rdWJlbG9nby5wbmc="
