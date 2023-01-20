@@ -80,5 +80,5 @@ metadata:
   labels:
     findme: "yup"
 binaryData:
-  # Base64 encoded url is 'https://github.com/kiwigrid/k8s-sidecar/raw/master/test/kubelogo.png'
-  url-downloaded-kubelogo.png.url: "aHR0cHM6Ly9naXRodWIuY29tL2tpd2lncmlkL2s4cy1zaWRlY2FyL3Jhdy9tYXN0ZXIvdGVzdC9rdWJlbG9nby5wbmc="
+  # Base64 encoded url is 'http://dummy-server/static/kubelogo.png'
+  url-downloaded-kubelogo.png.url: "aHR0cDovL2R1bW15LXNlcnZlci9zdGF0aWMva3ViZWxvZ28ucG5n"

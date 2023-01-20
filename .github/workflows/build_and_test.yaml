@@ -14,6 +14,9 @@ jobs:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
           tags: "kiwigrid/k8s-sidecar:testing"
+      - name: Prepare dummy server static resources
+        run: |
+          cp test/kubelogo.png test/server/static/
       - name: Build dummy server
         uses: docker/build-push-action@v3
         with:
