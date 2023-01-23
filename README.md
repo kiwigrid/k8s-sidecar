@@ -33,8 +33,10 @@ Both are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc6
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
 - CI tests for k8s v1.19-v1.26
-- Support for base64'd `binaryData` for both `Secret` and `ConfigMap` kinds
-  - Binary data content is base64 decoded before generating the file
+- Support `binaryData` for both `Secret` and `ConfigMap` kinds
+  - Binary data content is base64 decoded before generating the file on disk
+  - Values can also be base64 encoded URLs that download binary data e.g. executables
+    - The value in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/svolland-csgroup/k8s-sidecar/blob/master/test/resources/resources.yaml#L11))
 
 # Usage 
 
