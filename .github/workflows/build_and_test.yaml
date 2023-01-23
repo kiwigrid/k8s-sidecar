@@ -6,6 +6,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build sidecar
@@ -14,10 +16,13 @@ jobs:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
           tags: "kiwigrid/k8s-sidecar:testing"
+      - name: Prepare dummy server static resources
+        run: |
+          cp test/kubelogo.png test/server/static/
       - name: Build dummy server
         uses: docker/build-push-action@v3
         with:
-          context: "{{defaultContext}}:test/server"
+          context: "test/server"
           push: false
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
@@ -123,6 +128,7 @@ jobs:
           kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
           kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
+          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/url-downloaded-kubelogo.png          
           kubectl cp sidecar:/tmp/script_result /tmp/script_result
           kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
           kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
@@ -134,6 +140,7 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
           kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
           kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png          
           # script also generates into '/tmp'
           kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
           # absolute path in configmap points to /tmp in 'absolute-configmap'
@@ -169,6 +176,7 @@ jobs:
           echo -n "Hello World!" | diff - /tmp/hello.world &&
             diff test/kubelogo.png /tmp/cm-kubelogo.png &&
             diff test/kubelogo.png /tmp/secret-kubelogo.png &&
+            diff test/kubelogo.png /tmp/url-downloaded-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/relative.txt &&
             echo -n "This change-dir exists" | diff - /tmp/change-dir.txt &&
@@ -179,6 +187,7 @@ jobs:
             echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
             diff test/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
             diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
+            diff test/kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
             echo -n "This change-dir exists" | diff - /tmp/5xx/change-dir.txt &&

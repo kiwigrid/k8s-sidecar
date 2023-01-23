@@ -72,3 +72,13 @@ metadata:
     findme: "yup"
 data:
   secured.txt.url: "http://dummy-server/secured"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: url-configmap-binary-download
+  labels:
+    findme: "yup"
+binaryData:
+  # Base64 encoded url is 'http://dummy-server/static/kubelogo.png'
+  url-downloaded-kubelogo.png.url: "aHR0cDovL2R1bW15LXNlcnZlci9zdGF0aWMva3ViZWxvZ28ucG5n"

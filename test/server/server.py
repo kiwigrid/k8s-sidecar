@@ -1,9 +1,12 @@
 from fastapi import Depends, FastAPI, status, HTTPException
 from fastapi.logger import logger
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import PlainTextResponse
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 basic_auth_scheme = HTTPBasic()
 
