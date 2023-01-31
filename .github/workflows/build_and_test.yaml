@@ -11,7 +11,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build sidecar
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
@@ -20,7 +20,7 @@ jobs:
         run: |
           cp test/kubelogo.png test/server/static/
       - name: Build dummy server
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: "test/server"
           push: false
