@@ -4,6 +4,7 @@ import errno
 import hashlib
 import os
 import subprocess
+import json
 from datetime import datetime
 
 import requests
@@ -22,6 +23,7 @@ REQ_RETRY_READ = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("RE
 REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
     os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
 REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
+REQ_HEADERS = {} if os.getenv("REQ_HEADERS") is None else json.loads(os.getenv("REQ_HEADERS"))
 
 # Tune default timeouts as outlined in
 # https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
@@ -127,9 +129,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
+        res = r.get("%s" % url, auth=auth, headers=REQ_HEADERS, timeout=REQ_TIMEOUT)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
+        res = r.post("%s" % url, auth=auth, headers=REQ_HEADERS, json=payload, timeout=REQ_TIMEOUT)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
