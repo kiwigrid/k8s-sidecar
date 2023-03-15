@@ -23,12 +23,12 @@ REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None 
     os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
 REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
-# Allows to suppress TLS verification for HTTPs requests to Grafana
-# This is particularly useful since the connection happens as "localhost"
-# and most likely the TLS cert offered by Grafana will have an external URL.
+# Allows to suppress TLS verification for all HTTPs requests (except to the API server, which are controller by SKIP_TLS_VERIFY)
+# This is particularly useful when the connection to the main container happens as "localhost"
+# and most likely the TLS cert offered by that will have an external URL in it.
 # Note that the latest 'requests' library no longer offer a way to disable this via
 # env vars; however a custom truststore can be set via REQUESTS_CA_BUNDLE
-REQ_TLS_VERIFY = False if os.getenv("SKIP_GRAFANA_TLS_VERIFY") == "true" else None
+REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY ") == "true" else None
 
 # Tune default timeouts as outlined in
 # https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
