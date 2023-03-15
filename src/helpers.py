@@ -23,6 +23,13 @@ REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None 
     os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
 REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
+# Allows to suppress TLS verification for all HTTPs requests (except to the API server, which are controller by SKIP_TLS_VERIFY)
+# This is particularly useful when the connection to the main container happens as "localhost"
+# and most likely the TLS cert offered by that will have an external URL in it.
+# Note that the latest 'requests' library no longer offer a way to disable this via
+# env vars; however a custom truststore can be set via REQUESTS_CA_BUNDLE
+REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY ") == "true" else None
+
 # Tune default timeouts as outlined in
 # https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
 # https://github.com/kubernetes-client/python/blob/master/examples/watch/timeout-settings.md
@@ -127,9 +134,9 @@ def request(url, method, enable_5xx=False, payload=None):
 
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT)
+        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT)
+        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
