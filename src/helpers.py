@@ -28,7 +28,7 @@ REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_T
 # and most likely the TLS cert offered by that will have an external URL in it.
 # Note that the latest 'requests' library no longer offer a way to disable this via
 # env vars; however a custom truststore can be set via REQUESTS_CA_BUNDLE
-REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY ") == "true" else None
+REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY") == "true" else None
 
 # Tune default timeouts as outlined in
 # https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
