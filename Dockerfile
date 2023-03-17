@@ -11,6 +11,9 @@ RUN apk add --no-cache gcc && \
 
 
 FROM base
+LABEL org.opencontainers.image.source=https://github.com/kiwigrid/k8s-sidecar
+LABEL org.opencontainers.image.description="K8s sidecar image to collect configmaps and secrets as files"
+LABEL org.opencontainers.image.licenses=MIT
 ENV         PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY --from=builder /app /app
