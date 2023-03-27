@@ -128,6 +128,8 @@ jobs:
           kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
           kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
+          kubectl cp sidecar:/tmp/cm-not-unique-kubelogo.png /tmp/cm-not-unique-kubelogo.png
+          kubectl cp sidecar:/tmp/secret-not-unique-kubelogo.png /tmp/secret-not-unique-kubelogo.png
           kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/url-downloaded-kubelogo.png          
           kubectl cp sidecar:/tmp/script_result /tmp/script_result
           kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
@@ -140,6 +142,8 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
           kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
           kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/cm-not-unique-kubelogo.png /tmp/5xx/cm-not-unique-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/secret-not-unique-kubelogo.png /tmp/5xx/secret-not-unique-kubelogo.png
           kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png          
           # script also generates into '/tmp'
           kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
@@ -176,6 +180,8 @@ jobs:
           echo -n "Hello World!" | diff - /tmp/hello.world &&
             diff test/kubelogo.png /tmp/cm-kubelogo.png &&
             diff test/kubelogo.png /tmp/secret-kubelogo.png &&
+            diff test/kubelogo.png /tmp/cm-not-unique-kubelogo.png &&
+            diff test/kubelogo.png /tmp/secret-not-unique-kubelogo.png &&
             diff test/kubelogo.png /tmp/url-downloaded-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/relative.txt &&
@@ -187,6 +193,8 @@ jobs:
             echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
             diff test/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
             diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
+            diff test/kubelogo.png /tmp/5xx/cm-not-unique-kubelogo.png &&
+            diff test/kubelogo.png /tmp/5xx/secret-not-unique-kubelogo.png &&
             diff test/kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png &&
             echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
             echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
