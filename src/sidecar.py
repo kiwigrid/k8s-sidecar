@@ -9,7 +9,7 @@ from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
 from requests.packages.urllib3.util.retry import Retry
 
 from helpers import REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
-from logger import get_logger
+from logger import get_logger,init_logger
 from resources import list_resources, watch_for_changes
 
 METHOD = "METHOD"
@@ -32,6 +32,8 @@ logger = get_logger()
 
 
 def main():
+    init_logger()
+    
     logger.info("Starting collector")
 
     folder_annotation = os.getenv(FOLDER_ANNOTATION)
