@@ -122,7 +122,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: pod-logs_${{ matrix.k8s }}
+          name: pod-logs_${{ matrix.k8s.maj_min }}
           path: /tmp/*.log
       - name: Download expected files from cluster
         run: |
