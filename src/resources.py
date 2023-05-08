@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import base64
+import copy
 import os
 import signal
 import sys
-import copy
 import traceback
 from collections import defaultdict
 from multiprocessing import Process
@@ -14,10 +14,10 @@ from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError
 from urllib3.exceptions import ProtocolError
-from logger import get_logger
 
 from helpers import request, write_data_to_file, remove_file, unique_filename, CONTENT_TYPE_TEXT, \
     CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
+from logger import get_logger
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -277,8 +277,8 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         else:
             logger.debug(f"Deleting {filename}")
             return remove_file(dest_folder, filename)
-    except Exception as e:
-        logger.error(f"Error when updating from ${data_key} into ${dest_folder}: ${e}")
+    except Exception:
+        logger.exception(f"Error when updating from '%s' into '%s'", data_key, dest_folder)
         return False
 
 

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3          
+        uses: actions/checkout@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build sidecar
@@ -91,6 +91,7 @@ jobs:
 
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-5xx"
+          wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
@@ -103,7 +104,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-5xx")
+          pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -116,6 +117,7 @@ jobs:
         run: |
           kubectl logs sidecar > /tmp/sidecar.log
           kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
+          kubectl logs sidecar-pythonscript > /tmp/sidecar-pythonscript.log
           kubectl logs dummy-server-pod > /tmp/dummy-server.log
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -199,4 +201,5 @@ jobs:
             kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
             kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
             kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt"
+            kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
+            test $(cat /tmp/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "7"

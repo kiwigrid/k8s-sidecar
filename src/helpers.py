@@ -3,6 +3,7 @@
 import errno
 import hashlib
 import os
+import stat
 import subprocess
 from datetime import datetime
 
@@ -169,9 +170,15 @@ def unique_filename(filename, namespace, resource, resource_name):
 def execute(script_path):
     logger.debug(f"Executing script from {script_path}")
     try:
-        result = subprocess.run(["sh", script_path],
-                                capture_output=True,
-                                check=True)
+        file_stat = os.stat(script_path)
+        if file_stat.st_mode & stat.S_IXOTH:
+            result = subprocess.run([script_path],
+                                    capture_output=True,
+                                    check=True)
+        else:
+            result = subprocess.run(["sh", script_path],
+                                    capture_output=True,
+                                    check=True)
         logger.debug(f"Script stdout: {result.stdout}")
         logger.debug(f"Script stderr: {result.stderr}")
         logger.debug(f"Script exit code: {result.returncode}")
