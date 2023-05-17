@@ -30,9 +30,18 @@ _list_namespace = defaultdict(lambda: {
     RESOURCE_CONFIGMAP: "list_config_map_for_all_namespaces"
 }})
 
-_resources_version_map = {}
-_resources_object_map = {}
-_resources_dest_folder_map = {}
+_resources_version_map = {
+    RESOURCE_SECRET: {},
+    RESOURCE_CONFIGMAP: {},
+}
+_resources_object_map = {
+    RESOURCE_SECRET: {},
+    RESOURCE_CONFIGMAP: {},
+}
+_resources_dest_folder_map = {
+    RESOURCE_SECRET: {},
+    RESOURCE_CONFIGMAP: {},
+}
 
 # Get logger
 logger = get_logger()
@@ -106,11 +115,11 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the LIST loop reconnects
         if ignore_already_processed:
-            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
+            if _resources_version_map[resource].get(metadata.namespace + metadata.name) == metadata.resource_version:
                 logger.debug(f"Ignoring {resource} {metadata.namespace}/{metadata.name}")
                 continue
 
-            _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
+            _resources_version_map[resource][metadata.namespace + metadata.name] = metadata.resource_version
 
         logger.debug(f"Working on {resource}: {metadata.namespace}/{metadata.name}")
 
@@ -123,8 +132,8 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
 
     # Clear the cache that is not listed.
-    for key in set(_resources_object_map.keys()) - exist_keys:
-        item = _resources_object_map.get(key)
+    for key in set(_resources_object_map[resource].keys()) - exist_keys:
+        item = _resources_object_map[resource].get(key)
         metadata = item.metadata
 
         logger.debug(f"Removing {resource}: {metadata.namespace}/{metadata.name}")
@@ -144,13 +153,13 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
 def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx, is_removed=False):
     files_changed = False
 
-    old_secret = _resources_object_map.get(secret.metadata.namespace + secret.metadata.name) or copy.deepcopy(secret)
-    old_dest_folder = _resources_dest_folder_map.get(secret.metadata.namespace + secret.metadata.name) or dest_folder
+    old_secret = _resources_object_map[resource].get(secret.metadata.namespace + secret.metadata.name) or copy.deepcopy(secret)
+    old_dest_folder = _resources_dest_folder_map[resource].get(secret.metadata.namespace + secret.metadata.name) or dest_folder
     if is_removed:
-        _resources_object_map.pop(secret.metadata.namespace + secret.metadata.name, None)
+        _resources_object_map[resource].pop(secret.metadata.namespace + secret.metadata.name, None)
     else:
-        _resources_object_map[secret.metadata.namespace + secret.metadata.name] = copy.deepcopy(secret)
-        _resources_dest_folder_map[secret.metadata.namespace + secret.metadata.name] = dest_folder
+        _resources_object_map[resource][secret.metadata.namespace + secret.metadata.name] = copy.deepcopy(secret)
+        _resources_dest_folder_map[resource][secret.metadata.namespace + secret.metadata.name] = dest_folder
 
     if secret.data is None:
         logger.warning(f"No data field in {resource}")
@@ -184,13 +193,13 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
 def _process_config_map(dest_folder, config_map, resource, unique_filenames, enable_5xx, is_removed=False):
     files_changed = False
 
-    old_config_map = _resources_object_map.get(config_map.metadata.namespace + config_map.metadata.name) or copy.deepcopy(config_map)
-    old_dest_folder = _resources_dest_folder_map.get(config_map.metadata.namespace + config_map.metadata.name) or dest_folder
+    old_config_map = _resources_object_map[resource].get(config_map.metadata.namespace + config_map.metadata.name) or copy.deepcopy(config_map)
+    old_dest_folder = _resources_dest_folder_map[resource].get(config_map.metadata.namespace + config_map.metadata.name) or dest_folder
     if is_removed:
-        _resources_object_map.pop(config_map.metadata.namespace + config_map.metadata.name, None)
+        _resources_object_map[resource].pop(config_map.metadata.namespace + config_map.metadata.name, None)
     else:
-        _resources_object_map[config_map.metadata.namespace + config_map.metadata.name] = copy.deepcopy(config_map)
-        _resources_dest_folder_map[config_map.metadata.namespace + config_map.metadata.name] = dest_folder
+        _resources_object_map[resource][config_map.metadata.namespace + config_map.metadata.name] = copy.deepcopy(config_map)
+        _resources_dest_folder_map[resource][config_map.metadata.namespace + config_map.metadata.name] = dest_folder
 
     if config_map.data is None and config_map.binary_data is None:
         logger.warning(f"No data/binaryData field in {resource}")
@@ -313,15 +322,15 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
         if ignore_already_processed:
-            if _resources_version_map.get(metadata.namespace + metadata.name) == metadata.resource_version:
+            if _resources_version_map[resource].get(metadata.namespace + metadata.name) == metadata.resource_version:
                 if event_type == "ADDED" or event_type == "MODIFIED":
                     logger.debug(f"Ignoring {event_type} {resource} {metadata.namespace}/{metadata.name}")
                     continue
                 elif event_type == "DELETED":
-                    _resources_version_map.pop(metadata.namespace + metadata.name)
+                    _resources_version_map[resource].pop(metadata.namespace + metadata.name)
 
             if event_type == "ADDED" or event_type == "MODIFIED":
-                _resources_version_map[metadata.namespace + metadata.name] = metadata.resource_version
+                _resources_version_map[resource][metadata.namespace + metadata.name] = metadata.resource_version
 
         logger.debug(f"Working on {event_type} {resource} {metadata.namespace}/{metadata.name}")
 
