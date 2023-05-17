@@ -12,11 +12,11 @@ from time import sleep
 
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
-from urllib3.exceptions import MaxRetryError
-from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from helpers import request, write_data_to_file, remove_file, unique_filename, CONTENT_TYPE_TEXT, \
-    CONTENT_TYPE_BASE64_BINARY, execute, WATCH_SERVER_TIMEOUT, WATCH_CLIENT_TIMEOUT
+from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
+                     WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
+                     remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
 
 RESOURCE_SECRET = "secret"
@@ -91,6 +91,8 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     if namespace != "ALL":
         additional_args['namespace'] = namespace
 
+    logger.info(f"Performing list-based sync on {resource} resources: {additional_args}")
+
     ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
 
     files_changed = False
@@ -123,6 +125,9 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     # Clear the cache that is not listed.
     for key in set(_resources_object_map.keys()) - exist_keys:
         item = _resources_object_map.get(key)
+        metadata = item.metadata
+
+        logger.debug(f"Removing {resource}: {metadata.namespace}/{metadata.name}")
 
         if resource == RESOURCE_CONFIGMAP:
             files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx, True)
@@ -272,10 +277,8 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
                                        resource=resource,
                                        resource_name=metadata.name)
         if not remove:
-            logger.debug(f"Writing {filename}")
             return write_data_to_file(dest_folder, filename, file_data, content_type)
         else:
-            logger.debug(f"Deleting {filename}")
             return remove_file(dest_folder, filename)
     except Exception:
         logger.exception(f"Error when updating from '%s' into '%s'", data_key, dest_folder)
@@ -296,6 +299,8 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
     }
     if namespace != "ALL":
         additional_args['namespace'] = namespace
+
+    logger.debug(f"Performing watch-based sync on {resource} resources: {additional_args}")
 
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
