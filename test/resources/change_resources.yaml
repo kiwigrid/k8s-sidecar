@@ -54,3 +54,22 @@ metadata:
 data:
   change-dir.txt: |-
     This change-dir exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: similar-configmap-secret
+  labels:
+    findme: "yup"
+data:
+  change-similar-configmap.txt: |-
+    I'm very similar
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: similar-configmap-secret
+  labels:
+    findme: "yup"
+data:
+  change-similar-secret.txt: SSdtIHZlcnkgc2ltaWxhcg==
