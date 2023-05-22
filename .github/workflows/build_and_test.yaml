@@ -130,7 +130,7 @@ jobs:
           kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
           kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
-          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/url-downloaded-kubelogo.png          
+          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/url-downloaded-kubelogo.png
           kubectl cp sidecar:/tmp/script_result /tmp/script_result
           kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
           kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
@@ -142,7 +142,7 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
           kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
           kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
-          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png          
+          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png
           # script also generates into '/tmp'
           kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
           # absolute path in configmap points to /tmp in 'absolute-configmap'
