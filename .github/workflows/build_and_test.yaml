@@ -216,8 +216,8 @@ jobs:
           ls /tmp/sidecar-5xx/script_result
       - name: Verify sidecar-python logs after initial sync
         run: |
-          # this needs to be the last statement so that it defines the script exit code
-          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "7"
+          # Make sure to update this number this when adding or removing configmap or secrets
+          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
       - name: Verify sidecar files after update
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
