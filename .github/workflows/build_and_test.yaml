@@ -228,4 +228,4 @@ jobs:
           kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
