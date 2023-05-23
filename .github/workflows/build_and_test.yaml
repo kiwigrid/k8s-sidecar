@@ -115,6 +115,7 @@ jobs:
           sleep 5
       - name: Retrieve pod logs
         run: |
+          mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
@@ -126,6 +127,8 @@ jobs:
           path: /tmp/logs/*
       - name: Download expected files from cluster
         run: |
+          mkdir /tmp/sidecar
+          mkdir /tmp/sidecar-5xx
           echo "Downloading resource files from sidecar..."
           kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
