@@ -6,6 +6,7 @@ import os
 import signal
 import sys
 import traceback
+import json
 from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
@@ -54,6 +55,14 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGTERM, signal_handler)
 
+def prepare_payload(payload):
+    """Prepare payload as dict for request."""
+    try:
+       payload_dict = json.loads(payload)
+       return payload_dict
+    except ValueError as err:
+        logger.warning(f"Payload will be posted as quoted json")
+        return payload
 
 def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CONTENT_TYPE_TEXT):
     if content_type == CONTENT_TYPE_BASE64_BINARY:
