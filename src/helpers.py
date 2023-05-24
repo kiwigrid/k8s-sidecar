@@ -109,6 +109,7 @@ def remove_file(folder, filename):
         logger.error(f"Unable to remove {complete_file}, file not found")
         return False
 
+
 def request(url, method, enable_5xx=False, payload=None):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
 

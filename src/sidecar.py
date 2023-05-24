@@ -60,7 +60,10 @@ def main():
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
-    request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
+   
+    request_payload = os.getenv(REQ_PAYLOAD)
+    if request_payload:
+        request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
     script = os.getenv(SCRIPT)
 
     _initialize_kubeclient_configuration()
