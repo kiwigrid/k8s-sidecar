@@ -10,7 +10,8 @@ from requests.packages.urllib3.util.retry import Retry
 
 from helpers import REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 from logger import get_logger,init_logger
-from resources import list_resources, watch_for_changes
+from resources import list_resources, watch_for_changes, prepare_payload
+
 
 METHOD = "METHOD"
 UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
@@ -62,7 +63,10 @@ def main():
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
+   
     request_payload = os.getenv(REQ_PAYLOAD)
+    if request_payload:
+        request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
     script = os.getenv(SCRIPT)
 
     _initialize_kubeclient_configuration()
