@@ -1,0 +1,39 @@
+version: 1
+disable_existing_loggers: false
+
+loggers:
+    root:
+         level: DEBUG
+         handlers: [console]
+         propagate: no
+    k8s-sidecar:
+         level: DEBUG
+         handlers: [console]
+         propagate: no
+
+handlers:
+    console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: LOGFMT
+
+formatters:
+    JSON:
+        (): logger.JsonFormatter
+        format: '%(levelname)s %(message)s'
+        rename_fields: {
+                 "message": "msg", 
+                 "levelname": "level"
+                }
+    LOGFMT:
+        (): logger.LogfmtFormatter
+        keys: [
+            "time",
+            "level",
+            "msg"
+        ]
+        mapping: {
+            "time": "asctime",
+            "level": "levelname",
+             "msg": "message"
+        }

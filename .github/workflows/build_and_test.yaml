@@ -105,7 +105,7 @@ jobs:
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
           pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
@@ -115,43 +115,58 @@ jobs:
           sleep 5
       - name: Retrieve pod logs
         run: |
-          kubectl logs sidecar > /tmp/sidecar.log
-          kubectl logs sidecar-5xx > /tmp/sidecar-5xx.log
-          kubectl logs sidecar-pythonscript > /tmp/sidecar-pythonscript.log
-          kubectl logs dummy-server-pod > /tmp/dummy-server.log
-      - name: Upload artifacts
+          mkdir /tmp/logs
+          kubectl logs sidecar > /tmp/logs/sidecar.log
+          kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
+          kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
+          kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+      - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
         with:
           name: pod-logs_${{ matrix.k8s.maj_min }}
-          path: /tmp/*.log
+          path: /tmp/logs/*
       - name: Download expected files from cluster
         run: |
+          mkdir /tmp/sidecar
+          mkdir /tmp/sidecar-5xx
           echo "Downloading resource files from sidecar..."
-          kubectl cp sidecar:/tmp/hello.world /tmp/hello.world
-          kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/cm-kubelogo.png
-          kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/secret-kubelogo.png
-          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/url-downloaded-kubelogo.png          
-          kubectl cp sidecar:/tmp/script_result /tmp/script_result
-          kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/absolute.txt
-          kubectl cp sidecar:/tmp/relative/relative.txt /tmp/relative.txt
-          kubectl cp sidecar:/tmp/orig-dir/change-dir.txt /tmp/change-dir.txt
-          kubectl cp sidecar:/tmp/500.txt /tmp/500.txt || true
-          kubectl cp sidecar:/tmp/secured.txt /tmp/secured.txt
+          kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
+          kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
+          kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/sidecar/secret-kubelogo.png
+          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
+          # script also generates into '/tmp'
+          kubectl cp sidecar:/tmp/script_result /tmp/sidecar/script_result
+          # absolute path in configmap points to /tmp in 'absolute-configmap'
+          kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/sidecar/absolute.txt
+          kubectl cp sidecar:/tmp/relative/relative.txt /tmp/sidecar/relative.txt
+          kubectl cp sidecar:/tmp/orig-dir/change-dir.txt /tmp/sidecar/change-dir.txt
+          kubectl cp sidecar:/tmp/500.txt /tmp/sidecar/500.txt || true
+          kubectl cp sidecar:/tmp/secured.txt /tmp/sidecar/secured.txt
+          kubectl cp sidecar:/tmp/similar-configmap.txt /tmp/sidecar/similar-configmap.txt
+          kubectl cp sidecar:/tmp/similar-secret.txt /tmp/sidecar/similar-secret.txt
 
           echo "Downloading resource files from sidecar-5xx..."
-          kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/5xx/hello.world
-          kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/5xx/cm-kubelogo.png
-          kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/5xx/secret-kubelogo.png
-          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png          
+          kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
+          kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
           # script also generates into '/tmp'
-          kubectl cp sidecar-5xx:/tmp/script_result /tmp/5xx/script_result
+          kubectl cp sidecar-5xx:/tmp/script_result /tmp/sidecar-5xx/script_result
           # absolute path in configmap points to /tmp in 'absolute-configmap'
-          kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/5xx/absolute.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/5xx/relative.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/orig-dir/change-dir.txt /tmp/5xx/change-dir.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/5xx/500.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/5xx/secured.txt
-
+          kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/sidecar-5xx/absolute.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/sidecar-5xx/relative.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/orig-dir/change-dir.txt /tmp/sidecar-5xx/change-dir.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/sidecar-5xx/500.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/sidecar-5xx/secured.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
+      - name: Upload artifacts (expected files from cluster)
+        uses: actions/upload-artifact@v3
+        with:
+          name: expected-files_${{ matrix.k8s.maj_min }}
+          path: |
+            /tmp/sidecar/**
+            /tmp/sidecar-5xx/**
       - name: Update Configmaps and Secrets
         run: |
           sleep 5
@@ -163,7 +178,7 @@ jobs:
           echo "Updating resources..."
           kubectl apply -f "test/resources/change_resources.yaml"
           pods=("sidecar" "sidecar-5xx")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
@@ -171,35 +186,46 @@ jobs:
           done
           # 20 more seconds after the last thing appeared in the logs.
           sleep 20
-      - name: Verify files
+      - name: Verify sidecar files after initial sync
         run: |
-          echo "Verifying file content from sidecar and sidecar-5xx ..."
-          # this needs to be the last statement so that it defines the script exit code
-          echo -n "Hello World!" | diff - /tmp/hello.world &&
-            diff test/kubelogo.png /tmp/cm-kubelogo.png &&
-            diff test/kubelogo.png /tmp/secret-kubelogo.png &&
-            diff test/kubelogo.png /tmp/url-downloaded-kubelogo.png &&
-            echo -n "This absolutely exists" | diff - /tmp/absolute.txt &&
-            echo -n "This relatively exists" | diff - /tmp/relative.txt &&
-            echo -n "This change-dir exists" | diff - /tmp/change-dir.txt &&
-            echo -n "allowed" | diff - /tmp/secured.txt &&
-            echo -n '{"detail":"Not authenticated"}' | diff - /tmp/5xx/secured.txt &&
-            [ ! -f /tmp/500.txt ] && echo "No 5xx file created" &&
-            ls /tmp/script_result &&
-            echo -n "Hello World!" | diff - /tmp/5xx/hello.world &&
-            diff test/kubelogo.png /tmp/5xx/cm-kubelogo.png &&
-            diff test/kubelogo.png /tmp/5xx/secret-kubelogo.png &&
-            diff test/kubelogo.png /tmp/5xx/url-downloaded-kubelogo.png &&
-            echo -n "This absolutely exists" | diff - /tmp/5xx/absolute.txt &&
-            echo -n "This relatively exists" | diff - /tmp/5xx/relative.txt &&
-            echo -n "This change-dir exists" | diff - /tmp/5xx/change-dir.txt &&
-            echo -n "500" | diff - /tmp/5xx/500.txt &&
-            ls /tmp/5xx/script_result &&
-            kubectl exec sidecar -- sh -c "ls /tmp/" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/cm-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e  /tmp/change-cm-kubelogo.png" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt" &&
-            kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
-            test $(cat /tmp/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "7"
+          echo -n "Hello World!" | diff - /tmp/sidecar/hello.world &&
+          diff test/kubelogo.png /tmp/sidecar/cm-kubelogo.png &&
+          diff test/kubelogo.png /tmp/sidecar/secret-kubelogo.png &&
+          diff test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png &&
+          echo -n "This absolutely exists" | diff - /tmp/sidecar/absolute.txt &&
+          echo -n "This relatively exists" | diff - /tmp/sidecar/relative.txt &&
+          echo -n "This change-dir exists" | diff - /tmp/sidecar/change-dir.txt &&
+          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt &&
+          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt &&
+          echo -n "allowed" | diff - /tmp/sidecar/secured.txt &&
+          [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
+          ls /tmp/sidecar/script_result
+      - name: Verify sidecar-5xx files after initial sync
+        run: |
+          echo -n '{"detail":"Not authenticated"}' | diff - /tmp/sidecar-5xx/secured.txt &&
+          echo -n "Hello World!" | diff - /tmp/sidecar-5xx/hello.world &&
+          diff test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png &&
+          diff test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png &&
+          diff test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png &&
+          echo -n "This absolutely exists" | diff - /tmp/sidecar-5xx/absolute.txt &&
+          echo -n "This relatively exists" | diff - /tmp/sidecar-5xx/relative.txt &&
+          echo -n "This change-dir exists" | diff - /tmp/sidecar-5xx/change-dir.txt &&
+          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-configmap.txt &&
+          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-secret.txt &&
+          echo -n "500" | diff - /tmp/sidecar-5xx/500.txt &&
+          ls /tmp/sidecar-5xx/script_result
+      - name: Verify sidecar-python logs after initial sync
+        run: |
+          # Make sure to update this number this when adding or removing configmap or secrets
+          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
+      - name: Verify sidecar files after update
+        run: |
+          kubectl exec sidecar -- sh -c "ls /tmp/" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/cm-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e  /tmp/change-cm-kubelogo.png" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
+          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"

@@ -1,12 +1,14 @@
 import logging
 import os
+import sys
+import yaml
 from datetime import datetime
 from typing import Optional
 
 from dateutil.tz import tzlocal, tzutc
 from logfmter import Logfmter
 from pythonjsonlogger import jsonlogger
-from logging.handlers import RotatingFileHandler
+from logging import config
 
 # Supported Timezones for time format (in ISO 8601)
 LogTimezones = {
@@ -18,12 +20,8 @@ LogTimezones = {
 level = os.getenv("LOG_LEVEL", logging.INFO)
 fmt = os.getenv("LOG_FORMAT", 'JSON')
 tz = os.getenv("LOG_TZ", 'LOCAL')
-#Possible values are CONSOLE, FILE, BOTH
-log_mode = os.getenv("LOG_MODE","CONSOLE")
-# If not specified default size of 2MB is set. 
-log_file_maxsize = 2097152 if os.getenv("LOG_FILE_SIZE") is None else int(os.getenv("LOG_FILE_SIZE"))
-log_num_files = 5 if os.getenv("LOG_MAX_FILES") is None else int(os.getenv("LOG_MAX_FILES"))
-log_file_name = os.getenv("LOG_FILE_NAME","/tmp/kiwi-grid.log")
+log_conf_file = os.getenv("LOG_CONFIG","")
+
 log_tz = LogTimezones[tz.upper()] if LogTimezones.get(tz.upper()) else LogTimezones['LOCAL']
 
 
@@ -65,26 +63,80 @@ LogFormatters = {
                                mapping={"time": "asctime", "level": "levelname", "msg": "message"}))
 }
 
+logLevel = level.upper() if isinstance(level, str) else level
 log_fmt = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogFormatters['JSON']
 
+default_log_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {
+        "root": {
+        "level": logLevel,
+        "handlers": [
+            "console"
+        ],
+        "propagate": "no"
+        },
+        "k8s-sidecar": {
+        "level": logLevel,
+        "handlers": [
+            "console"
+        ],
+        "propagate": "no"
+        }
+    },
+    "handlers": {
+        "console": {
+        "class": "logging.StreamHandler",
+        "level": logLevel,
+        "formatter": fmt.upper()
+        }
+    },
+    "formatters": {
+        "JSON": {
+            "()": "logger.JsonFormatter",
+            "format": "%(levelname)s %(message)s",
+            "rename_fields": {
+                "message": "msg",
+                "levelname": "level"
+            }
+        },
+        "LOGFMT": {
+            "()": "logger.LogfmtFormatter",
+            "keys": [
+                "time",
+                "level",
+                "msg"
+            ],
+            "mapping": {
+                "time": "asctime",
+                "level": "levelname",
+                "msg": "message"
+            }
+        }
+    }
+}
+
+def get_log_config():
+    if log_conf_file != "" :
+        try:
+            with open(log_conf_file, 'r') as stream:
+                config = yaml.load(stream, Loader=yaml.FullLoader)
+            return config
+        except FileNotFoundError:
+            msg = "Config file: "+ log_conf_file + " Not Found"
+            print(msg)
+            sys.exit(1)
+        except yaml.YAMLError as e:
+            print("Error loading yaml file:")
+            print(e)
+            sys.exit(2)
+    else:
+        return default_log_config    
+
 # Initialize/configure root logger
-def init_logger():
-    root_logger = logging.getLogger()
-    logLevel = level.upper() if isinstance(level, str) else level
-    if log_mode == "CONSOLE" or log_mode == "BOTH":
-        log_handler = logging.StreamHandler()
-        log_handler.setFormatter(log_fmt)
-        log_handler.setLevel(logLevel)
-        root_logger.addHandler(log_handler)
-
-    if log_mode == "FILE" or log_mode == "BOTH":
-        stream_handler = RotatingFileHandler(log_file_name,'a',maxBytes=int(log_file_maxsize),backupCount=int(log_num_files))
-        stream_handler.setFormatter(log_fmt)
-        stream_handler.setLevel(logLevel)
-        root_logger.addHandler(stream_handler)
-
-    root_logger.setLevel(logLevel)
-
+log_config = get_log_config()    
+config.dictConfig(log_config)
 
 def get_logger():
     return logging.getLogger('k8s-sidecar')

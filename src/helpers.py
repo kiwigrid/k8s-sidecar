@@ -89,6 +89,7 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
     else:
         write_type = "w"
 
+    logger.info(f"Writing {absolute_path} ({data_type})")
     with open(absolute_path, write_type) as f:
         f.write(data)
         f.close()
@@ -101,10 +102,11 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
 def remove_file(folder, filename):
     complete_file = os.path.join(folder, filename)
     if os.path.isfile(complete_file):
+        logger.info(f"Removing {complete_file}")
         os.remove(complete_file)
         return True
     else:
-        print(f"{timestamp()} Error: {complete_file} file not found")
+        logger.error(f"Unable to remove {complete_file}, file not found")
         return False
 
 
