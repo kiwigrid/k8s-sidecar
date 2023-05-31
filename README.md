@@ -6,7 +6,7 @@
 ![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/kiwigrid/k8s-sidecar)
 # What?
 
-This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster. The contained Python script is working from Kubernetes API 1.10.
+This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster.
 
 # Why?
 
@@ -25,7 +25,7 @@ Images are available at:
 - [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
 - [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
 
-Both are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le` and `s390x`
+All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le` and `s390x`
 
 # Features
 
@@ -33,7 +33,7 @@ Both are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc6
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
-- CI tests for k8s v1.19-v1.26
+- CI tests for k8s v1.21-v1.27
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables

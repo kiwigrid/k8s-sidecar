@@ -38,22 +38,20 @@ jobs:
       matrix:
         # see https://github.com/kubernetes-sigs/kind/releases for supported k8s versions per kind version
         k8s:
-          - maj_min: v1.19
-            digest: sha256:476cb3269232888437b61deca013832fee41f9f074f9bed79f57e4280f7c48b7
-          - maj_min: v1.20
-            digest: sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
           - maj_min: v1.21
-            digest: sha256:9d9eb5fb26b4fbc0c6d95fa8c790414f9750dd583f5d7cee45d92e8c26670aa1
+            digest: sha256:220cfafdf6e3915fbce50e13d1655425558cb98872c53f802605aa2fb2d569cf
           - maj_min: v1.22
-            digest: sha256:7d9708c4b0873f0fe2e171e2b1b7f45ae89482617778c1c875f1053d4cef2e41
+            digest: sha256:9af784f45a584f6b28bce2af84c494d947a05bd709151466489008f80a9ce9d5
           - maj_min: v1.23
-            digest: sha256:ef453bb7c79f0e3caba88d2067d4196f427794086a7d0df8df4f019d5e336b61
+            digest: sha256:f77f8cf0b30430ca4128cc7cfafece0c274a118cd0cdb251049664ace0dee4ff
           - maj_min: v1.24
-            digest: sha256:577c630ce8e509131eab1aea12c022190978dd2f745aac5eb1fe65c0807eb315
+            digest: sha256:cea86276e698af043af20143f4bf0509e730ec34ed3b7fa790cc0bea091bc5dd
           - maj_min: v1.25
-            digest: sha256:f52781bc0d7a19fb6c405c2af83abfeb311f130707a0e219175677e366cc45d1
+            digest: sha256:c08d6c52820aa42e533b70bce0c2901183326d86dcdcbedecc9343681db45161
           - maj_min: v1.26
-            digest: sha256:691e24bd2417609db7e589e1a479b902d2e209892a10ce375fab60a8407c7352
+            digest: sha256:f4c0d87be03d6bea69f5e5dc0adb678bb498a190ee5c38422bf751541cebe92e
+          - maj_min: v1.27
+            digest: sha256:b7d12ed662b873bd8510879c1846e87c7e676a79fefc93e17b2a52989d3ff42b
     name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
