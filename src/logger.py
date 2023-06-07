@@ -69,21 +69,11 @@ log_fmt = LogFormatters[fmt.upper()] if LogFormatters.get(fmt.upper()) else LogF
 default_log_config = {
     "version": 1,
     "disable_existing_loggers": False,
-    "loggers": {
-        "root": {
+    "root": {
         "level": logLevel,
         "handlers": [
             "console"
-        ],
-        "propagate": "no"
-        },
-        "k8s-sidecar": {
-        "level": logLevel,
-        "handlers": [
-            "console"
-        ],
-        "propagate": "no"
-        }
+        ]
     },
     "handlers": {
         "console": {

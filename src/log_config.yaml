@@ -1,16 +1,10 @@
 version: 1
 disable_existing_loggers: false
 
-loggers:
-    root:
-         level: DEBUG
-         handlers: [console]
-         propagate: no
-    k8s-sidecar:
-         level: DEBUG
-         handlers: [console]
-         propagate: no
-
+root:
+    level: DEBUG
+    handlers: [console]
+    
 handlers:
     console:
         class: logging.StreamHandler
