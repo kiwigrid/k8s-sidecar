@@ -96,7 +96,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
     return default_folder
 
 
-def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
+def list_resources(label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed):
     v1 = client.CoreV1Api()
@@ -303,7 +303,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         return False
 
 
-def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
+def _watch_resource_iterator(label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                              ignore_already_processed):
     v1 = client.CoreV1Api()
@@ -327,6 +327,11 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         item = event['object']
         metadata = item.metadata
         event_type = event['type']
+
+        # rest sync - based on rest endpoint state only (i.e. not on sidecar app state)
+        # based on eventstate either create/update or delete the rules-group
+        # todo
+
 
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
@@ -385,13 +390,26 @@ def _watch_resource_loop(mode, *args):
             logger.error(f"Received unknown exception: {e}\n")
             traceback.print_exc()
 
+def _sync_back_rest(*args):
+    while True:
+        try:
+            sleep(int(os.getenv("SYNC_BACK_REST_SLEEP", 60)))
+            logger.info(f"Sync back rest api state")
+            # Cleanup content at the REST endpoint when resources no longer exist
+            # List all namespaces, foreach list all rule-groups, compare against listing of all configmaps/secrets and remaining keys are to be cleaned.
+            # todo
+            __sync_back__(*args)
+        except Exception as e:
+            logger.exception(f"Exception caught: {e}\n")
+            traceback.print_exc()
 
-def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
+
+def watch_for_changes(mode, label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
                       ignore_already_processed):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
                                          label_value, request_method, mode, request_payload, resources,
-                                         target_folder, unique_filenames, script, request_url, enable_5xx,
+                                         target_folder, rest_endpoint_conf, unique_filenames, script, request_url, enable_5xx,
                                          ignore_already_processed)
 
     while True:
@@ -411,18 +429,26 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
 
 
 def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
-                             mode, request_payload, resources, target_folder, unique_filenames, script, request_url,
+                             mode, request_payload, resources, target_folder, rest_endpoint_conf, unique_filenames, script, request_url,
                              enable_5xx, ignore_already_processed):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
-                           args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
+                           args=(mode, label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
                                  ignore_already_processed)
                            )
             proc.daemon = True
             proc.start()
             processes.append((proc, ns, resource))
+            proc_sync_back = Process(target=_sync_back_rest,
+                           args=(mode, label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
+                                 ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                                 ignore_already_processed)
+                           )
+            proc_sync_back.daemon = True
+            proc_sync_back.start()
+            processes.append((proc_sync_back, ns, resource))
 
     return processes
