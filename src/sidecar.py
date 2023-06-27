@@ -26,10 +26,21 @@ REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
-CREATE_URL = "CREATE_URL"
-READ_URL = "READ_URL"
-UPDATE_URL = "UPDATE_URL"
-DELETE_URL = "DELETE_URL"
+
+##############################
+# Implementation notes:
+# - remove the two old implementations (SLEEP and default watch), also secret support is no longer needed
+# - add by default 2 workers: 
+#   1. full one-way sync (set all rulegroups and remove all rulegroups not backed by resources)
+#   2. watch changed configmaps
+#
+#
+#
+
+# Cortex ruler
+X_SCOPE_ORGID_DEFAULT = "X_SCOPE_ORGID_DEFAULT"
+X_SCOPE_ORGID_NAMESPACE_LABEL = "X_SCOPE_ORGID_NAMESPACE_LABEL"  # capsule.clastix.io/tenant
+RULE_GROUP_URL = "RULE_GROUP_URL"  # /api/v1/rules
 
 # Get logger
 logger = get_logger()
@@ -88,20 +99,11 @@ def main():
         logger.info(f"5xx response content will not be enabled.")
         enable_5xx = False
 
-    rest_endpoint_conf = {
-        'create': {
-            'url': os.getenv(CREATE_URL, None),
-        },
-        'read': {
-            'url': os.getenv(READ_URL, None),
-        },
-        'update': {
-            'url': os.getenv(UPDATE_URL, None),
-        },
-        'delete': {
-            'url': os.getenv(DELETE_URL, None),
-        },
+    rule_group_conf = {
+        'url': os.getenv(RULE_GROUP_URL, None),
     }
+    x_scope_orgid_default = os.getenv(X_SCOPE_ORGID_DEFAULT, 'system')
+    x_scope_orgid_namespace_label = os.getenv(X_SCOPE_ORGID_NAMESPACE_LABEL, 'system')
 
     ignore_already_processed = False
     if os.getenv(IGNORE_ALREADY_PROCESSED) is not None and os.getenv(IGNORE_ALREADY_PROCESSED).lower() == "true":
@@ -128,17 +130,19 @@ def main():
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
 
-    method = os.getenv(METHOD)
-    if method == "LIST":
-        for res in resources:
-            for ns in namespace.split(','):
-                list_resources(label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
-                               ns, folder_annotation, res, unique_filenames, script, enable_5xx,
-                               ignore_already_processed)
-    else:
-        watch_for_changes(method, label, label_value, target_folder, rest_endpoint_conf, request_url, request_method, request_payload,
-                          namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed)
+    # method = os.getenv(METHOD)
+    # if method == "LIST":
+    #     for res in resources:
+    #         for ns in namespace.split(','):
+    #             list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
+    #                            ns, folder_annotation, res, unique_filenames, script, enable_5xx,
+    #                            ignore_already_processed)
+    # else:
+    watch_for_changes(method, label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
+                        x_scope_orgid_namespace_label,
+                        request_url, request_method, request_payload,
+                        namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
+                        ignore_already_processed)
 
 
 def _initialize_kubeclient_configuration():
