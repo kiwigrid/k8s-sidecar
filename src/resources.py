@@ -304,6 +304,7 @@ def prepare_payload(payload):
 #         return False
 
 def _get_namespace_label(v1, namespace, label, default):
+    # prevent fetching all namespaces; so a filter on name is required
     logger.info(f'get label {label} for namespace {namespace}')
     # todo
     return default

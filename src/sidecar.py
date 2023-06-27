@@ -33,9 +33,11 @@ IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 # - add by default 2 workers: 
 #   1. full one-way sync (set all rulegroups and remove all rulegroups not backed by resources)
 #   2. watch changed configmaps
-#
-#
-#
+# - implement fetching label from namespace (_get_namespace_label)
+# - implement one-way sync to catch missed events
+# - implement similar for alertmanager (use env to select)
+# - possible needs retries / backoff
+# - 
 
 # Cortex ruler
 X_SCOPE_ORGID_DEFAULT = "X_SCOPE_ORGID_DEFAULT"
