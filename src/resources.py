@@ -8,6 +8,7 @@ import sys
 import traceback
 import json
 import yaml
+import requests
 from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
@@ -309,10 +310,9 @@ def _get_namespace_label(v1, namespace, label, default):
     # todo
     return default
 
-def _watch_resource_iterator(label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, request_url, request_method, request_payload,
-                             namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                             ignore_already_processed):
+def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                        x_scope_orgid_namespace_label, 
+                             namespace, folder_annotation, resource):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -325,7 +325,8 @@ def _watch_resource_iterator(label, label_value, target_folder, rule_group_conf,
     if namespace != "ALL":
         additional_args['namespace'] = namespace
 
-    logger.debug(f"Performing watch-based sync on {resource} resources: {additional_args}")
+    logger.info(f"Performing watch-based sync on {resource} resources: {additional_args}")
+    logger.info(f"{_list_namespace[namespace][resource]}")
 
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
@@ -336,13 +337,13 @@ def _watch_resource_iterator(label, label_value, target_folder, rule_group_conf,
         event_type = event['type']
 
         for key in item.data.keys():
-            document = yaml.load(data[key])
-            for group in document.groups:
+            document = yaml.load(item.data[key], Loader=yaml.Loader)
+            for group in document['groups']:
                 if event_type == "DELETED":
                     headers = {
                         'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
                     }
-                    url = f'{rule_group_conf['url']}/{metadata.namespace}/{group.name}'
+                    url = f'{rule_group_conf["url"]}/{metadata.namespace}/{group["name"]}'
                     response = requests.delete(
                         url,
                         auth=None,
@@ -357,14 +358,14 @@ def _watch_resource_iterator(label, label_value, target_folder, rule_group_conf,
                         'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
                     }
                     payload = {
-                        'name': group.name,
-                        'rules': group.rules,
+                        'name': group["name"],
+                        'rules': group["rules"],
                     }
-                    url = f'{rule_group_conf['url']}/{metadata.namespace}'
+                    url = f'{rule_group_conf["url"]}/{metadata.namespace}'
                     response = requests.post(
                         url,
                         auth=None,
-                        data=yaml.dump(payload)
+                        data=yaml.dump(payload),
                         headers=headers,
                     )
                     logger.info(f'request {url} giving response {response.status_code}')
@@ -404,7 +405,7 @@ def _watch_resource_iterator(label, label_value, target_folder, rule_group_conf,
         #     request(request_url, request_method, enable_5xx, request_payload)
 
 
-def _watch_resource_loop(mode, *args):
+def _watch_resource_loop(*args):
     while True:
         try:
             # Always wait to slow down the loop in case of exceptions
@@ -441,15 +442,13 @@ def _sync(*args):
             traceback.print_exc()
 
 
-def watch_for_changes(mode, label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
-                      x_scope_orgid_namespace_label, request_url, request_method, request_payload,
-                      current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                      ignore_already_processed):
+def watch_for_changes(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                      x_scope_orgid_namespace_label, 
+                      current_namespace, folder_annotation, resources):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
-                                         label_value, request_method, mode, request_payload, resources,
-                                         target_folder, rule_group_conf, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, unique_filenames, script, request_url, enable_5xx,
-                                         ignore_already_processed)
+                                         label_value, resources,
+                                         rule_group_conf, x_scope_orgid_default, 
+                        x_scope_orgid_namespace_label)
 
     while True:
         died = False
@@ -467,10 +466,9 @@ def watch_for_changes(mode, label, label_value, target_folder, rule_group_conf, 
         sleep(5)
 
 
-def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
-                             mode, request_payload, resources, target_folder, rule_group_conf, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, unique_filenames, script, request_url,
-                             enable_5xx, ignore_already_processed):
+def _start_watcher_processes(namespace, folder_annotation, label, label_value, resources, 
+            rule_group_conf, x_scope_orgid_default, 
+            x_scope_orgid_namespace_label):
     """
     Watch configmap resources for changes and update accordingly
     -and-
@@ -480,19 +478,17 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
-                           args=(mode, label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, request_url, request_method, request_payload,
-                                 ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                 ignore_already_processed)
+                           args=(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                        x_scope_orgid_namespace_label, 
+                                 ns, folder_annotation, resource)
                            )
             proc.daemon = True
             proc.start()
             processes.append((proc, ns, resource))
             proc_sync = Process(target=_sync,
-                           args=(mode, label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, request_url, request_method, request_payload,
-                                 ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                 ignore_already_processed)
+                           args=(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                        x_scope_orgid_namespace_label, 
+                                 ns, folder_annotation, resource)
                            )
             proc_sync.daemon = True
             proc_sync.start()

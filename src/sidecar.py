@@ -10,7 +10,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 from helpers import REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 from logger import get_logger
-from resources import list_resources, watch_for_changes, prepare_payload
+from resources import watch_for_changes, prepare_payload
 
 METHOD = "METHOD"
 UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
@@ -140,11 +140,9 @@ def main():
     #                            ns, folder_annotation, res, unique_filenames, script, enable_5xx,
     #                            ignore_already_processed)
     # else:
-    watch_for_changes(method, label, label_value, target_folder, rule_group_conf, x_scope_orgid_default, 
+    watch_for_changes(label, label_value, rule_group_conf, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label,
-                        request_url, request_method, request_payload,
-                        namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                        ignore_already_processed)
+                        namespace, folder_annotation, resources)
 
 
 def _initialize_kubeclient_configuration():
