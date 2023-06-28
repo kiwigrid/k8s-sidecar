@@ -5,6 +5,7 @@ import hashlib
 import os
 import stat
 import subprocess
+import backoff
 from datetime import datetime
 
 import requests
@@ -186,3 +187,41 @@ def execute(script_path):
         logger.debug(f"Script exit code: {result.returncode}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Script failed with error: {e}")
+
+
+@backoff.on_exception(
+    wait_gen=backoff.expo,
+    exception=(
+        Exception,
+    ),
+    max_time=600,
+    on_backoff=lambda details: logger.warning(f"backoff try {details['tries']} waiting {details['wait']:.1f}s")
+)
+def request_post(url, headers, data):
+    response = requests.post(
+        url,
+        auth=None,
+        data=data,
+        headers=headers,
+    )
+    logger.info(f'post request {url} giving response {response.status_code}')
+    response.raise_for_status()
+
+
+@backoff.on_exception(
+    wait_gen=backoff.expo,
+    exception=(
+        Exception,
+    ),
+    max_time=600,
+    on_backoff=lambda details: logger.warning(f"backoff try {details['tries']} waiting {details['wait']:.1f}s")
+)
+def request_delete(url, headers):
+    response = requests.delete(
+        url,
+        auth=None,
+        headers=headers,
+    )
+    logger.info(f'delete request {url} giving response {response.status_code}')
+    response.raise_for_status()
+    return response

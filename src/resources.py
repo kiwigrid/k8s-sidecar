@@ -20,6 +20,7 @@ from urllib3.exceptions import MaxRetryError, ProtocolError
 from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
+from helpers import request_delete, request_post
 from logger import get_logger
 
 RESOURCE_SECRET = "secret"
@@ -307,8 +308,10 @@ def prepare_payload(payload):
 def _get_namespace_label(v1, namespace, label, default):
     # prevent fetching all namespaces; so a filter on name is required
     logger.info(f'get label {label} for namespace {namespace}')
-    # todo
-    return default
+    ns = next(v1.list_namespace(field_selector=f'metadata.name={namespace}'))
+    logger.info(ns)
+    return ns.labels.get(label, default)
+
 
 def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label, 
@@ -326,7 +329,7 @@ def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_
         additional_args['namespace'] = namespace
 
     logger.info(f"Performing watch-based sync on {resource} resources: {additional_args}")
-    logger.info(f"{_list_namespace[namespace][resource]}")
+    # logger.info(f"Watch {_list_namespace[namespace][resource]}")
 
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
@@ -344,13 +347,7 @@ def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_
                         'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
                     }
                     url = f'{rule_group_conf["url"]}/{metadata.namespace}/{group["name"]}'
-                    response = requests.delete(
-                        url,
-                        auth=None,
-                        headers=headers,
-                    )
-                    logger.info(f'request {url} giving response {response.status_code}')
-                    response.raise_for_status()
+                    response = request_delete(url, headers)
 
                 else:  # ADDED / MODIFIED
                     headers = {
@@ -362,14 +359,7 @@ def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_
                         'rules': group["rules"],
                     }
                     url = f'{rule_group_conf["url"]}/{metadata.namespace}'
-                    response = requests.post(
-                        url,
-                        auth=None,
-                        data=yaml.dump(payload),
-                        headers=headers,
-                    )
-                    logger.info(f'request {url} giving response {response.status_code}')
-                    response.raise_for_status()
+                    response = request_post(url, headers, yaml.dump(payload))
 
         # # Ignore already processed resource
         # # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
