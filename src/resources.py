@@ -307,10 +307,10 @@ def prepare_payload(payload):
 
 def _get_namespace_label(v1, namespace, label, default):
     # prevent fetching all namespaces; so a filter on name is required
-    logger.info(f'get label {label} for namespace {namespace}')
-    ns = next(v1.list_namespace(field_selector=f'metadata.name={namespace}'))
-    logger.info(ns)
-    return ns.labels.get(label, default)
+    ns = v1.list_namespace(field_selector=f'metadata.name={namespace}').items[0]
+    value = ns.metadata.labels.get(label, default)
+    logger.info(f'get label {label} for namespace {namespace}: {value}')
+    return value
 
 
 def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_default, 

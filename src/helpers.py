@@ -204,7 +204,7 @@ def request_post(url, headers, data):
         data=data,
         headers=headers,
     )
-    logger.info(f'post request {url} giving response {response.status_code}')
+    logger.info(f'post request {url} with headers {headers} giving response {response.status_code}')
     response.raise_for_status()
 
 
@@ -222,6 +222,6 @@ def request_delete(url, headers):
         auth=None,
         headers=headers,
     )
-    logger.info(f'delete request {url} giving response {response.status_code}')
+    logger.info(f'delete request {url} with headers {headers} giving response {response.status_code}')
     response.raise_for_status()
     return response
