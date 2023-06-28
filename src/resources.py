@@ -363,8 +363,25 @@ def _watch_resource_iterator(function, label, label_value, rules_url, alerts_url
                         url = f'{rules_url}/{metadata.namespace}'
                         response = request_post(url, headers, yaml.dump(payload))
         else:  # alerts
-            pass
-            
+            for key in item.data.keys():
+                if event_type == "DELETED":
+                    headers = {
+                        'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
+                    }
+                    url = f'{alerts_url}'
+                    response = request_delete(url, headers)
+
+                else:  # ADDED / MODIFIED
+                    headers = {
+                        'Content-Type': 'application/yaml',
+                        'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
+                    }
+                    payload = {
+                        'alertmanager_config': item.data[key]
+                    }
+                    url = f'{alerts_url}'
+                    response = request_post(url, headers, yaml.dump(payload))
+
         # # Ignore already processed resource
         # # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
         # if ignore_already_processed:
