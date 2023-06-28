@@ -445,8 +445,10 @@ def _sync(*args):
             logger.info(f"Sync back rest api state")
             # __sync__(*args)
             # Cleanup content at the REST endpoint when resources no longer exist
-            # List all namespaces, foreach list all rule-groups, compare against listing of all configmaps/secrets and remaining keys are to be cleaned.
-            # todo
+            # 1. Fetch all rules/alerts definitions from the LHS (ConfigMaps) (upstream)
+            # 2. process all of them (iterate + post the content to the rest endpoint)
+            # 3. List all rules/alerts from the RHS (rest endpoint)
+            # 4. Remove all rules (groups) or alerts that no longer are present on the LHS (Configmaps / local administration)
             sleep(int(os.getenv("SYNC_SLEEP", 60)))
         except Exception as e:
             logger.exception(f"Exception caught: {e}\n")
