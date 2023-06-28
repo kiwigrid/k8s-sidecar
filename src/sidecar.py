@@ -15,17 +15,17 @@ from resources import watch_for_changes, prepare_payload
 METHOD = "METHOD"
 UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
 SKIP_TLS_VERIFY = "SKIP_TLS_VERIFY"
-FOLDER = "FOLDER"
-FOLDER_ANNOTATION = "FOLDER_ANNOTATION"
+# FOLDER = "FOLDER"
+# FOLDER_ANNOTATION = "FOLDER_ANNOTATION"
 LABEL = "LABEL"
 LABEL_VALUE = "LABEL_VALUE"
 RESOURCE = "RESOURCE"
-REQ_PAYLOAD = "REQ_PAYLOAD"
-REQ_URL = "REQ_URL"
-REQ_METHOD = "REQ_METHOD"
-SCRIPT = "SCRIPT"
-ENABLE_5XX = "ENABLE_5XX"
-IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
+# REQ_PAYLOAD = "REQ_PAYLOAD"
+# REQ_URL = "REQ_URL"
+# REQ_METHOD = "REQ_METHOD"
+# SCRIPT = "SCRIPT"
+# ENABLE_5XX = "ENABLE_5XX"
+# IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 
 ##############################
 # Implementation notes:
@@ -39,10 +39,16 @@ IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 # - possible needs retries / backoff
 # - 
 
-# Cortex ruler
+# Cortex
+FUNCTION = "FUNCTION"  # either rules or alerts
 X_SCOPE_ORGID_DEFAULT = "X_SCOPE_ORGID_DEFAULT"
 X_SCOPE_ORGID_NAMESPACE_LABEL = "X_SCOPE_ORGID_NAMESPACE_LABEL"  # capsule.clastix.io/tenant
-RULE_GROUP_URL = "RULE_GROUP_URL"  # /api/v1/rules
+
+# Cortex ruler
+RULES_URL = "RULES_URL"  # /api/v1/rules
+
+# Cortex alertmanager
+ALERTS_URL = "ALERTS_URL"  # /api/v1/alerts
 
 # Get logger
 logger = get_logger()
@@ -51,11 +57,11 @@ logger = get_logger()
 def main():
     logger.info("Starting collector")
 
-    folder_annotation = os.getenv(FOLDER_ANNOTATION)
-    if folder_annotation is None:
-        logger.warning("No folder annotation was provided, "
-                       "defaulting to k8s-sidecar-target-directory")
-        folder_annotation = "k8s-sidecar-target-directory"
+    # folder_annotation = os.getenv(FOLDER_ANNOTATION)
+    # if folder_annotation is None:
+    #     logger.warning("No folder annotation was provided, "
+    #                    "defaulting to k8s-sidecar-target-directory")
+    #     folder_annotation = "k8s-sidecar-target-directory"
 
     label = os.getenv(LABEL)
     if label is None:
@@ -66,22 +72,22 @@ def main():
     if label_value:
         logger.debug(f"Filter labels with value: {label_value}")
 
-    target_folder = os.getenv(FOLDER)
-    if target_folder is None:
-        logger.fatal(f"Should have added {FOLDER} as environment variable! Exit")
-        return -1
+    # target_folder = os.getenv(FOLDER)
+    # if target_folder is None:
+    #     logger.fatal(f"Should have added {FOLDER} as environment variable! Exit")
+    #     return -1
 
     resources = os.getenv(RESOURCE, "configmap")
     resources = ("secret", "configmap") if resources == "both" else (resources,)
     logger.debug(f"Selected resource type: {resources}")
 
-    request_method = os.getenv(REQ_METHOD)
-    request_url = os.getenv(REQ_URL)
+    # request_method = os.getenv(REQ_METHOD)
+    # request_url = os.getenv(REQ_URL)
    
-    request_payload = os.getenv(REQ_PAYLOAD)
-    if request_payload:
-        request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
-    script = os.getenv(SCRIPT)
+    # request_payload = os.getenv(REQ_PAYLOAD)
+    # if request_payload:
+    #     request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
+    # script = os.getenv(SCRIPT)
 
     _initialize_kubeclient_configuration()
 
@@ -93,41 +99,41 @@ def main():
         logger.info(f"Unique filenames will not be enforced.")
         unique_filenames = False
 
-    enable_5xx = os.getenv(ENABLE_5XX)
-    if enable_5xx is not None and enable_5xx.lower() == "true":
-        logger.info(f"5xx response content will be enabled.")
-        enable_5xx = True
-    else:
-        logger.info(f"5xx response content will not be enabled.")
-        enable_5xx = False
+    # enable_5xx = os.getenv(ENABLE_5XX)
+    # if enable_5xx is not None and enable_5xx.lower() == "true":
+    #     logger.info(f"5xx response content will be enabled.")
+    #     enable_5xx = True
+    # else:
+    #     logger.info(f"5xx response content will not be enabled.")
+    #     enable_5xx = False
 
-    rule_group_conf = {
-        'url': os.getenv(RULE_GROUP_URL, None),
-    }
+    function = os.getenv(FUNCTION, "rules")
     x_scope_orgid_default = os.getenv(X_SCOPE_ORGID_DEFAULT, 'system')
     x_scope_orgid_namespace_label = os.getenv(X_SCOPE_ORGID_NAMESPACE_LABEL, 'system')
+    rules_url = os.getenv(RULES_URL, None)
+    alerts_url = os.getenv(ALERTS_URL, None)
 
-    ignore_already_processed = False
-    if os.getenv(IGNORE_ALREADY_PROCESSED) is not None and os.getenv(IGNORE_ALREADY_PROCESSED).lower() == "true":
-        # Check API version
-        try:
-            version = client.VersionApi().get_code()
-            # Filter version content and retain only numbers
-            v_major = re.sub(r'\D', '', version.major)
-            v_minor = re.sub(r'\D', '', version.minor)
+    # ignore_already_processed = False
+    # if os.getenv(IGNORE_ALREADY_PROCESSED) is not None and os.getenv(IGNORE_ALREADY_PROCESSED).lower() == "true":
+    #     # Check API version
+    #     try:
+    #         version = client.VersionApi().get_code()
+    #         # Filter version content and retain only numbers
+    #         v_major = re.sub(r'\D', '', version.major)
+    #         v_minor = re.sub(r'\D', '', version.minor)
 
-            if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
-                logger.info("Ignore already processed resource version will be enabled.")
-                ignore_already_processed = True
-            else:
-                logger.info("Can't enable 'ignore already processed resource version', "
-                             f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
+    #         if len(v_major) and len(v_minor) and (int(v_major) > 1 or (int(v_major) == 1 and int(v_minor) >= 19)):
+    #             logger.info("Ignore already processed resource version will be enabled.")
+    #             ignore_already_processed = True
+    #         else:
+    #             logger.info("Can't enable 'ignore already processed resource version', "
+    #                          f"kubernetes api version (%s) is lower than v1.19 or unrecognized format." % version.git_version)
 
-        except ApiException as e:
-            logger.error("Exception when calling VersionApi", exc_info=True)
+    #     except ApiException as e:
+    #         logger.error("Exception when calling VersionApi", exc_info=True)
 
-    if not ignore_already_processed:
-        logger.debug("Ignore already processed resource version will not be enabled.")
+    # if not ignore_already_processed:
+    #     logger.debug("Ignore already processed resource version will not be enabled.")
 
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
@@ -140,9 +146,9 @@ def main():
     #                            ns, folder_annotation, res, unique_filenames, script, enable_5xx,
     #                            ignore_already_processed)
     # else:
-    watch_for_changes(label, label_value, rule_group_conf, x_scope_orgid_default, 
+    watch_for_changes(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label,
-                        namespace, folder_annotation, resources)
+                        namespace, resources)
 
 
 def _initialize_kubeclient_configuration():

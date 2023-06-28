@@ -313,9 +313,9 @@ def _get_namespace_label(v1, namespace, label, default):
     return value
 
 
-def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_default, 
+def _watch_resource_iterator(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label, 
-                             namespace, folder_annotation, resource):
+                             namespace, resource):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -339,28 +339,32 @@ def _watch_resource_iterator(label, label_value, rule_group_conf, x_scope_orgid_
         metadata = item.metadata
         event_type = event['type']
 
-        for key in item.data.keys():
-            document = yaml.load(item.data[key], Loader=yaml.Loader)
-            for group in document['groups']:
-                if event_type == "DELETED":
-                    headers = {
-                        'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
-                    }
-                    url = f'{rule_group_conf["url"]}/{metadata.namespace}/{group["name"]}'
-                    response = request_delete(url, headers)
+        # rules
+        if function == "rules":
+            for key in item.data.keys():
+                document = yaml.load(item.data[key], Loader=yaml.Loader)
+                for group in document['groups']:
+                    if event_type == "DELETED":
+                        headers = {
+                            'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
+                        }
+                        url = f'{rules_url}/{metadata.namespace}/{group["name"]}'
+                        response = request_delete(url, headers)
 
-                else:  # ADDED / MODIFIED
-                    headers = {
-                        'Content-Type': 'application/yaml',
-                        'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
-                    }
-                    payload = {
-                        'name': group["name"],
-                        'rules': group["rules"],
-                    }
-                    url = f'{rule_group_conf["url"]}/{metadata.namespace}'
-                    response = request_post(url, headers, yaml.dump(payload))
-
+                    else:  # ADDED / MODIFIED
+                        headers = {
+                            'Content-Type': 'application/yaml',
+                            'X-Scope-OrgID': _get_namespace_label(v1, metadata.namespace, x_scope_orgid_namespace_label, x_scope_orgid_default),
+                        }
+                        payload = {
+                            'name': group["name"],
+                            'rules': group["rules"],
+                        }
+                        url = f'{rules_url}/{metadata.namespace}'
+                        response = request_post(url, headers, yaml.dump(payload))
+        else:  # alerts
+            pass
+            
         # # Ignore already processed resource
         # # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
         # if ignore_already_processed:
@@ -432,12 +436,12 @@ def _sync(*args):
             traceback.print_exc()
 
 
-def watch_for_changes(label, label_value, rule_group_conf, x_scope_orgid_default, 
+def watch_for_changes(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
                       x_scope_orgid_namespace_label, 
-                      current_namespace, folder_annotation, resources):
-    processes = _start_watcher_processes(current_namespace, folder_annotation, label,
+                      current_namespace, resources):
+    processes = _start_watcher_processes(function, current_namespace, label,
                                          label_value, resources,
-                                         rule_group_conf, x_scope_orgid_default, 
+                                         rules_url, alerts_url, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label)
 
     while True:
@@ -456,8 +460,8 @@ def watch_for_changes(label, label_value, rule_group_conf, x_scope_orgid_default
         sleep(5)
 
 
-def _start_watcher_processes(namespace, folder_annotation, label, label_value, resources, 
-            rule_group_conf, x_scope_orgid_default, 
+def _start_watcher_processes(function, namespace, label, label_value, resources, 
+            rules_url, alerts_url, x_scope_orgid_default, 
             x_scope_orgid_namespace_label):
     """
     Watch configmap resources for changes and update accordingly
@@ -468,17 +472,17 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
-                           args=(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                           args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label, 
-                                 ns, folder_annotation, resource)
+                                 ns, resource)
                            )
             proc.daemon = True
             proc.start()
             processes.append((proc, ns, resource))
             proc_sync = Process(target=_sync,
-                           args=(label, label_value, rule_group_conf, x_scope_orgid_default, 
+                           args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
                         x_scope_orgid_namespace_label, 
-                                 ns, folder_annotation, resource)
+                                 ns, resource)
                            )
             proc_sync.daemon = True
             proc_sync.start()
