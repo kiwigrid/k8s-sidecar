@@ -2,3 +2,5 @@ kubernetes==26.1.0
 requests==2.31.0
 python-json-logger==2.0.7
 logfmter==0.0.6
+PyYAML==6.0
+backoff==2.2.1

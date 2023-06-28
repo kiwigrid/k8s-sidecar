@@ -39,6 +39,12 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
   - Values can also be base64 encoded URLs that download binary data e.g. executables
     - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
+# Build
+
+```shell
+docker build --network=host -t cortex-k8s-sidecar:0.1 .
+```
+
 # Usage 
 
 Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
