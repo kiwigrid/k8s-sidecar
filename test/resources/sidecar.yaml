@@ -158,7 +158,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: logger-config
-
+  labels:
+    somelabel: "somesome"
 data:
   log_conf.yaml: |-
     version: 1
