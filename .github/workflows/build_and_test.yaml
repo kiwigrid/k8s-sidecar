@@ -92,8 +92,8 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
-          wait_for_pod_ready "dummy-server-pod"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
+          wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
         run: |
@@ -113,7 +113,7 @@ jobs:
             done
           done
           # 5 more seconds after the last thing appeared in the logs.
-          sleep 5
+          sleep 10
       - name: Retrieve pod logs
         run: |
           mkdir /tmp/logs
@@ -219,10 +219,11 @@ jobs:
       - name: Verify sidecar-python logs after initial sync
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
-          cat /tmp/logs/sidecar-pythonscript-logfile.log
+          cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!"
           echo "--------------DELIMITER-----------------"
-          cat /tmp/logs/sidecar-pythonscript.log
+          cat /tmp/logs/sidecar-pythonscript.log | | grep "Hello from python script!"
           test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
+          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9"
       - name: Verify sidecar files after update
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
