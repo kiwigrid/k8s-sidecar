@@ -194,7 +194,7 @@ def execute(script_path):
     exception=(
         Exception,
     ),
-    max_time=600,
+    max_time=60,
     on_backoff=lambda details: logger.warning(f"backoff try {details['tries']} waiting {details['wait']:.1f}s")
 )
 def request_post(url, headers, data):
@@ -213,7 +213,7 @@ def request_post(url, headers, data):
     exception=(
         Exception,
     ),
-    max_time=600,
+    max_time=60,
     on_backoff=lambda details: logger.warning(f"backoff try {details['tries']} waiting {details['wait']:.1f}s")
 )
 def request_delete(url, headers):
@@ -224,4 +224,33 @@ def request_delete(url, headers):
     )
     logger.info(f'delete request {url} with headers {headers} giving response {response.status_code}')
     response.raise_for_status()
+    return response
+
+
+@backoff.on_exception(
+    wait_gen=backoff.expo,
+    exception=(
+        Exception,
+    ),
+    max_time=60,
+    on_backoff=lambda details: logger.warning(f"backoff try {details['tries']} waiting {details['wait']:.1f}s")
+)
+def request_get(url, headers):
+    # TODO
+    # move this try/except into the resources.py
+    # timeout gets strange
+    try:
+        response = requests.get(
+            url,
+            auth=None,
+            headers=headers,
+        )
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404 and "no rule groups found" in e.response.text:
+            response = e.response
+        else:
+            raise
+        
+    logger.info(f'get request {url} with headers {headers} giving response {response.status_code}')
     return response
