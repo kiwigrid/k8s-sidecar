@@ -170,7 +170,7 @@ def unique_filename(filename, namespace, resource, resource_name):
 
 
 def execute(script_path):
-    logger.debug(f"Executing script from {script_path}")
+    logger.info(f"Executing script from {script_path}")
     try:
         if os.access(script_path, os.X_OK):
             result = subprocess.run([script_path],
