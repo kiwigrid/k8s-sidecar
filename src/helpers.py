@@ -170,10 +170,9 @@ def unique_filename(filename, namespace, resource, resource_name):
 
 
 def execute(script_path):
-    logger.debug(f"Executing script from {script_path}")
+    logger.info(f"Executing script from {script_path}")
     try:
-        file_stat = os.stat(script_path)
-        if file_stat.st_mode & stat.S_IXOTH:
+        if os.access(script_path, os.X_OK):
             result = subprocess.run([script_path],
                                     capture_output=True,
                                     check=True)
