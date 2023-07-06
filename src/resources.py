@@ -9,7 +9,6 @@ import traceback
 import json
 import yaml
 import pprint
-import requests
 from collections import defaultdict
 from multiprocessing import Process
 from time import sleep
@@ -312,44 +311,73 @@ def prepare_payload(payload):
 
 def _del_rulegroup(namespace, orgid, rules_url, rulegroup_name):
     headers = {'X-Scope-OrgID': orgid}
-    
+
     url = f'{rules_url}/{namespace}/{rulegroup_name}'
     logger.info(f"RULER DEL - namespace: {namespace}, group: {rulegroup_name}, url: {url}")
-    response = request_delete(url, headers)
-    logger.info(f"RULER DEL - namespace: {namespace}, group: {rulegroup_name}, response: {response}")
-    
-    
-def _addmod_rulegroup(namespace, orgid, rules_url, rulegroup_name, rulegroup_content):
+    request_delete(url, headers)
+
+
+def _set_rulegroup(namespace, orgid, rules_url, rulegroup_name, rulegroup_content):
     headers = {
         'Content-Type': 'application/yaml',
         'X-Scope-OrgID': orgid,
     }
-    
+
     payload = {
         'name': rulegroup_name,
         'rules': rulegroup_content,
     }
 
     url = f'{rules_url}/{namespace}'
-    logger.info(f"RULER ADD/MOD - namespace: {namespace}, group: {rulegroup_name}, url: {url}")
-    response = request_post(url, headers, yaml.dump(payload))    
-    logger.info(f"RULER ADD/MOD - namespace: {namespace}, group: {rulegroup_name}, response: {response}")
-    
-    
+    logger.info(f"RULER SET - namespace: {namespace}, group: {rulegroup_name}, url: {url}")
+    request_post(url, headers, yaml.dump(payload))
+
+
+def _del_alertmanager_config(orgid, alerts_url):
+    headers = {'X-Scope-OrgID': orgid}
+    logger.info(f"ALERTMANAGER DEL - url: {alerts_url}")
+    request_delete(alerts_url, headers)
+
+
+def _set_alertmanager_config(orgid, alerts_url, alertmanager_config):
+    headers = {'X-Scope-OrgID': orgid}
+    payload = yaml.dump(alertmanager_config).replace("\n", "\n  ")
+    payload = f"alertmanager_config: |\n  {payload}"
+    logger.info(f"ALERTMANAGER SET - url: {alerts_url} headers: {headers}, payload: {payload}")
+    request_post(alerts_url, headers, payload)
+
+
+def _get_cortex_alertmanager_list(alerts_url, orgid):
+    headers = {'X-Scope-OrgID': orgid}
+
+    logger.info(f"ALERTMANAGER SYNC - CORTEX list: url: {alerts_url}, headers: {headers}")
+    response = request_get(alerts_url, headers=headers)
+    logger.info(f"ALERTMANAGER SYNC - CORTEX list: response: {response}")
+
+    if "alertmanager storage object not found" in response.text:
+        return {}
+    else:
+        content = response.content.decode("utf-8")
+        content = yaml.safe_load(content)
+        logger.info(f"ALERTMANAGER SYNC - CORTEX list content: {content}")
+
+        return {orgid: content}
+
+
 def _get_cortex_rulegroups_list(namespace_label, rules_url):
     headers = {'X-Scope-OrgID': namespace_label}
-    
+
     logger.info(f"RULER SYNC - CORTEX list rules: url: {rules_url}, headers: {headers}")
     response = request_get(rules_url, headers=headers)
     logger.info(f"RULER SYNC - CORTEX list rules response: {response}")
-    
+
     if "no rule groups found" in response.text:
         return {}
     else:
         content = response.content.decode("utf-8")
         content = yaml.safe_load(content)
-        logger.info(f"RULER SYNC - CORTEX lis rules content: {content}")
-        
+        logger.info(f"RULER SYNC - CORTEX list rules content: {content}")
+
         return content
 
 
@@ -362,12 +390,12 @@ def _watch_configmap_resources(v1, label, label_value, namespace, resource):
         'timeout_seconds': WATCH_SERVER_TIMEOUT,
         '_request_timeout': WATCH_CLIENT_TIMEOUT,
     }
-    
+
     if namespace != "ALL":
         additional_args['namespace'] = namespace
-        
+
     value = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
-    
+
     logger.info(f"Configmap loaded from {resource} resources: {additional_args}")
     return value
 
@@ -380,9 +408,8 @@ def _get_namespace_label(v1, namespace, label, default):
     return value
 
 
-def _watch_resource_iterator(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, 
-                             namespace, resource):
+def _watch_resource_iterator(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
+                        x_scope_orgid_namespace_label, namespace, resource):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -450,50 +477,75 @@ def _watch_resource_iterator(function, label, label_value, rules_url, alerts_url
                     response = request_post(url, headers, yaml.dump(payload))
 
 
-
 def _get_namespace_labels(v1, x_scope_orgid_namespace_label):
-    logger.info(f"RULER SYNC - label_selector: {x_scope_orgid_namespace_label}")
+    logger.info(f"SYNC - label_selector: {x_scope_orgid_namespace_label}")
     namespaces = v1.list_namespace(label_selector=x_scope_orgid_namespace_label)
-  
+
     namespace_labels = []
     for namespace in namespaces.items:
-        logger.info(f"RULER SYNC - NAMESPACE NAME: {namespace.metadata.name}")
-        logger.info(f"RULER SYNC - NAMESPACE LABEL: {namespace.metadata.labels[x_scope_orgid_namespace_label]}")
+        logger.info(f"SYNC - NAMESPACE NAME: {namespace.metadata.name}")
+        logger.info(f"SYNC - NAMESPACE LABEL: {namespace.metadata.labels[x_scope_orgid_namespace_label]}")
         namespace_labels.append({namespace.metadata.name: namespace.metadata.labels[x_scope_orgid_namespace_label]})
 
-    logger.info(f"RULER SYNC - NAMESPACE LABELS: {namespace_labels}")
-    
+    logger.info(f"SYNC - NAMESPACE LABELS: {namespace_labels}")
+
     return namespace_labels
-            
-    
-def _get_rulegropups_from_configmaps(v1, namespace_label):
+
+
+def _get_alertmanager_from_configmaps(v1, namespace_label, orgid):
+    alertmanager_dict_configmap = {}
+    alertmanager_dict_configmap[orgid] = {}
+    configmap = v1.list_namespaced_config_map(namespace_label, label_selector='cortex/alertmanager-config').items
+
+    if configmap and configmap is not None:
+        for configmap_item in configmap:
+            if configmap_item.data.keys():
+                for file in configmap_item.data.keys():
+                    alertmanager_dict_configmap[orgid][file] = {}
+                    configmap_document = yaml.load(configmap_item.data[file], Loader=yaml.Loader)
+                    if configmap_document:
+                        alertmanager_dict_configmap[orgid][file]["alertmanager_config"] = configmap_document
+                    else:
+                        alertmanager_dict_configmap[orgid][file]["alertmanager_config"] = {}
+            else:
+                alertmanager_dict_configmap[orgid] = {}
+
+    logger.info(f"ALERTMANAGER SYNC - CONFIGMAP content: {pprint.pformat(alertmanager_dict_configmap)}")
+
+    return alertmanager_dict_configmap
+
+
+def _get_rulegroups_from_configmaps(v1, namespace_label):
     rulegroup_dict_configmap = {}
     configmap = v1.list_namespaced_config_map(namespace_label, label_selector='cortex/rules').items
     if configmap and configmap is not None:
         for configmap_item in configmap:
             logger.info(f"RULER SYNC - CONFIGMAP ITEM DATA: {configmap_item.data}")
             logger.info(f"RULER SYNC - CONFIGMAP ITEM METADATA: {configmap_item.metadata}")
-            for key in configmap_item.data.keys():
-                configmap_document = yaml.load(configmap_item.data[key], Loader=yaml.Loader)
-                logger.info(f"RULER SYNC - CONFIGMAP DOC: {configmap_document}")
-                logger.info(f"RULER SYNC - CONFIGMAP DOC KEYS: {configmap_document.keys()}")
-                if 'groups' in configmap_document.keys() and configmap_document['groups'] is not None:
-                    rulegroup_dict_configmap[namespace_label] = {}
-                    for configmap_group in configmap_document['groups']:
-                        logger.info(f"RULER SYNC - CONFIGMAP namespace_label: {namespace_label}")
-                        logger.info(f"RULER SYNC - CONFIGMAP rulegroup name: {configmap_group['name']}")
-                        logger.info(f"RULER SYNC - CONFIGMAP rulegroup content: {pprint.pformat(configmap_group['rules'])}")
-                        rulegroup_dict_configmap[namespace_label][configmap_group['name']] = configmap_group['rules']
-    
+            rulegroup_dict_configmap[namespace_label] = {}
+            if configmap_item.data.keys():
+                for key in configmap_item.data.keys():
+                    rulegroup_dict_configmap[namespace_label][key] = {}
+                    configmap_document = yaml.load(configmap_item.data[key], Loader=yaml.Loader)
+                    logger.info(f"RULER SYNC - CONFIGMAP DOC: {configmap_document}")
+                    logger.info(f"RULER SYNC - CONFIGMAP DOC KEYS: {configmap_document.keys()}")
+                    if 'groups' in configmap_document.keys() and configmap_document['groups'] is not None:
+                        rulegroup_dict_configmap[namespace_label] = {}
+                        for configmap_group in configmap_document['groups']:
+                            logger.info(f"RULER SYNC - CONFIGMAP namespace_label: {namespace_label}")
+                            logger.info(f"RULER SYNC - CONFIGMAP rulegroup name: {configmap_group['name']}")
+                            logger.info(f"RULER SYNC - CONFIGMAP rulegroup content: {pprint.pformat(configmap_group['rules'])}")
+                            rulegroup_dict_configmap[namespace_label][configmap_group['name']] = configmap_group['rules']
+
     logger.info(f"RULER SYNC - CONFIGMAP rulegroup dict: {pprint.pformat(rulegroup_dict_configmap)}")
-    
+
     return rulegroup_dict_configmap
-    
-    
-def _get_rulegropups_from_cortex(rules_url, namespace_label, x_scope_orgid_default, namespace):
+
+
+def _get_rulegroups_from_cortex(rules_url, namespace_label, x_scope_orgid_default, namespace):
     rulegroup_dict_cortex = {}
     logger.info(f"RULER SYNC - CORTEX {namespace_label} {x_scope_orgid_default} {namespace}")
-    
+
     cortex_rulegroups = _get_cortex_rulegroups_list(namespace_label, rules_url)
     logger.info(f"RULER SYNC - CORTEX rulegroup list: {cortex_rulegroups}")
     for cortex_namespace in cortex_rulegroups:
@@ -503,12 +555,12 @@ def _get_rulegropups_from_cortex(rules_url, namespace_label, x_scope_orgid_defau
             logger.info(f"RULER SYNC - CORTEX rulegroup: {cortex_rulegroup['name']}")
             logger.info(f"RULER SYNC - CORTEX rulegroup: {pprint.pformat(cortex_rulegroup['rules'])}")
             rulegroup_dict_cortex[cortex_namespace][cortex_rulegroup['name']] = cortex_rulegroup['rules']
-    
+
     logger.info(f"RULER SYNC - CORTEX rulegroup dict: {pprint.pformat(rulegroup_dict_cortex)}")
-    
+
     return rulegroup_dict_cortex
 
-   
+
 def _watch_resource_loop(*args):
     while True:
         try:
@@ -532,40 +584,73 @@ def _watch_resource_loop(*args):
 def rulegroup_equalize(namespace, orgid, rulegroup_dict_configmap, rulegroup_dict_cortex, rules_url):
     if namespace in rulegroup_dict_configmap:
         for rulegroup_configmap in rulegroup_dict_configmap[namespace]:
-            add = False
             if not namespace in rulegroup_dict_cortex or \
                     not rulegroup_configmap in rulegroup_dict_cortex[namespace] or \
                     not rulegroup_dict_configmap[namespace][rulegroup_configmap] == rulegroup_dict_cortex[namespace][rulegroup_configmap]:
-                _addmod_rulegroup(namespace, orgid, rules_url, rulegroup_configmap, rulegroup_dict_configmap[namespace][rulegroup_configmap])
-    
+                _set_rulegroup(namespace, orgid, rules_url, rulegroup_configmap, rulegroup_dict_configmap[namespace][rulegroup_configmap])
+
     if namespace in rulegroup_dict_cortex:
         for rulegroup_cortex in rulegroup_dict_cortex[namespace]:
             if namespace not in rulegroup_dict_configmap or not rulegroup_cortex in rulegroup_dict_configmap[namespace]:
                 _del_rulegroup(namespace, orgid, rules_url, rulegroup_cortex)
 
 
-#def _sync_alertmanager(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
-#                        x_scope_orgid_namespace_label, namespace, resource):
+def alertmanager_equalize(orgid, alertmanager_dict_configmap, alertmanager_dict_cortex, alerts_url):
+
+    if str(orgid) in alertmanager_dict_configmap:
+
+        for file in alertmanager_dict_configmap[orgid]:
+            if str(orgid) in alertmanager_dict_cortex:
+                if not alertmanager_dict_configmap[orgid][file]['alertmanager_config'] \
+                        and alertmanager_dict_cortex[orgid]['alertmanager_config']:
+                    _del_alertmanager_config(orgid, alerts_url)
+                elif alertmanager_dict_cortex[orgid]['alertmanager_config'] \
+                        and not alertmanager_dict_cortex[orgid]['alertmanager_config']:
+                    _set_alertmanager_config(orgid, alerts_url, alertmanager_dict_configmap[orgid][file]['alertmanager_config'])
+                elif alertmanager_dict_configmap[orgid][file]['alertmanager_config'] \
+                        != yaml.load(alertmanager_dict_cortex[orgid]['alertmanager_config'], Loader=yaml.Loader):
+                    _set_alertmanager_config(orgid, alerts_url, alertmanager_dict_configmap[orgid][file]['alertmanager_config'])
+            else:
+                if alertmanager_dict_configmap[orgid][file]['alertmanager_config']:
+                    _set_alertmanager_config(orgid, alerts_url, alertmanager_dict_configmap[orgid][file]['alertmanager_config'])
+            #TODO if not alertmanager_dict_configmap[orgid][file] == yaml.load(alertmanager_dict_cortex[orgid]['template_files'], Loader=yaml.Loader):
 
 
+    if str(orgid) in alertmanager_dict_cortex:
+        if orgid not in alertmanager_dict_configmap:
+            _del_alertmanager_config(orgid, alerts_url)
 
-def _sync_ruler(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
+
+def _sync_alertmanager(v1, function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
                         x_scope_orgid_namespace_label, namespace, resource):
-    v1 = client.CoreV1Api()
     namespace_labels = _get_namespace_labels(v1, x_scope_orgid_namespace_label)
-    
+
     for namespace_label in namespace_labels:
         namespace_name = list(namespace_label.keys())[0]
         orgid = list(namespace_label.values())[0]
 
-        rulegroup_dict_configmap = _get_rulegropups_from_configmaps(v1, namespace_name)
-        rulegroup_dict_cortex = _get_rulegropups_from_cortex(rules_url, orgid, x_scope_orgid_default, namespace)
+        alertmanager_dict_configmap = _get_alertmanager_from_configmaps(v1, namespace_name, orgid)
+        alertmanager_dict_cortex = _get_cortex_alertmanager_list(alerts_url, orgid)
+
+        alertmanager_equalize(orgid, alertmanager_dict_configmap, alertmanager_dict_cortex, alerts_url)
+
+
+def _sync_ruler(v1, function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
+                        x_scope_orgid_namespace_label, namespace, resource):
+    namespace_labels = _get_namespace_labels(v1, x_scope_orgid_namespace_label)
+
+    for namespace_label in namespace_labels:
+        namespace_name = list(namespace_label.keys())[0]
+        orgid = list(namespace_label.values())[0]
+
+        rulegroup_dict_configmap = _get_rulegroups_from_configmaps(v1, namespace_name)
+        rulegroup_dict_cortex = _get_rulegroups_from_cortex(rules_url, orgid, x_scope_orgid_default, namespace)
 
         rulegroup_equalize(namespace_name, orgid, rulegroup_dict_configmap, rulegroup_dict_cortex, rules_url)
 
 
 def _sync(*args):
-            
+
     while True:
         try:
             logger.info(f"Sync back rest api state")
@@ -575,21 +660,22 @@ def _sync(*args):
             # 2. process all of them (iterate + post the content to the rest endpoint)
             # 3. List all rules/alerts from the RHS (rest endpoint)
             # 4. Remove all rules (groups) or alerts that no longer are present on the LHS (Configmaps / local administration)
-            _sync_ruler(*args)
-            #_sync_alertmanager(*args) TODO
+            v1 = client.CoreV1Api()
+            #_sync_ruler(v1, *args)
+            _sync_alertmanager(v1, *args)
             sleep(int(os.getenv("SYNC_SLEEP", 60)))
         except Exception as e:
             logger.exception(f"Exception caught: {e}\n")
             traceback.print_exc()
 
 
-def watch_for_changes(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
-                      x_scope_orgid_namespace_label, 
+def watch_for_changes(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
+                      x_scope_orgid_namespace_label,
                       current_namespace, resources):
     processes = _start_watcher_processes(function, current_namespace, label,
                                          label_value, resources,
-                                         rules_url, alerts_url, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label)
+                                         rules_url, alerts_url, x_scope_orgid_default,
+                                         x_scope_orgid_namespace_label)
 
     while True:
         died = False
@@ -607,8 +693,8 @@ def watch_for_changes(function, label, label_value, rules_url, alerts_url, x_sco
         sleep(5)
 
 
-def _start_watcher_processes(function, namespace, label, label_value, resources, 
-            rules_url, alerts_url, x_scope_orgid_default, 
+def _start_watcher_processes(function, namespace, label, label_value, resources,
+            rules_url, alerts_url, x_scope_orgid_default,
             x_scope_orgid_namespace_label):
     """
     Watch configmap resources for changes and update accordingly
@@ -618,17 +704,17 @@ def _start_watcher_processes(function, namespace, label, label_value, resources,
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
-            proc = Process(target=_watch_resource_loop,
-                           args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, 
-                                 ns, resource)
-                           )
-            proc.daemon = True
-            proc.start()
-            processes.append((proc, ns, resource))
+            #proc = Process(target=_watch_resource_loop,
+            #               args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
+            #            x_scope_orgid_namespace_label,
+            #                     ns, resource)
+            #               )
+            #proc.daemon = True
+            #proc.start()
+            #processes.append((proc, ns, resource))
             proc_sync = Process(target=_sync,
-                           args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default, 
-                        x_scope_orgid_namespace_label, 
+                           args=(function, label, label_value, rules_url, alerts_url, x_scope_orgid_default,
+                        x_scope_orgid_namespace_label,
                                  ns, resource)
                            )
             proc_sync.daemon = True

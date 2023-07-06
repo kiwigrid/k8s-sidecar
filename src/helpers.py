@@ -247,10 +247,11 @@ def request_get(url, headers):
         )
         response.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404 and "no rule groups found" in e.response.text:
+        if e.response.status_code == 404 and \
+            ("no rule groups found" in e.response.text or "alertmanager storage object not found" in e.response.text):
             response = e.response
         else:
             raise
-        
+
     logger.info(f'get request {url} with headers {headers} giving response {response.status_code}')
     return response
