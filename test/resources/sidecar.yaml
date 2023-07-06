@@ -173,7 +173,7 @@ data:
         console:
             class: logging.StreamHandler
             level: DEBUG
-            formatter: LOGFMT
+            formatter: JSON
 
     formatters:
         JSON:
