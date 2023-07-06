@@ -219,9 +219,6 @@ jobs:
       - name: Verify sidecar-python logs after initial sync
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
-          cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!"
-          echo "--------------DELIMITER-----------------"
-          cat /tmp/logs/sidecar-pythonscript.log |  grep "Hello from python script!"
           test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
           test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9"
       - name: Verify sidecar files after update
