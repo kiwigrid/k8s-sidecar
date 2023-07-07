@@ -112,7 +112,7 @@ jobs:
               wait_for_pod_log $p $r
             done
           done
-          # 5 more seconds after the last thing appeared in the logs.
+          # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
         run: |
