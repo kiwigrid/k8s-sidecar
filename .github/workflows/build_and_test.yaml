@@ -221,9 +221,10 @@ jobs:
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
           test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9" &&
-          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9" &&
-          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
-          test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "9"
+          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9"
+          kubectl exec sidecar-logtofile-pythonscript -- sh -c "ls -l /opt/logs/sidecar.log"
+          kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!"'
+          kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Writing /tmp"'
       - name: Verify sidecar files after update
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&

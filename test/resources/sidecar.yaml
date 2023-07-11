@@ -298,7 +298,7 @@ spec:
     - name: shared-volume
       emptyDir: { }
     - name: logdir
-      emptyDir: {}
+      emptyDir: { }
     - name: script-volume
       configMap:
         name: script-configmap
