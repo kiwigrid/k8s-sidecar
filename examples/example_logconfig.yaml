@@ -1,0 +1,33 @@
+version: 1
+disable_existing_loggers: false
+
+root:
+    level: DEBUG
+    handlers: [console]
+    
+handlers:
+    console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: JSON
+
+formatters:
+    JSON:
+        (): logger.JsonFormatter
+        format: '%(levelname)s %(message)s'
+        rename_fields: {
+                 "message": "msg", 
+                 "levelname": "level"
+                }
+    LOGFMT:
+        (): logger.LogfmtFormatter
+        keys: [
+            "time",
+            "level",
+            "msg"
+        ]
+        mapping: {
+            "time": "asctime",
+            "level": "levelname",
+             "msg": "message"
+        }

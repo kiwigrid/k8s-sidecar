@@ -90,6 +90,8 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
+          wait_for_pod_ready "sidecar-pythonscript-logfile"
+          wait_for_pod_ready "sidecar-logtofile-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
@@ -102,21 +104,22 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript")
+          pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
             done
           done
-          # 5 more seconds after the last thing appeared in the logs.
-          sleep 5
+          # 10 more seconds after the last thing appeared in the logs.
+          sleep 10
       - name: Retrieve pod logs
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
+          kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
@@ -215,7 +218,12 @@ jobs:
       - name: Verify sidecar-python logs after initial sync
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
-          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
+          # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
+          # Total is (9 + 7)
+          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9" &&
+          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9" &&
+          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
+          test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
       - name: Verify sidecar files after update
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
