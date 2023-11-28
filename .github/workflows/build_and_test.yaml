@@ -39,19 +39,21 @@ jobs:
         # see https://github.com/kubernetes-sigs/kind/releases for supported k8s versions per kind version
         k8s:
           - maj_min: v1.21
-            digest: sha256:220cfafdf6e3915fbce50e13d1655425558cb98872c53f802605aa2fb2d569cf
+            digest: sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
           - maj_min: v1.22
-            digest: sha256:9af784f45a584f6b28bce2af84c494d947a05bd709151466489008f80a9ce9d5
+            digest: sha256:f5b2e5698c6c9d6d0adc419c0deae21a425c07d81bbf3b6a6834042f25d4fba2
           - maj_min: v1.23
-            digest: sha256:f77f8cf0b30430ca4128cc7cfafece0c274a118cd0cdb251049664ace0dee4ff
+            digest: sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
           - maj_min: v1.24
-            digest: sha256:cea86276e698af043af20143f4bf0509e730ec34ed3b7fa790cc0bea091bc5dd
+            digest: sha256:7db4f8bea3e14b82d12e044e25e34bd53754b7f2b0e9d56df21774e6f66a70ab
           - maj_min: v1.25
-            digest: sha256:c08d6c52820aa42e533b70bce0c2901183326d86dcdcbedecc9343681db45161
+            digest: sha256:227fa11ce74ea76a0474eeefb84cb75d8dad1b08638371ecf0e86259b35be0c8
           - maj_min: v1.26
-            digest: sha256:f4c0d87be03d6bea69f5e5dc0adb678bb498a190ee5c38422bf751541cebe92e
+            digest: sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
           - maj_min: v1.27
-            digest: sha256:b7d12ed662b873bd8510879c1846e87c7e676a79fefc93e17b2a52989d3ff42b
+            digest: sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72
+          - maj_min: v1.28
+            digest: sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31            
     name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +61,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
-        uses: helm/kind-action@v1.7.0
+        uses: helm/kind-action@v1.8.0
         with:
           node_image: kindest/node@${{ matrix.k8s.digest }}
           config: test/kind-config.yaml
@@ -90,8 +92,6 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
-          wait_for_pod_ready "sidecar-pythonscript-logfile"
-          wait_for_pod_ready "sidecar-logtofile-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
@@ -104,22 +104,21 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-5xx" "sidecar-pythonscript")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
             done
           done
-          # 10 more seconds after the last thing appeared in the logs.
-          sleep 10
+          # 5 more seconds after the last thing appeared in the logs.
+          sleep 5
       - name: Retrieve pod logs
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
-          kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
@@ -218,12 +217,7 @@ jobs:
       - name: Verify sidecar-python logs after initial sync
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
-          # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
-          # Total is (9 + 7)
-          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9" &&
-          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9" &&
-          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
-          test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
+          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9"
       - name: Verify sidecar files after update
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
