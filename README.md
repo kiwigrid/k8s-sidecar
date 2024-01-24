@@ -55,6 +55,12 @@ metadata:
 
 If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from.
 
+## Configuration CLI Flags
+| name                  | description                                                                                                                                                      | required | default | type    |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|---------|
+| `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_USERNAME` | false    | -       | string  |
+| `--req-password-file` | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_PASSWORD` | false    | -       | string  |
+
 ## Configuration Environment Variables
 
 | name                       | description                                                                                                                                                                                                                                                                                                                         | required | default                                   | type    |
