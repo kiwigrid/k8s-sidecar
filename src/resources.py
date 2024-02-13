@@ -305,7 +305,8 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
 
 def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                             ignore_already_processed):
+                             ignore_already_processed,
+                             reload_once_per_batch):
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -358,8 +359,10 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         if script and files_changed:
             execute(script)
 
-        if request_url and files_changed:
+        if request_url and files_changed and not reload_once_per_batch:
             request(request_url, request_method, enable_5xx, request_payload)
+    if request_url and reload_once_per_batch:
+        request(request_url, request_method, enable_5xx, request_payload)
 
 
 def _watch_resource_loop(mode, *args):
@@ -388,11 +391,13 @@ def _watch_resource_loop(mode, *args):
 
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                      ignore_already_processed):
+                      ignore_already_processed,
+                      reload_once_per_batch):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
-                                         ignore_already_processed)
+                                         ignore_already_processed,
+                                         reload_once_per_batch)
 
     while True:
         died = False
@@ -412,14 +417,15 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
 
 def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
                              mode, request_payload, resources, target_folder, unique_filenames, script, request_url,
-                             enable_5xx, ignore_already_processed):
+                             enable_5xx, ignore_already_processed, reload_once_per_batch):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                 ignore_already_processed)
+                                 ignore_already_processed,
+                                 reload_once_per_batch)
                            )
             proc.daemon = True
             proc.start()
