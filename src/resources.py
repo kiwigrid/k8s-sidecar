@@ -365,8 +365,6 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 def _watch_resource_loop(mode, *args):
     while True:
         try:
-            # Always wait to slow down the loop in case of exceptions
-            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
             if mode == "SLEEP":
                 list_resources(*args)
                 sleep(int(os.getenv("SLEEP_TIME", 60)))
@@ -379,11 +377,14 @@ def _watch_resource_loop(mode, *args):
                 raise
         except ProtocolError as e:
             logger.error(f"ProtocolError when calling kubernetes: {e}\n")
+            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
         except MaxRetryError as e:
             logger.error(f"MaxRetryError when calling kubernetes: {e}\n")
+            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
         except Exception as e:
             logger.error(f"Received unknown exception: {e}\n")
             traceback.print_exc()
+            sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
 
 
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,

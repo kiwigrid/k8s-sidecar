@@ -1,5 +1,5 @@
 kubernetes==28.1.0
 requests==2.31.0
 python-json-logger==2.0.7
-logfmter==0.0.6
+logfmter==0.0.7
 argparse==1.4.0
