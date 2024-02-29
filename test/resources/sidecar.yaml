@@ -345,7 +345,7 @@ spec:
   serviceAccountName: sample-acc
   containers:
   - name: sidecar
-    image: k8s-sidecar:testing
+    image: kiwigrid/k8s-sidecar:testing
     command: [ "python" , "-u" , "sidecar.py" , "--req-username-file=/opt/creds/username" , "--req-password-file=/opt/creds/password"]
     imagePullPolicy: IfNotPresent
     volumeMounts:
