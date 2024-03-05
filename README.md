@@ -41,7 +41,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
 
 # Usage 
 
-Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
+Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
 ```shell
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)
 ```
