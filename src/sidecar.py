@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-import os
-import re
+import os, sys, re
 
 from kubernetes import client, config
 from kubernetes.client import ApiException
@@ -31,6 +30,17 @@ IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 
 # Get logger
 logger = get_logger()
+
+
+def exception_handler(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("%s: %s" % (exc_type.__qualname__, exc_value), exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = exception_handler
 
 
 def main():
