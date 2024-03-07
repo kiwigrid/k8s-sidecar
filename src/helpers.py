@@ -13,6 +13,12 @@ from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.util.retry import Retry
 
 from logger import get_logger
+import argparse
+
+parser = argparse.ArgumentParser(description="CLI flags for kiwigrid sidecar")
+parser.add_argument("--req-username-file", type=str, metavar=argparse.REMAINDER, help="path to file containing basic-auth username for REQ. This takes precedence over the environment variable REQ_USERNAME")
+parser.add_argument("--req-password-file", type=str, metavar=argparse.REMAINDER, help="path to file containing basic-auth password for REQ. This takes precedence over the environment variable REQ_PASSWORD")
+args = parser.parse_args()
 
 CONTENT_TYPE_TEXT = "ascii"
 CONTENT_TYPE_BASE64_BINARY = "binary"
@@ -110,11 +116,36 @@ def remove_file(folder, filename):
         return False
 
 
-def request(url, method, enable_5xx=False, payload=None):
-    enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
+def read_file_content(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        logger.warning(f"File not found at: {file_path}")
+    except PermissionError:
+        logger.error(f"No read permission for file: {file_path}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+    return None
 
+
+def fetch_basic_auth_credentials():
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
+    if args.req_username_file:
+        username_from_file = read_file_content(args.req_username_file)
+        if username_from_file is not None:
+            username = username_from_file
+    if args.req_password_file:
+        password_from_file = read_file_content(args.req_password_file)
+        if password_from_file is not None:
+            password = password_from_file
+    return username, password
+
+
+def request(url, method, enable_5xx=False, payload=None):
+    enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
+    username,password = fetch_basic_auth_credentials()
     encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
     if username and password:
         auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
