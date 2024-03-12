@@ -28,6 +28,7 @@ REQ_METHOD = "REQ_METHOD"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
+RELOAD_ONCE_PER_BATCH = "RELOAD_ONCE_PER_BATCH"
 
 # Get logger
 logger = get_logger()
@@ -62,7 +63,7 @@ def main():
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
-   
+
     request_payload = os.getenv(REQ_PAYLOAD)
     if request_payload:
         request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
@@ -111,6 +112,14 @@ def main():
     with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
         namespace = os.getenv("NAMESPACE", f.read())
 
+    reload_once_per_batch = os.getenv(RELOAD_ONCE_PER_BATCH)
+    if reload_once_per_batch is not None and reload_once_per_batch.lower() == "true":
+        logger.info(f"Reload once per batch will be enabled.")
+        reload_once_per_batch = True
+    else:
+        logger.info(f"Reload once per batch will not be enabled.")
+        reload_once_per_batch = False
+
     method = os.getenv(METHOD)
     if method == "LIST":
         for res in resources:
@@ -121,7 +130,8 @@ def main():
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed)
+                          ignore_already_processed,
+                          reload_once_per_batch)
 
 
 def _initialize_kubeclient_configuration():
