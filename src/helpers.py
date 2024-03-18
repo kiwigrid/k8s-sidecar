@@ -134,12 +134,16 @@ def request(url, method, enable_5xx=False, payload=None):
     if url is None:
         logger.warning(f"No url provided. Doing nothing.")
         return
-
+    client_cert, client_key = get_client_cert_and_key_paths()
+    if client_cert and client_key:
+        cert = (client_cert, client_key)
+    else:
+        cert = None
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        res = r.get("%s" % url, cert=cert, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        res = r.post("%s" % url, cert=cert, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
@@ -185,3 +189,9 @@ def execute(script_path):
         logger.debug(f"Script exit code: {result.returncode}")
     except subprocess.CalledProcessError as e:
         logger.error(f"Script failed with error: {e}")
+
+
+def get_client_cert_and_key_paths():
+    client_cert = os.getenv("REQ_CLIENT_CERT")
+    client_key = os.getenv("REQ_CLIENT_KEY")
+    return client_cert, client_key
