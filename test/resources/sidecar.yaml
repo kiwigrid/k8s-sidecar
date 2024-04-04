@@ -204,7 +204,7 @@ data:
               class: logging.handlers.RotatingFileHandler
               level: DEBUG
               formatter: JSON
-              filename: "/opt/logs/sidecar.log"
+              filename: "$(OUTPUT_LOG_FILE)"
               maxBytes: 2097152
               backupCount: 3
 
@@ -294,6 +294,8 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
+        - name: OUTPUT_LOG_FILE
+          value: "/opt/logs/sidecar.log"
   volumes:
     - name: shared-volume
       emptyDir: { }
