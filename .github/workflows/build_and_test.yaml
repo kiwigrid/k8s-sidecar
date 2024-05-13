@@ -43,17 +43,19 @@ jobs:
           - maj_min: v1.22
             digest: sha256:f5b2e5698c6c9d6d0adc419c0deae21a425c07d81bbf3b6a6834042f25d4fba2
           - maj_min: v1.23
-            digest: sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
+            digest: sha256:fbb92ac580fce498473762419df27fa8664dbaa1c5a361b5957e123b4035bdcf
           - maj_min: v1.24
-            digest: sha256:7db4f8bea3e14b82d12e044e25e34bd53754b7f2b0e9d56df21774e6f66a70ab
+            digest: sha256:ea292d57ec5dd0e2f3f5a2d77efa246ac883c051ff80e887109fabefbd3125c7
           - maj_min: v1.25
-            digest: sha256:227fa11ce74ea76a0474eeefb84cb75d8dad1b08638371ecf0e86259b35be0c8
+            digest: sha256:9d0a62b55d4fe1e262953be8d406689b947668626a357b5f9d0cfbddbebbc727
           - maj_min: v1.26
-            digest: sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
+            digest: sha256:15ae92d507b7d4aec6e8920d358fc63d3b980493db191d7327541fbaaed1f789
           - maj_min: v1.27
-            digest: sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72
+            digest: sha256:3700c811144e24a6c6181065265f69b9bf0b437c45741017182d7c82b908918f
           - maj_min: v1.28
-            digest: sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31            
+            digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b            
+          - maj_min: v1.29
+            digest: sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
     name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
@@ -61,7 +63,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
-        uses: helm/kind-action@v1.8.0
+        uses: helm/kind-action@v1.10.0
         with:
           node_image: kindest/node@${{ matrix.k8s.digest }}
           config: test/kind-config.yaml

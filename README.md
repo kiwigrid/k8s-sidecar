@@ -33,7 +33,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
-- CI tests for k8s v1.21-v1.28
+- CI tests for k8s v1.21-v1.29
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables
@@ -41,7 +41,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
 
 # Usage 
 
-Example for a simple deployment can be found in [`example.yaml`](./example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
+Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
 ```shell
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)
 ```
