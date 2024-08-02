@@ -146,11 +146,14 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         metadata = item.metadata
 
         logger.debug(f"Removing {resource}: {metadata.namespace}/{metadata.name}")
-
+        
+        # Get the destination folder
+        dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation)
+      
         if resource == RESOURCE_CONFIGMAP:
-            files_changed |= _process_config_map(None, item, resource, unique_filenames, enable_5xx, True)
+            files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx, True)
         else:
-            files_changed = _process_secret(None, item, resource, unique_filenames, enable_5xx, True)
+            files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx, True)
 
     if script and files_changed:
         execute(script)
