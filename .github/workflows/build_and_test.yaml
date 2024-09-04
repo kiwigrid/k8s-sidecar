@@ -49,9 +49,9 @@ jobs:
           - maj_min: v1.25
             digest: sha256:9d0a62b55d4fe1e262953be8d406689b947668626a357b5f9d0cfbddbebbc727
           - maj_min: v1.26
-            digest: sha256:15ae92d507b7d4aec6e8920d358fc63d3b980493db191d7327541fbaaed1f789
+            digest: sha256:5d548739ddef37b9318c70cb977f57bf3e5015e4552be4e27e57280a8cbb8e4f
           - maj_min: v1.27
-            digest: sha256:3700c811144e24a6c6181065265f69b9bf0b437c45741017182d7c82b908918f
+            digest: sha256:681253009e68069b8e01aad36a1e0fa8cf18bb0ab3e5c4069b2e65cafdd70843
           - maj_min: v1.28
             digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b            
           - maj_min: v1.29
