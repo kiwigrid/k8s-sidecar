@@ -411,6 +411,8 @@ spec:
         value: /tmp/
       - name: RESOURCE
         value: both
+      - name: REQ_URL
+        value: http://dummy-server/reload
       - name: REQ_ONCE_PER_BATCH
         value: "true"
       - name: LOG_LEVEL
