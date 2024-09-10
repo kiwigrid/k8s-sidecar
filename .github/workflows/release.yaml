@@ -12,7 +12,7 @@ jobs:
           fetch-depth: '0'
       - name: Bump version and push tag
         id: tagging
-        uses: anothrNick/github-tag-action@1.55.0
+        uses: anothrNick/github-tag-action@1.59.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INITIAL_VERSION: 1.0.0
@@ -47,7 +47,7 @@ jobs:
       - name: "Build and push"
         if: steps.tagging.outputs.part
         id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
