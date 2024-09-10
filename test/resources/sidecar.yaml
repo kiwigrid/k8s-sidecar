@@ -168,7 +168,7 @@ data:
     root:
         level: DEBUG
         handlers: [console]
-        
+
     handlers:
         console:
             class: logging.StreamHandler
@@ -180,7 +180,7 @@ data:
             (): logger.JsonFormatter
             format: '%(levelname)s %(message)s'
             rename_fields: {
-                    "message": "msg", 
+                    "message": "msg",
                     "levelname": "level"
                     }
 ---
@@ -389,3 +389,32 @@ type: Opaque
 stringData:
   username: "user1"
   password: "abcdefghijklmnopqrstuvwxyz"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-batch-reload
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    env:
+      - name: LABEL
+        value: "findme"
+      - name: FOLDER
+        value: /tmp/
+      - name: RESOURCE
+        value: both
+      - name: REQ_ONCE_PER_BATCH
+        value: "true"
+      - name: LOG_LEVEL
+        value: "DEBUG"
+  volumes:
+  - name: shared-volume
+    emptyDir: {}

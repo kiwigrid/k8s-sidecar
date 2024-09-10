@@ -53,7 +53,7 @@ jobs:
           - maj_min: v1.27
             digest: sha256:3700c811144e24a6c6181065265f69b9bf0b437c45741017182d7c82b908918f
           - maj_min: v1.28
-            digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b            
+            digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b
           - maj_min: v1.29
             digest: sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
     name: "Test on k8s ${{ matrix.k8s.maj_min }}"
@@ -97,6 +97,7 @@ jobs:
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
+          wait_for_pod_ready "sidecar-batch-reload"
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
@@ -109,7 +110,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile" "sidecar-batch-reload")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -127,6 +128,10 @@ jobs:
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+
+          # Sleep more to pass WATCH_SERVER_TIMEOUT seconds for batch-reload to occur
+          sleep 60
+          kubectl logs sidecar-batch-reload > /tmp/logs/sidecar-batch-reload.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
         with:
@@ -151,10 +156,10 @@ jobs:
           kubectl cp sidecar:/tmp/secured.txt /tmp/sidecar/secured.txt
           kubectl cp sidecar:/tmp/similar-configmap.txt /tmp/sidecar/similar-configmap.txt
           kubectl cp sidecar:/tmp/similar-secret.txt /tmp/sidecar/similar-secret.txt
-          
+
           echo "Downloading resource files from sidecar-basicauth-args pod"
           kubectl cp sidecar-basicauth-args:/tmp/secured.txt /tmp/sidecar-basicauth-args/secured.txt
-          
+
           echo "Downloading resource files from sidecar-5xx..."
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
           kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
@@ -247,3 +252,8 @@ jobs:
           kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
+      # - name: Verify sidecar-batch-reload logs after initial sync
+      #   run: |
+      #     test $(cat /tmp/logs/sidecar-sidecar-batch-reload.log | grep "Hello from python script!" | wc -l) = "9" &&
+      #     kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
+      #     test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
