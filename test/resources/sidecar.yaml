@@ -394,7 +394,7 @@ stringData:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: sidecar-batch-reload
+  name: sidecar-req-once-per-batch
   namespace: default
 spec:
   serviceAccountName: sample-acc
