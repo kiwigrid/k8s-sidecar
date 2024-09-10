@@ -47,6 +47,3 @@ async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_schem
         )
     return 'allowed'
 
-@app.post("/reload", status_code=201)
-async def read_item():
-    return 201

@@ -412,7 +412,9 @@ spec:
       - name: RESOURCE
         value: both
       - name: REQ_URL
-        value: http://dummy-server/reload
+        value: http://dummy-server/
+      - name: REQ_METHOD
+        value: GET
       - name: REQ_ONCE_PER_BATCH
         value: "true"
       - name: LOG_LEVEL
