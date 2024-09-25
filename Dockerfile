@@ -1,6 +1,6 @@
-FROM python:3.12-alpine as base
+FROM python:alpine3.20 AS base
 
-FROM base as builder
+FROM base AS builder
 WORKDIR /app
 RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptools
 COPY        src/ /app/
