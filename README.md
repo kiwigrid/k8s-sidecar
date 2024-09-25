@@ -100,10 +100,11 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `LOG_TZ`                   | Set the log timezone. (LOCAL or UTC)                                                                                                                                                                                                                                                                                                | false    | `LOCAL`                                   | string  |
 | `LOG_CONFIG`               | Log configuration file path. If not configured, uses the default log config for backward compatibility support. When not configured `LOG_LEVEL, LOG_FORMAT and LOG_TZ` would be used. Refer to [Python logging](https://docs.python.org/3/library/logging.config.html) for log configuration. For sample configuration file  refer to file examples/example_logconfig.yaml | false    | -                                         | string  |
 
-# Environment variable expansion in LOG_CONFIG
+
+## Environment variable expansion in LOG_CONFIG
 Kiwigrid k8s-sidecar supports expansion of environment variables in the log config.
 This can be done by wrapping the name of environment variable in the regex placeholder `$(<env_var_name>)` in the log config.
-At the startup, the k8s container will look for the regex wrapper and replace all the matched occurrences with the content of the environment variables.
+At the startup, the k8s-sidecar container will look for the regex wrapper and replace all the matched occurrences with the content of the environment variables.
 
 For instance the below snippet from the log config,
 
@@ -117,7 +118,7 @@ root:
 ...
 ```
 
-would be read as below, replacing the content of `$(LV_DBG)` with the value of environment variable `LV_DBG`.
+would be read as below, replacing the content of `$(LV_DBG)` with the value of environment variable `LV_DBG` (assuming it set to `DEBUG` here).
 
 ```commandline
 version: 1
@@ -128,3 +129,5 @@ root:
     handlers: [console]
 ...
 ```
+
+> **Note:** The k8s-sidecar will terminate if it finds a match for the environment variable expansion placeholder and the corresponding environment variable is not set.

@@ -166,13 +166,13 @@ data:
     disable_existing_loggers: false
 
     root:
-        level: DEBUG
+        level: $(ENV_LEVEL_DEBUG)
         handlers: [console]
         
     handlers:
         console:
             class: logging.StreamHandler
-            level: DEBUG
+            level: $(ENV_LEVEL_DEBUG)
             formatter: JSON
 
     formatters:
@@ -180,8 +180,8 @@ data:
             (): logger.JsonFormatter
             format: '%(levelname)s %(message)s'
             rename_fields: {
-                    "message": "msg", 
-                    "levelname": "level"
+                    "message": "$(ENV_RENAME_FIELD_MSG)", 
+                    "levelname": "$(ENV_RENAME_FIELD_LEVEL)"
                     }
 ---
 apiVersion: v1
@@ -204,7 +204,7 @@ data:
               class: logging.handlers.RotatingFileHandler
               level: DEBUG
               formatter: JSON
-              filename: "$(OUTPUT_LOG_FILE)"
+              filename: "/opt/logs/sidecar.log"
               maxBytes: 2097152
               backupCount: 3
 
@@ -248,6 +248,12 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
+        - name: ENV_LEVEL_DEBUG
+          value: "DEBUG"
+        - name: ENV_RENAME_FIELD_MSG
+          value: "msg"
+        - name: ENV_RENAME_FIELD_LEVEL
+          value: "level"
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -294,8 +300,6 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
-        - name: OUTPUT_LOG_FILE
-          value: "/opt/logs/sidecar.log"
   volumes:
     - name: shared-volume
       emptyDir: { }
