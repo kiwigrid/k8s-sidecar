@@ -33,7 +33,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
-- CI tests for k8s v1.21-v1.28
+- CI tests for k8s v1.21-v1.29
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables
@@ -54,6 +54,12 @@ metadata:
 ```
 
 If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from.
+
+## Configuration CLI Flags
+| name                  | description                                                                                                                                                      | required | default | type    |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|---------|
+| `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_USERNAME` | false    | -       | string  |
+| `--req-password-file` | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_PASSWORD` | false    | -       | string  |
 
 ## Configuration Environment Variables
 
