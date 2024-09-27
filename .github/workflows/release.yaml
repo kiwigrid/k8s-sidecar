@@ -1,3 +1,5 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Release
 on:
   push:
@@ -15,6 +17,7 @@ jobs:
         uses: anothrNick/github-tag-action@1.59.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: master
           INITIAL_VERSION: 1.0.0
           DEFAULT_BUMP: none
           BRANCH_HISTORY: last
