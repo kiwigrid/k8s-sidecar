@@ -389,3 +389,154 @@ type: Opaque
 stringData:
   username: "user1"
   password: "abcdefghijklmnopqrstuvwxyz"
+---
+# For client-certificate-auth
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: default
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: root-ca
+  namespace: default
+spec:
+  isCA: true
+  commonName: root-ca
+  subject:
+    organizations:
+      - Kiwigrid
+    organizationalUnits:
+      - k8s-sidecar
+  secretName: ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: root-ca-issuer
+  namespace: default
+spec:
+  ca:
+    secretName: ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dummy-server
+  namespace: default
+spec:
+  secretName: server-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "dummy-server-tls.default.svc.cluster.local"
+  - "dummy-server-tls"
+  issuerRef:
+    name: root-ca-issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sidecar-client
+  namespace: default
+spec:
+  secretName: client-tls
+  isCA: false
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+  - "dummy-server-tls.default.svc.cluster.local"
+  - "dummy-server-tls"
+  issuerRef:
+    name: root-ca-issuer
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dummy-server-tls-pod
+  namespace: default
+  labels:
+    app: dummyserver-tls
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: dummy-server-tls
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "443", "--ssl-keyfile", "/opt/server-creds/tls.key", "--ssl-certfile", "/opt/server-creds/tls.crt", "--ssl-cert-reqs", "2", "--ssl-ca-certs","/opt/root-creds/ca.crt"]
+    image: dummy-server:1.0.0
+    ports:
+      - containerPort: 443
+    volumeMounts:
+    - name: server-creds
+      mountPath: /opt/server-creds/
+    - name: root-creds
+      mountPath: /opt/root-creds/
+  volumes:
+  - name: server-creds
+    secret:
+      secretName: server-tls
+  - name: root-creds
+    secret:
+      secretName: ca-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dummy-server-tls
+spec:
+  selector:
+    app: dummyserver-tls
+  ports:
+    - port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-tls
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+    - name: sidecar-tls
+      image: kiwigrid/k8s-sidecar:testing
+      volumeMounts:
+        - name: shared-volume
+          mountPath: /tmp/
+        - name: client-tls-creds
+          mountPath: /opt/client-tls-creds/
+      env:
+        - name: LABEL
+          value: "findme-with-tls"
+        - name: FOLDER
+          value: /tmp/
+        - name: RESOURCE
+          value: both
+        - name: LOG_LEVEL
+          value: "DEBUG"
+        - name: REQ_CLIENT_CERT
+          value: "/opt/client-tls-creds/tls.crt"
+        - name: REQ_CLIENT_KEY
+          value: "/opt/client-tls-creds/tls.key"
+        - name: REQ_SKIP_TLS_VERIFY
+          value: "true"
+  volumes:
+    - name: shared-volume
+      emptyDir: {}
+    - name: client-tls-creds
+      secret:
+        secretName: client-tls

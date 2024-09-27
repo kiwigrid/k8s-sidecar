@@ -101,3 +101,13 @@ metadata:
 binaryData:
   # Base64 encoded url is 'http://dummy-server/static/kubelogo.png'
   url-downloaded-kubelogo.png.url: "aHR0cDovL2R1bW15LXNlcnZlci9zdGF0aWMva3ViZWxvZ28ucG5n"
+---
+# For client-certificate-auth
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tls-url-configmap-200
+  labels:
+    findme-with-tls: "yup"
+data:
+  200-tls.txt.url: "https://dummy-server-tls/200"

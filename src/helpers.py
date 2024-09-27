@@ -167,8 +167,10 @@ def request(url, method, enable_5xx=False, payload=None):
         return
     client_cert, client_key = get_client_cert_and_key_paths()
     if client_cert and client_key:
+        logger.debug("Client certificates are configured: Client cert path: %s, Client key path: %s", client_cert, client_key)
         cert = (client_cert, client_key)
     else:
+        logger.debug("Client certificates are not configured. Skipping client certificate authentication.")
         cert = None
     # If method is not provided use GET as default
     if method == "GET" or not method:

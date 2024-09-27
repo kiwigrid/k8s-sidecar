@@ -74,6 +74,16 @@ jobs:
         with:
           name: images
           path: /tmp
+      - name: Install Helm
+        run: |
+          wget https://get.helm.sh/helm-v3.16.1-linux-amd64.tar.gz
+          tar -zxf helm-v3.16.1-linux-amd64.tar.gz
+          mv linux-amd64/helm /usr/local/bin/helm
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm install cert-manager jetstack/cert-manager --version v1.11.0 --set installCRDs=true
       - name: Load images into kind cluster
         run: |
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
@@ -94,6 +104,7 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
+          wait_for_pod_ready "sidecar-tls"
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
@@ -116,6 +127,7 @@ jobs:
               wait_for_pod_log $p $r
             done
           done
+          wait_for_pod_log "sidecar-tls" "tls-url-configmap-200"
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
@@ -127,6 +139,7 @@ jobs:
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+          kubectl logs sidecar-tls > /tmp/logs/sidecar-tls.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
         with:
@@ -135,6 +148,7 @@ jobs:
       - name: Download expected files from cluster
         run: |
           mkdir /tmp/sidecar
+          mkdir /tmp/sidecar-tls
           mkdir /tmp/sidecar-5xx
           echo "Downloading resource files from sidecar..."
           kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
@@ -170,12 +184,16 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/sidecar-5xx/secured.txt
           kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
           kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
+
+          echo "Downloading resource files from sidecar-tls pod"
+          kubectl cp sidecar-tls:/tmp/200-tls.txt /tmp/sidecar-tls/200-tls.txt
       - name: Upload artifacts (expected files from cluster)
         uses: actions/upload-artifact@v3
         with:
           name: expected-files_${{ matrix.k8s.maj_min }}
           path: |
             /tmp/sidecar/**
+            /tmp/sidecar-tls/**
             /tmp/sidecar-5xx/**
       - name: Update Configmaps and Secrets
         run: |
@@ -208,6 +226,8 @@ jobs:
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt &&
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt &&
           echo -n "allowed" | diff - /tmp/sidecar/secured.txt &&
+          [ ! -f /tmp/sidecar-tls/200-tls.txt ] && echo "No 200-tls.txt file created" &&
+          echo -n "200" | diff - /tmp/sidecar-tls/200-tls.txt &&
           [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
           ls /tmp/sidecar/script_result
       - name: Verify sidecar-basicauth-args pod file after initial sync
