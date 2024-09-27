@@ -1,3 +1,5 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: "Build and Test"
 on:
   - pull_request
@@ -43,19 +45,19 @@ jobs:
           - maj_min: v1.22
             digest: sha256:f5b2e5698c6c9d6d0adc419c0deae21a425c07d81bbf3b6a6834042f25d4fba2
           - maj_min: v1.23
-            digest: sha256:fbb92ac580fce498473762419df27fa8664dbaa1c5a361b5957e123b4035bdcf
+            digest: sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
           - maj_min: v1.24
-            digest: sha256:ea292d57ec5dd0e2f3f5a2d77efa246ac883c051ff80e887109fabefbd3125c7
+            digest: sha256:bad10f9b98d54586cba05a7eaa1b61c6b90bfc4ee174fdc43a7b75ca75c95e51
           - maj_min: v1.25
-            digest: sha256:9d0a62b55d4fe1e262953be8d406689b947668626a357b5f9d0cfbddbebbc727
+            digest: sha256:e8b50f8e06b44bb65a93678a65a26248fae585b3d3c2a669e5ca6c90c69dc519
           - maj_min: v1.26
             digest: sha256:5d548739ddef37b9318c70cb977f57bf3e5015e4552be4e27e57280a8cbb8e4f
           - maj_min: v1.27
             digest: sha256:681253009e68069b8e01aad36a1e0fa8cf18bb0ab3e5c4069b2e65cafdd70843
           - maj_min: v1.28
-            digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b            
+            digest: sha256:9bc6c451a289cf96ad0bbaf33d416901de6fd632415b076ab05f5fa7e4f65c58            
           - maj_min: v1.29
-            digest: sha256:a0cc28af37cf39b019e2b448c54d1a3f789de32536cb5a5db61a49623e527144
+            digest: sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245
     name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
@@ -63,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
-        uses: helm/kind-action@v1.10.0
+        uses: helm/kind-action@v1.10.0 # use kind release v0.22.0
         with:
           node_image: kindest/node@${{ matrix.k8s.digest }}
           config: test/kind-config.yaml
