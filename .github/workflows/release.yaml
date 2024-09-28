@@ -23,7 +23,7 @@ jobs:
           BRANCH_HISTORY: last
       - name: "Set up QEMU"
         if: steps.tagging.outputs.part
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - name: "Set up Docker Buildx"
         if: steps.tagging.outputs.part
         uses: docker/setup-buildx-action@v3
