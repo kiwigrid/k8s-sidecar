@@ -140,8 +140,6 @@ jobs:
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
           kubectl logs sidecar-tls > /tmp/logs/sidecar-tls.log
-          #For Debug
-          cat /tmp/logs/sidecar-tls.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v3
         with:
@@ -189,8 +187,6 @@ jobs:
 
           echo "Downloading resource files from sidecar-tls pod"
           kubectl cp sidecar-tls:/tmp/200-tls.txt /tmp/sidecar-tls/200-tls.txt
-          # For Debug
-          cat /tmp/sidecar-tls/200-tls.txt
       - name: Upload artifacts (expected files from cluster)
         uses: actions/upload-artifact@v3
         with:
@@ -230,7 +226,7 @@ jobs:
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt &&
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt &&
           echo -n "allowed" | diff - /tmp/sidecar/secured.txt &&
-          [ ! -f /tmp/sidecar-tls/200-tls.txt ] && echo "No 200-tls.txt file created" &&
+          [ -f /tmp/sidecar-tls/200-tls.txt ] && echo "200-tls.txt file created" &&
           echo -n "200" | diff - /tmp/sidecar-tls/200-tls.txt &&
           [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
           ls /tmp/sidecar/script_result
