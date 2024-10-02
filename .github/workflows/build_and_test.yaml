@@ -40,10 +40,6 @@ jobs:
       matrix:
         # see https://github.com/kubernetes-sigs/kind/releases for supported k8s versions per kind version
         k8s:
-          - maj_min: v1.21
-            digest: sha256:8a4e9bb3f415d2bb81629ce33ef9c76ba514c14d707f9797a01e3216376ba093
-          - maj_min: v1.22
-            digest: sha256:f5b2e5698c6c9d6d0adc419c0deae21a425c07d81bbf3b6a6834042f25d4fba2
           - maj_min: v1.23
             digest: sha256:14d0a9a892b943866d7e6be119a06871291c517d279aedb816a4b4bc0ec0a5b3
           - maj_min: v1.24
