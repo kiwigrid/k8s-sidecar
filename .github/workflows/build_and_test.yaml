@@ -247,3 +247,7 @@ jobs:
           kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
+      - name: Verify environment variable expansion feature in log config
+        run: |
+          cat /tmp/logs/sidecar-pythonscript-logfile.log | jq 'has("msg") and has("level")' -e >/dev/null &&
+          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | jq '. | select(.level == "DEBUG")' | wc -l) -gt 0
