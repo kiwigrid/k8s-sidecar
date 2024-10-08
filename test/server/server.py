@@ -46,3 +46,4 @@ async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_schem
             headers={"WWW-Authenticate": "Basic"},
         )
     return 'allowed'
+

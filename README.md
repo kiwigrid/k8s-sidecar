@@ -39,7 +39,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
   - Values can also be base64 encoded URLs that download binary data e.g. executables
     - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
-# Usage 
+# Usage
 
 Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
 ```shell
@@ -84,6 +84,7 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `REQ_USERNAME`             | Username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests                                                                                                                                                                                                                               | false    | -                                         | string  |
 | `REQ_PASSWORD`             | Password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests                                                                                                                                                                                                                               | false    | -                                         | string  |
 | `REQ_BASIC_AUTH_ENCODING`  | Which encoding to use for username and password as [by default it's undefined](https://datatracker.ietf.org/doc/html/rfc7617) (e.g. `utf-8`).                                                                                                                                                                                       | false    | `latin1`                                  | string  |
+| `REQ_ONCE_PER_BATCH`       | Send request to `REQ_URL` only once each `WATCH_SERVER_TIMEOUT`. By default request is made after each change. Applicable only to `METHOD=WATCH`. | false | - | boolean |
 | `SCRIPT`                   | Absolute path to a script to execute after a configmap got reloaded. It runs before calls to `REQ_URI`. If the file is not executable it will be passed to `sh`. Otherwise it's executed as is. [Shebangs](https://en.wikipedia.org/wiki/Shebang_(Unix)) known to work are `#!/bin/sh` and `#!/usr/bin/env python`                  | false    | -                                         | string  |
 | `ERROR_THROTTLE_SLEEP`     | How many seconds to wait before watching resources again when an error occurs                                                                                                                                                                                                                                                       | false    | `5`                                       | integer |
 | `SKIP_TLS_VERIFY`          | Set to `true` to skip tls verification for kube api calls                                                                                                                                                                                                                                                                           | false    | -                                         | boolean |

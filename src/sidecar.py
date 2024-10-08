@@ -24,6 +24,7 @@ RESOURCE = "RESOURCE"
 REQ_PAYLOAD = "REQ_PAYLOAD"
 REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
+REQ_ONCE_PER_BATCH = "REQ_ONCE_PER_BATCH"
 SCRIPT = "SCRIPT"
 ENABLE_5XX = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
@@ -72,10 +73,19 @@ def main():
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
-   
+
     request_payload = os.getenv(REQ_PAYLOAD)
     if request_payload:
         request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
+
+    request_once_per_batch = os.getenv(REQ_ONCE_PER_BATCH)
+    if request_once_per_batch is not None and request_once_per_batch.lower() == "true":
+        logger.info(f"Request once per batch will be enabled.")
+        request_once_per_batch = True
+    else:
+        logger.info(f"Request once per batch will not be enabled.")
+        request_once_per_batch = False
+
     script = os.getenv(SCRIPT)
 
     _initialize_kubeclient_configuration()
@@ -131,7 +141,8 @@ def main():
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed)
+                          ignore_already_processed,
+                          request_once_per_batch)
 
 
 def _initialize_kubeclient_configuration():
