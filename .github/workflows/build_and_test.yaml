@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build sidecar
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
@@ -20,14 +20,14 @@ jobs:
         run: |
           cp test/kubelogo.png test/server/static/
       - name: Build dummy server
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: "test/server"
           push: false
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: images
           path: /tmp/*.tar
@@ -49,9 +49,9 @@ jobs:
           - maj_min: v1.25
             digest: sha256:9d0a62b55d4fe1e262953be8d406689b947668626a357b5f9d0cfbddbebbc727
           - maj_min: v1.26
-            digest: sha256:15ae92d507b7d4aec6e8920d358fc63d3b980493db191d7327541fbaaed1f789
+            digest: sha256:5d548739ddef37b9318c70cb977f57bf3e5015e4552be4e27e57280a8cbb8e4f
           - maj_min: v1.27
-            digest: sha256:3700c811144e24a6c6181065265f69b9bf0b437c45741017182d7c82b908918f
+            digest: sha256:681253009e68069b8e01aad36a1e0fa8cf18bb0ab3e5c4069b2e65cafdd70843
           - maj_min: v1.28
             digest: sha256:b7e1cf6b2b729f604133c667a6be8aab6f4dde5bb042c1891ae248d9154f665b
           - maj_min: v1.29
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
         uses: helm/kind-action@v1.10.0
@@ -70,7 +70,7 @@ jobs:
           cluster_name: sidecar-testing
           wait: 5m
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: images
           path: /tmp
@@ -133,7 +133,7 @@ jobs:
           sleep 40
           kubectl logs sidecar-req-once-per-batch > /tmp/logs/sidecar-req-once-per-batch.log
       - name: Upload artifacts (pod logs)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pod-logs_${{ matrix.k8s.maj_min }}
           path: /tmp/logs/*
@@ -176,7 +176,7 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
           kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
       - name: Upload artifacts (expected files from cluster)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: expected-files_${{ matrix.k8s.maj_min }}
           path: |
@@ -217,7 +217,7 @@ jobs:
           ls /tmp/sidecar/script_result
       - name: Verify sidecar-basicauth-args pod file after initial sync
         run: |
-          echo -n "allowed" | diff - /tmp/sidecar-basicauth-args/secured.txt
+          echo -n "allowed" | diff - /tmp/sidecar-basicauth-args/secured.txt          
       - name: Verify sidecar-5xx files after initial sync
         run: |
           echo -n '{"detail":"Not authenticated"}' | diff - /tmp/sidecar-5xx/secured.txt &&

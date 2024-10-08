@@ -1,15 +1,19 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Release
+name: Release Workflow Tests
+# This workflow tests the tag and changelog action and can be used to detect (some) breaking changes.
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
+
+env:
+  TEST_TAG: testing
+
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Bump version and push tag
@@ -17,10 +21,10 @@ jobs:
         uses: anothrNick/github-tag-action@1.59.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BRANCH: master
           INITIAL_VERSION: 1.0.0
           DEFAULT_BUMP: none
           BRANCH_HISTORY: last
+          DRY_RUN: true
       - name: "Set up QEMU"
         if: steps.tagging.outputs.part
         uses: docker/setup-qemu-action@v3
@@ -55,12 +59,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le,linux/s390x
           tags: |
-            docker.io/kiwigrid/k8s-sidecar:latest
-            docker.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}
-            quay.io/kiwigrid/k8s-sidecar:latest
-            quay.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}
-            ghcr.io/kiwigrid/k8s-sidecar:latest
-            ghcr.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}
+            docker.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+            quay.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+            ghcr.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
       - name: "Build Changelog"
         if: steps.tagging.outputs.part
         id: build_changelog
@@ -75,8 +76,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ steps.tagging.outputs.tag }}
-          release_name: v${{ steps.tagging.outputs.tag }}
+          tag_name: ${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+          release_name: v${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
           body: ${{ steps.build_changelog.outputs.changelog }}
-          draft: false
+          draft: true
           prerelease: false
