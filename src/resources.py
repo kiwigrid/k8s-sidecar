@@ -373,6 +373,7 @@ def _watch_resource_loop(mode, *args):
         except ApiException as e:
             if e.status != 500:
                 logger.error(f"ApiException when calling kubernetes: {e}\n")
+                sleep(int(os.getenv("ERROR_THROTTLE_SLEEP", 5)))
             else:
                 raise
         except ProtocolError as e:
