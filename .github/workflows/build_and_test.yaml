@@ -82,9 +82,9 @@ jobs:
         run: |
           wait_for_pod_ready() {
             while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
-            echo "Pod '$1' ready." >> $GITHUB_OUTPUT
+            echo "Pod '$1' ready."
           }
-          echo "Installing sidecar..." >> $GITHUB_STEP_SUMMARY
+          echo "Installing sidecar..."
           kubectl apply -f "test/resources/sidecar.yaml"
 
           sleep 10
