@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+  # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json 
 name: "Build and Test"
 on:
   - pull_request
@@ -79,10 +79,10 @@ jobs:
       - name: Install Sidecar and Dummy Server
         run: |
           wait_for_pod_ready() {
-            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
-            echo "Pod '$1' ready."
+            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." >> $GITHUB_OUTPUT && sleep 5; done
+            echo "Pod '$1' ready." >> $GITHUB_OUTPUT
           }
-          echo "Installing sidecar..."
+          echo "Installing sidecar..." >> $GITHUB_STEP_SUMMARY
           kubectl apply -f "test/resources/sidecar.yaml"
 
           sleep 10
@@ -100,12 +100,12 @@ jobs:
       - name: Install Configmaps and Secrets
         run: |
           wait_for_pod_log() {
-            while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-            echo "Pod '$1' logs contains '$2'"
+            while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." >> $GITHUB_OUTPUT && sleep 5; done
+            echo "Pod '$1' logs contains '$2'" >> $GITHUB_OUTPUT
           }
           # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
           sleep 20
-          echo "Installing resources..."
+          echo "Installing resources..." >> $GITHUB_STEP_SUMMARY
           kubectl apply -f "test/resources/resources.yaml"
           pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
@@ -134,7 +134,7 @@ jobs:
         run: |
           mkdir /tmp/sidecar
           mkdir /tmp/sidecar-5xx
-          echo "Downloading resource files from sidecar..."
+          echo "Downloading resource files from sidecar..." >> $GITHUB_STEP_SUMMARY
           kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
           kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/sidecar/secret-kubelogo.png
@@ -150,10 +150,10 @@ jobs:
           kubectl cp sidecar:/tmp/similar-configmap.txt /tmp/sidecar/similar-configmap.txt
           kubectl cp sidecar:/tmp/similar-secret.txt /tmp/sidecar/similar-secret.txt
 
-          echo "Downloading resource files from sidecar-basicauth-args pod"
+          echo "Downloading resource files from sidecar-basicauth-args pod" >> $GITHUB_STEP_SUMMARY
           kubectl cp sidecar-basicauth-args:/tmp/secured.txt /tmp/sidecar-basicauth-args/secured.txt
 
-          echo "Downloading resource files from sidecar-5xx..."
+          echo "Downloading resource files from sidecar-5xx..." >> $GITHUB_STEP_SUMMARY
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
           kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
           kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
@@ -180,10 +180,10 @@ jobs:
           sleep 5
           current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           wait_for_pod_log() {
-            while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-            echo "Pod '$1' logs contains '$2'"
+            while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." >> $GITHUB_OUTPUT && sleep 5; done
+            echo "Pod '$1' logs contains '$2'" >> $GITHUB_OUTPUT
           }
-          echo "Updating resources..."
+          echo "Updating resources..." >> $GITHUB_STEP_SUMMARY
           kubectl apply -f "test/resources/change_resources.yaml"
           pods=("sidecar" "sidecar-5xx")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
@@ -206,7 +206,7 @@ jobs:
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt &&
           echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt &&
           echo -n "allowed" | diff - /tmp/sidecar/secured.txt &&
-          [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
+          [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" >> $GITHUB_OUTPUT &&
           ls /tmp/sidecar/script_result
       - name: Verify sidecar-basicauth-args pod file after initial sync
         run: |
