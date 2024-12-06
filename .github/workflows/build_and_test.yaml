@@ -78,6 +78,7 @@ jobs:
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
           kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
       - name: Install Sidecar and Dummy Server
+        id: install_sidecar
         shell: bash
         run: |
           wait_for_pod_ready() {
@@ -100,6 +101,7 @@ jobs:
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
+        id: install_configmaps_and_secrets
         shell: bash
         run: |
           wait_for_pod_log() {
