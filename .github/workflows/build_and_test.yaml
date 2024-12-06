@@ -73,13 +73,15 @@ jobs:
           name: images
           path: /tmp
       - name: Load images into kind cluster
+        shell: bash
         run: |
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
           kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
       - name: Install Sidecar and Dummy Server
+        shell: bash
         run: |
           wait_for_pod_ready() {
-            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." >> $GITHUB_OUTPUT && sleep 5; done
+            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
             echo "Pod '$1' ready." >> $GITHUB_OUTPUT
           }
           echo "Installing sidecar..." >> $GITHUB_STEP_SUMMARY
@@ -98,6 +100,7 @@ jobs:
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
+        shell: bash
         run: |
           wait_for_pod_log() {
             while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." >> $GITHUB_OUTPUT && sleep 5; done
@@ -117,6 +120,7 @@ jobs:
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
+        shell: bash
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
