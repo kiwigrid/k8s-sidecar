@@ -54,7 +54,7 @@ jobs:
             digest: sha256:976ea815844d5fa93be213437e3ff5754cd599b040946b5cca43ca45c2047114
           - maj_min: v1.31
             digest: sha256:53df588e04085fd41ae12de0c3fe4c72f7013bba32a20e7325357a1ac94ba865
-            name: "Test on k8s ${{ matrix.k8s.maj_min }}"
+    name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
