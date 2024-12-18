@@ -95,6 +95,7 @@ jobs:
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
+          wait_for_pod_ready "sidecar-req-once-per-batch"
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
@@ -107,7 +108,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile" "sidecar-req-once-per-batch")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -125,6 +126,10 @@ jobs:
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+
+          # Sleep more to pass WATCH_SERVER_TIMEOUT seconds for request once per batch to occur
+          sleep 40
+          kubectl logs sidecar-req-once-per-batch > /tmp/logs/sidecar-req-once-per-batch.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v4
         with:
@@ -245,3 +250,7 @@ jobs:
           kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
+      - name: Verify sidecar-req-once-per-batch logs after initial sync
+        run: |
+          test $(cat /tmp/logs/sidecar-req-once-per-batch.log | grep "Request once per batch will be enabled" | wc -l) = "1" &&
+          test $(cat /tmp/logs/sidecar-req-once-per-batch.log | grep "Starting batch request" | wc -l) = "2"
