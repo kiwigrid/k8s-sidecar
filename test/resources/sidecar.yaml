@@ -389,3 +389,41 @@ type: Opaque
 stringData:
   username: "user1"
   password: "abcdefghijklmnopqrstuvwxyz"
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-pythonscript-resource-name
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+    - name: sidecar
+      image: kiwigrid/k8s-sidecar:testing
+      volumeMounts:
+        - name: shared-volume
+          mountPath: /tmp/
+        - name: script-volume
+          mountPath: /opt/script.py
+          subPath: script.py
+      env:
+        - name: LABEL
+          value: "findme"
+        - name: FOLDER
+          value: /tmp/
+        - name: RESOURCE
+          value: both
+        - name: RESOURCE_NAME
+          value: configmap/sample-configmap,secret/sample-secret-binary
+        - name: SCRIPT
+          value: "/opt/script.py"
+        - name: LOG_LEVEL
+          value: "DEBUG"
+  volumes:
+    - name: shared-volume
+      emptyDir: { }
+    - name: script-volume
+      configMap:
+        name: script-configmap
+        defaultMode: 0777

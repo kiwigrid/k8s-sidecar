@@ -21,6 +21,7 @@ FOLDER_ANNOTATION = "FOLDER_ANNOTATION"
 LABEL = "LABEL"
 LABEL_VALUE = "LABEL_VALUE"
 RESOURCE = "RESOURCE"
+RESOURCE_NAME = "RESOURCE_NAME"
 REQ_PAYLOAD = "REQ_PAYLOAD"
 REQ_URL = "REQ_URL"
 REQ_METHOD = "REQ_METHOD"
@@ -69,6 +70,9 @@ def main():
     resources = os.getenv(RESOURCE, "configmap")
     resources = ("secret", "configmap") if resources == "both" else (resources,)
     logger.debug(f"Selected resource type: {resources}")
+
+    resource_name = os.getenv(RESOURCE_NAME, "")
+    logger.debug(f"Selected resource name: {resource_name}")
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
@@ -127,11 +131,11 @@ def main():
             for ns in namespace.split(','):
                 list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx,
-                               ignore_already_processed)
+                               ignore_already_processed, resource_name)
     else:
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed)
+                          ignore_already_processed, resource_name)
 
 
 def _initialize_kubeclient_configuration():
