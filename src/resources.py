@@ -118,9 +118,9 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
     if namespace != "ALL" and resource_name:
         for rn in resource_name.split(","):
             splitted_rn = list(reversed(rn.split("/")))
-            if len(splitted_rn) == 3 and splitted_rn[2] != resource:
+            if len(splitted_rn) == 3 and splitted_rn[2] != namespace:
                 continue
-            if len(splitted_rn) == 2 and splitted_rn[1] != namespace:
+            if len(splitted_rn) == 2 and splitted_rn[1] != resource:
                 continue
             resource_names.append(splitted_rn[0])
 
