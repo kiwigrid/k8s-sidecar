@@ -31,6 +31,11 @@ _list_namespace = defaultdict(lambda: {
     RESOURCE_CONFIGMAP: "list_config_map_for_all_namespaces"
 }})
 
+_read_namespace = {
+    RESOURCE_SECRET: "read_namespaced_secret",
+    RESOURCE_CONFIGMAP: "read_namespaced_config_map"
+}
+
 _resources_version_map = {
     RESOURCE_SECRET: {},
     RESOURCE_CONFIGMAP: {},
@@ -98,26 +103,48 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                   ignore_already_processed):
+                   ignore_already_processed, resource_name):
     v1 = client.CoreV1Api()
-    # Filter resources based on label and value or just label
-    label_selector = f"{label}={label_value}" if label_value else label
 
-    additional_args = {
-        'label_selector': label_selector
-    }
+    additional_args = {}
+
     if namespace != "ALL":
         additional_args['namespace'] = namespace
 
     logger.info(f"Performing list-based sync on {resource} resources: {additional_args}")
 
-    ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
+    resource_names = []
+
+    if namespace != "ALL" and resource_name:
+        for rn in resource_name.split(","):
+            splitted_rn = list(reversed(rn.split("/")))
+            if len(splitted_rn) == 3 and splitted_rn[2] != resource:
+                continue
+            if len(splitted_rn) == 2 and splitted_rn[1] != namespace:
+                continue
+            resource_names.append(splitted_rn[0])
+
+    if namespace != "ALL" and resource_names:
+        items = []
+        for rn in resource_names:
+            additional_args['name'] = rn
+            try:
+                ret = getattr(v1, _read_namespace[resource])(**additional_args)
+                items.append(ret)
+            except ApiException as e:
+                if e.status != 404:
+                    raise e
+
+    else:
+        additional_args['label_selector'] = f"{label}={label_value}" if label_value else label
+        ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
+        items = ret.items
 
     files_changed = False
     exist_keys = set()
 
     # For all the found resources
-    for item in ret.items:
+    for item in items:
         metadata = item.metadata
         exist_keys.add(metadata.namespace + metadata.name)
 
@@ -362,14 +389,20 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
             request(request_url, request_method, enable_5xx, request_payload)
 
 
-def _watch_resource_loop(mode, *args):
+def _watch_resource_loop(mode, label, label_value, target_folder, request_url, request_method, request_payload,
+                         namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                         ignore_already_processed, resource_name):
     while True:
         try:
-            if mode == "SLEEP":
-                list_resources(*args)
+            if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
+                list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
+                               namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                               ignore_already_processed, resource_name)
                 sleep(int(os.getenv("SLEEP_TIME", 60)))
             else:
-                _watch_resource_iterator(*args)
+                _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
+                                         namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
+                                         ignore_already_processed)
         except ApiException as e:
             if e.status != 500:
                 logger.error(f"ApiException when calling kubernetes: {e}\n")
@@ -389,11 +422,11 @@ def _watch_resource_loop(mode, *args):
 
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                      ignore_already_processed):
+                      ignore_already_processed, resource_name):
     processes = _start_watcher_processes(current_namespace, folder_annotation, label,
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
-                                         ignore_already_processed)
+                                         ignore_already_processed, resource_name)
 
     while True:
         died = False
@@ -413,14 +446,14 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
 
 def _start_watcher_processes(namespace, folder_annotation, label, label_value, request_method,
                              mode, request_payload, resources, target_folder, unique_filenames, script, request_url,
-                             enable_5xx, ignore_already_processed):
+                             enable_5xx, ignore_already_processed, resource_name):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Process(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                 ignore_already_processed)
+                                 ignore_already_processed, resource_name)
                            )
             proc.daemon = True
             proc.start()
