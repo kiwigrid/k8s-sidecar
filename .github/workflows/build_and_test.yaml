@@ -108,13 +108,23 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile" "sidecar-pythonscript-resource-name")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
               wait_for_pod_log $p $r
             done
           done
+
+          # monitor only specified resources for sidecar-pythonscript-resource-name
+          pods=("sidecar-pythonscript-resource-name")
+          resources=("sample-configmap" "sample-secret-binary")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
