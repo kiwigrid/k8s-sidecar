@@ -94,6 +94,7 @@ jobs:
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
+          wait_for_pod_ready "sidecar-pythonscript-resource-name"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
 
@@ -114,6 +115,16 @@ jobs:
               wait_for_pod_log $p $r
             done
           done
+
+          # monitor only specified resources for sidecar-pythonscript-resource-name
+          pods=("sidecar-pythonscript-resource-name")
+          resources=("sample-configmap" "sample-secret-binary")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
@@ -124,6 +135,7 @@ jobs:
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
+          kubectl logs sidecar-pythonscript-resource-name > /tmp/logs/sidecar-pythonscript-resource-name.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v4
@@ -232,6 +244,7 @@ jobs:
           # Total is (9 + 7)
           test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9" &&
           test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9" &&
+          test $(cat /tmp/logs/sidecar-pythonscript-resource-name.log | grep "Hello from python script!" | wc -l) = "2" &&
           kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
           test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
       - name: Verify sidecar files after update
