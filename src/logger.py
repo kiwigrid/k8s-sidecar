@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import re
 import yaml
 from datetime import datetime
 from typing import Optional
@@ -107,11 +108,27 @@ default_log_config = {
     }
 }
 
+def expand_env(data):
+    placeholder_pattern = r'\$\((.*?)\)'
+
+    def replace_placeholder(s):
+        env = s.group(1)
+        env_value = os.getenv(env)
+        if env_value is None:
+            print(f'unable to expand environment variable {env} in LOG_CONFIG. reason: env variable not set')
+            sys.exit(1)
+        else:
+            return env_value
+
+    processed_data = re.sub(placeholder_pattern, replace_placeholder, data)
+    return yaml.load(processed_data, Loader=yaml.FullLoader)
+
 def get_log_config():
     if log_conf_file != "" :
         try:
             with open(log_conf_file, 'r') as stream:
-                config = yaml.load(stream, Loader=yaml.FullLoader)
+                data = stream.read()
+                config = expand_env(data)
             return config
         except FileNotFoundError:
             msg = "Config file: "+ log_conf_file + " Not Found"
