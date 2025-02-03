@@ -3,3 +3,4 @@ requests==2.32.3
 python-json-logger==3.2.1
 logfmter==0.0.9
 argparse==1.4.0
+pyjwt==2.10.1
