@@ -33,7 +33,7 @@ All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
-- CI tests for k8s v1.25-v1.31
+- CI tests for k8s v1.25-v1.32
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables
