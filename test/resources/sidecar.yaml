@@ -445,21 +445,21 @@ spec:
     - name: script-volume
       mountPath: /opt/script.sh
       subPath: script.sh
-      env:
-        - name: LABEL
-          value: "findme"
-        - name: FOLDER
-          value: /tmp/
-        - name: RESOURCE
-          value: both
-        - name: SCRIPT
-          value: "/opt/script.sh"
-        - name: JWT_HEADER_NAME
-          value: "some_jwt_header_name"
-        - name: LOG_LEVEL
-          value: "DEBUG"
-      envFrom:
-      - secretRef:
+    env:
+      - name: LABEL
+        value: "findme"
+      - name: FOLDER
+        value: /tmp/
+      - name: RESOURCE
+        value: both
+      - name: SCRIPT
+        value: "/opt/script.sh"
+      - name: JWT_HEADER_NAME
+        value: "some_jwt_header_name"
+      - name: LOG_LEVEL
+        value: "DEBUG"
+    envFrom:
+    - secretRef:
         name: dummyyserver-jwt-token
   volumes:
   - name: shared-volume
