@@ -148,10 +148,18 @@ def request(url, method, enable_5xx=False, payload=None):
     username,password = fetch_basic_auth_credentials()
     encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
     if username and password:
-        auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
+        basic_auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
     else:
-        auth = None
+        basic_auth = None
 
+    # JWT Auth
+    jwt_token = os.getenv("JWT_TOKEN")
+    jwt_header_name = os.getenv("JWT_HEADER_NAME", "X-JWT-Assertion")
+    jwt_auth = None
+    if jwt_token:
+        jwt_auth = {jwt_header_name: jwt_token}
+
+    # Create the session
     r = requests.Session()
 
     retries = Retry(total=REQ_RETRY_TOTAL,
@@ -162,15 +170,31 @@ def request(url, method, enable_5xx=False, payload=None):
                     status_forcelist=enforce_status_codes)
     r.mount("http://", HTTPAdapter(max_retries=retries))
     r.mount("https://", HTTPAdapter(max_retries=retries))
+
     if url is None:
         logger.warning(f"No url provided. Doing nothing.")
         return
 
+    # Handle Authentication logic: Basic Auth, JWT or both
+    auth = None
+    headers = {}
+
+    if basic_auth and jwt_auth:
+        logger.info("Using both Basic Auth and JWT Auth.")
+        auth = basic_auth  # Basic Auth will be used for the request
+        headers.update(jwt_auth)  # Add JWT token as header
+    elif basic_auth:
+        logger.info("Using Basic Auth.")
+        auth = basic_auth
+    elif jwt_auth:
+        logger.info("Using JWT Auth.")
+        headers.update(jwt_auth)  # Only JWT token
+
     # If method is not provided use GET as default
     if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        res = r.get("%s" % url, auth=auth, headers=headers, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        res = r.post("%s" % url, auth=auth, headers=headers, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
