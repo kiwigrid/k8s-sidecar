@@ -427,3 +427,52 @@ type: Opaque
 stringData:
   username: "user1"
   password: "abcdefghijklmnopqrstuvwxyz"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-jwt-token
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    - name: script-volume
+      mountPath: /opt/script.sh
+      subPath: script.sh
+      env:
+        - name: LABEL
+          value: "findme"
+        - name: FOLDER
+          value: /tmp/
+        - name: RESOURCE
+          value: both
+        - name: SCRIPT
+          value: "/opt/script.sh"
+        - name: JWT_HEADER_NAME
+          value: "some_jwt_header_name"
+        - name: LOG_LEVEL
+          value: "DEBUG"
+      envFrom:
+      - secretRef:
+        name: dummyyserver-jwt-token
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+  - name: script-volume
+    configMap:
+      name: script-configmap
+      defaultMode: 0777
+---  
+apiVersion: v1
+data:
+  JWT_TOKEN: ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnBjM01pT2lKck9ITXRjMmxrWldOaGNpQjBaWE4wYVc1bklpd2lhV0YwSWpveE56TTROREV4TWpBd0xDSmxlSEFpT2pFM056QXdOelkzT1Rrc0ltRjFaQ0k2SW5kM2R5NXJhWGRwWjNKcFpDNWpiMjBpTENKemRXSWlPaUpLYjJodUlFUnZaU0lzSW5WelpYSnVZVzFsSWpvaVNtOW9ibTU1SWl3aVJXMWhhV3dpT2lKck9ITXRjMmxrWldOaGNrQnJhWGRwWjNKcFpDNWpiMjBpTENKU2IyeGxJam9pZEdWemRHVnlJbjAuRlFwYlBEb2lwdFVybDNWamY4a2lyZDg1VTY3RGR2c0FjZTVLazU1SFlDYw==
+kind: Secret
+metadata:
+  name: dummyyserver-jwt-token
+type: Opaque
