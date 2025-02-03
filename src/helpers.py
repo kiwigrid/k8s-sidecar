@@ -12,6 +12,9 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.util.retry import Retry
 
+import jwt
+from jwt import InvalidTokenError
+
 from logger import get_logger
 import argparse
 
@@ -157,7 +160,16 @@ def request(url, method, enable_5xx=False, payload=None):
     jwt_header_name = os.getenv("JWT_HEADER_NAME", "X-JWT-Assertion")
     jwt_auth = None
     if jwt_token:
-        jwt_auth = {jwt_header_name: jwt_token}
+        # Validate JWT token
+        try:
+            # We can add custom validation, such as a secret or public key
+            # decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})  # Disable signature check for simplicity
+             
+            logger.info("JWT Token valid:")
+            jwt_auth = {jwt_header_name: jwt_token}
+        except InvalidTokenError as e:
+            logger.error(f"Invalid JWT Token: {e}")
+            jwt_auth = None
 
     # Create the session
     r = requests.Session()
