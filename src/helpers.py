@@ -10,7 +10,7 @@ from datetime import datetime
 import requests
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
-from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import Retry
 
 import jwt
 from jwt import InvalidTokenError
@@ -163,8 +163,7 @@ def request(url, method, enable_5xx=False, payload=None):
         # Validate JWT token
         try:
             # We can add custom validation, such as a secret or public key
-            # decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})  # Disable signature check for simplicity
-             
+            jwt.decode(jwt_token, options={"verify_signature": False})  # Disable signature check for simplicity    
             logger.info("JWT Token valid:")
             jwt_auth = {jwt_header_name: jwt_token}
         except InvalidTokenError as e:
@@ -192,14 +191,16 @@ def request(url, method, enable_5xx=False, payload=None):
     headers = {}
 
     if basic_auth and jwt_auth:
-        logger.info("Using both Basic Auth and JWT Auth.")
+        logger.info("Using both Basic Auth and JWT Auth")
         auth = basic_auth  # Basic Auth will be used for the request
         headers.update(jwt_auth)  # Add JWT token as header
     elif basic_auth:
-        logger.info("Using Basic Auth.")
+        logger.info("Using Basic Auth")
         auth = basic_auth
     elif jwt_auth:
-        logger.info("Using JWT Auth.")
+        logger.info("Using JWT Auth")
+        # Log the current JWT header name in DEBUG
+        logger.debug(f"Using JWT header name: {jwt_header_name}")
         headers.update(jwt_auth)  # Only JWT token
 
     # If method is not provided use GET as default
