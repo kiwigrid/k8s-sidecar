@@ -37,12 +37,12 @@ async def read_item():
 
 
 @app.get("/secured", status_code=200, response_class=PlainTextResponse)
-async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_scheme)):
-    if auth.username != 'user1' or auth.password != 'abcdefghijklmnopqrstuvwxyz':
-        logger.warning("[WARN] wrong auth: %s : %s ", auth.username, auth.password)
+async def read_secure_data(basic_auth: HTTPBasicCredentials = Depends(basic_auth_scheme)):
+    if basic_auth.username != 'user1' or basic_auth.password != 'abcdefghijklmnopqrstuvwxyz':
+        logger.warning("[WARN] wrong auth: %s : %s ", basic_auth.username, basic_auth.password)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Incorrect user (${auth.username}) or password (${auth.password})",
+            detail=f"Incorrect user (${basic_auth.username}) or password (${basic_auth.password})",
             headers={"WWW-Authenticate": "Basic"},
         )
     return 'allowed'
