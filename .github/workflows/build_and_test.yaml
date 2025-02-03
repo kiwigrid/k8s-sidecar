@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+  # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json 
 name: "Build and Test"
 on:
   - pull_request
@@ -49,19 +49,21 @@ jobs:
           - maj_min: v1.28
             digest: sha256:45d319897776e11167e4698f6b14938eb4d52eb381d9e3d7a9086c16c69a8110
           - maj_min: v1.29
-            digest: sha256:d46b7aa29567e93b27f7531d258c372e829d7224b25e3fc6ffdefed12476d3aa
+            digest: sha256:62c0672ba99a4afd7396512848d6fc382906b8f33349ae68fb1dbfe549f70dec
           - maj_min: v1.30
-            digest: sha256:976ea815844d5fa93be213437e3ff5754cd599b040946b5cca43ca45c2047114
+            digest: sha256:17cd608b3971338d9180b00776cb766c50d0a0b6b904ab4ff52fd3fc5c6369bf
           - maj_min: v1.31
-            digest: sha256:53df588e04085fd41ae12de0c3fe4c72f7013bba32a20e7325357a1ac94ba865
-    name: "Test on k8s ${{ matrix.k8s.maj_min }}"
+            digest: sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30
+          - maj_min: v1.32
+            digest: sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027
+            name: "Test on k8s ${{ matrix.k8s.maj_min }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
-        uses: helm/kind-action@v1.12.0 # use kind release v0.24.0
+        uses: helm/kind-action@v1.12.0 # use kind release v0.26.0
         with:
           node_image: kindest/node@${{ matrix.k8s.digest }}
           config: test/kind-config.yaml
@@ -73,10 +75,13 @@ jobs:
           name: images
           path: /tmp
       - name: Load images into kind cluster
+        shell: bash
         run: |
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
           kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
       - name: Install Sidecar and Dummy Server
+        id: install_sidecar
+        shell: bash
         run: |
           wait_for_pod_ready() {
             while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
@@ -98,6 +103,8 @@ jobs:
           wait_for_pod_ready "dummy-server-pod"
 
       - name: Install Configmaps and Secrets
+        id: install_configmaps_and_secrets
+        shell: bash
         run: |
           wait_for_pod_log() {
             while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
@@ -117,6 +124,7 @@ jobs:
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
       - name: Retrieve pod logs
+        shell: bash
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
@@ -131,6 +139,7 @@ jobs:
           name: pod-logs_${{ matrix.k8s.maj_min }}
           path: /tmp/logs/*
       - name: Download expected files from cluster
+        shell: bash
         run: |
           mkdir /tmp/sidecar
           mkdir /tmp/sidecar-5xx
@@ -176,6 +185,7 @@ jobs:
             /tmp/sidecar/**
             /tmp/sidecar-5xx/**
       - name: Update Configmaps and Secrets
+        shell: bash
         run: |
           sleep 5
           current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -195,6 +205,7 @@ jobs:
           # 20 more seconds after the last thing appeared in the logs.
           sleep 20
       - name: Verify sidecar files after initial sync
+        shell: bash
         run: |
           echo -n "Hello World!" | diff - /tmp/sidecar/hello.world &&
           diff test/kubelogo.png /tmp/sidecar/cm-kubelogo.png &&
@@ -209,9 +220,11 @@ jobs:
           [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
           ls /tmp/sidecar/script_result
       - name: Verify sidecar-basicauth-args pod file after initial sync
+        shell: bash
         run: |
           echo -n "allowed" | diff - /tmp/sidecar-basicauth-args/secured.txt          
       - name: Verify sidecar-5xx files after initial sync
+        shell: bash
         run: |
           echo -n '{"detail":"Not authenticated"}' | diff - /tmp/sidecar-5xx/secured.txt &&
           echo -n "Hello World!" | diff - /tmp/sidecar-5xx/hello.world &&
@@ -226,6 +239,7 @@ jobs:
           echo -n "500" | diff - /tmp/sidecar-5xx/500.txt &&
           ls /tmp/sidecar-5xx/script_result
       - name: Verify sidecar-python logs after initial sync
+        shell: bash
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
           # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
@@ -235,6 +249,7 @@ jobs:
           kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
           test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
       - name: Verify sidecar files after update
+        shell: bash
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
