@@ -96,6 +96,7 @@ jobs:
 
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-basicauth-args"
+          wait_for_pod_ready "sidecar-jwt-token"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
@@ -115,7 +116,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-jwt-token" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -140,6 +141,7 @@ jobs:
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
+          kubectl logs sidecar-jwt-token > /tmp/logs/sidecar-jwt-token.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
