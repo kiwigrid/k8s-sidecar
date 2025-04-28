@@ -95,6 +95,7 @@ jobs:
           kubectl get pods
 
           wait_for_pod_ready "sidecar"
+          wait_for_pod_ready "sidecar-healthz"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
@@ -139,6 +140,7 @@ jobs:
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
+          kubectl logs sidecar-healthz > /tmp/logs/sidecar-healthz.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
