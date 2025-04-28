@@ -95,7 +95,7 @@ jobs:
           kubectl get pods
 
           wait_for_pod_ready "sidecar"
-          wait_for_pod_ready "sidecar-healthz"
+          kubectl rollout status deployment/sidecar-healthz --timeout=2m
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
