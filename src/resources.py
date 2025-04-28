@@ -20,6 +20,8 @@ from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
 
+from healthz import mark_ready, update_k8s_contact
+
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
 
@@ -349,11 +351,19 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
-    # Process events
+    first_event = True
+
+    # Process events 
     for event in stream:
+        if first_event:
+            mark_ready() # After successful initial WATCH sync
+            first_event = False
+
         item = event['object']
         metadata = item.metadata
         event_type = event['type']
+
+        update_k8s_contact()  # To be sure that every event received is counted as “K8s alive”
 
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
