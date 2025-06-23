@@ -169,13 +169,13 @@ def request(url, method, enable_5xx=False, payload=None):
     # If method is not provided use GET as default
     if method == "GET" or not method:
         res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        logger.info(f"Request sent to {url}." f"Response: {res.status_code} {res.reason} {res.text}")
     elif method == "POST":
         res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+        logger.info(f"{payload} sent to {url}." f"Response: {res.status_code} {res.reason} {res.text}")
     else:
         logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
         return
-    logger.debug(f"{method} request sent to {url}. "
-                 f"Response: {res.status_code} {res.reason} {res.text}")
     return res
 
 
