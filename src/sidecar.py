@@ -49,7 +49,7 @@ def main():
 
     folder_annotation = os.getenv(FOLDER_ANNOTATION)
     if folder_annotation is None:
-        logger.warning("No folder annotation was provided, "
+        logger.info("No folder annotation was provided, "
                        "defaulting to k8s-sidecar-target-directory")
         folder_annotation = "k8s-sidecar-target-directory"
 
@@ -167,7 +167,7 @@ def _initialize_kubeclient_configuration():
                                   backoff_factor=REQ_RETRY_BACKOFF_FACTOR)
     client.Configuration.set_default(configuration)
 
-    logger.info(f"Config for cluster api at '{configuration.host}' loaded...")
+    logger.info(f"Config for cluster api at '{configuration.host}' loaded.")
 
 
 if __name__ == "__main__":
