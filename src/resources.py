@@ -79,9 +79,11 @@ def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CON
         filename = full_filename[:-4]
         if content_type == CONTENT_TYPE_BASE64_BINARY:
             file_url = file_data.decode('utf8')
-            file_data = request(file_url, "GET", enable_5xx).content
+            response = request(file_url, "GET", enable_5xx)
+            file_data = response.content if response else b""
         else:
-            file_data = request(file_data, "GET", enable_5xx).text
+            response = request(file_data, "GET", enable_5xx)
+            file_data = response.text if response else ""
     else:
         filename = full_filename
 
