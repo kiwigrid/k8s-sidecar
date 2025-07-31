@@ -4,7 +4,7 @@ import com.oracle.olcne.pipeline.BranchPattern
 String python_version = "39"; 
 
 olcnePipeline(
-        branchPattern: new BranchPattern(master: 'oracle/release/1.30.7', feature: 'feature/.*'),
+        branchPattern: new BranchPattern(master: 'oracle/release/1.30.7', feature: '(?!^release/.*$)(^.*$)'),
         containers: ['container-registry.oracle.com/olcne/k8s-sidecar:v1.30.7': 'olcne/k8s-sidecar:v1.30.7'],
         platforms: ['ol9'],
         architectures: ['x86_64', 'aarch64'],
