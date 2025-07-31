@@ -1,0 +1,7 @@
+=== Public License Template ===
+
+------------------------------ Top-Level License -------------------------------
+
+
+---------------------------------- Copyright -----------------------------------
+Copyright The k8s-sidecar Authors
