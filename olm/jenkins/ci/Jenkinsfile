@@ -1,9 +1,8 @@
 @Library('olcne-pipeline') _
 import com.oracle.olcne.pipeline.BranchPattern
 
-String python_version = "39"; 
 
-olcnePipeline(
+imagePipeline(
         branchPattern: new BranchPattern(master: 'oracle/release/1.30.7', feature: '(?!^release/.*$)(^.*$)'),
         containers: ['container-registry.oracle.com/olcne/k8s-sidecar:v1.30.7': 'olcne/k8s-sidecar:v1.30.7'],
         platforms: ['ol9'],
@@ -11,5 +10,6 @@ olcnePipeline(
         yumOL9Repos: ['ol9_appstream', 'ol9_baseos_latest'],
         customPlatformSteps: [
                 ol9: [container: [enabled: true], buildContainerRpms: [enabled: true]],
-        ]
+        ],
+        buildScript: "sh olm/build-image.sh"
 )

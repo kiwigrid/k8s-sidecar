@@ -1,15 +1,11 @@
-FROM container-registry.oracle.com/os/oraclelinux:9
-COPY rpms /tmp/
-RUN dnf install -y /tmp/*.rpm &&\
-    dnf clean all &&\
-    rm -rf /var/cache/yum/* /tmp/*.rpm &&\
-    test -d /LICENSES || ln -s /usr/share/licenses /LICENSES
-
 FROM container-registry.oracle.com/os/oraclelinux:9-slim
-COPY --from=0 /usr/share/licenses/k8s-sidecar* /LICENSES
-COPY --from=0  /usr/local/share/olcne/k8s-sidecar /usr/src/k8s-sidecar
 
-RUN microdnf install python3-pip &&\
+COPY LICENSE SECURITY.md THIRD_PARTY_LICENSES.txt /usr/share/licenses/
+
+COPY . /usr/src/k8s-sidecar
+
+RUN microdnf install -y python3-pip && \
+    microdnf clean all && \
     python3 -m pip install -r /usr/src/k8s-sidecar/src/requirements.txt
 
 ENV         PYTHONUNBUFFERED=1
