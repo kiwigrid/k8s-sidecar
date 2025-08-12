@@ -1,4 +1,5 @@
 FROM python:alpine3.22 AS base
+RUN apk update && apk upgrade sqlite-libs
 
 FROM base AS builder
 WORKDIR /app
