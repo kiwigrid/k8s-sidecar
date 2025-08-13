@@ -246,18 +246,24 @@ jobs:
       - name: Verify sidecar-5xx files after initial sync
         shell: bash
         run: |
-          echo -n '{"detail":"Not authenticated"}' | diff - /tmp/sidecar-5xx/secured.txt &&
-          echo -n "Hello World!" | diff - /tmp/sidecar-5xx/hello.world &&
-          diff test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png &&
-          diff test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png &&
-          diff test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png &&
-          echo -n "This absolutely exists" | diff - /tmp/sidecar-5xx/absolute.txt &&
-          echo -n "This relatively exists" | diff - /tmp/sidecar-5xx/relative.txt &&
-          echo -n "This change-dir exists" | diff - /tmp/sidecar-5xx/change-dir.txt &&
-          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-configmap.txt &&
-          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-secret.txt &&
-          echo -n "500" | diff - /tmp/sidecar-5xx/500.txt &&
-          ls /tmp/sidecar-5xx/script_result
+          check() {
+            diff "$1" "$2" || { echo "File mismatch: $1 vs $2"; exit 1; }
+          }
+
+          grep -E '/secured.*Not authenticated' /tmp/logs/sidecar-5xx.log || { echo '"detail":"Not authenticated" not found in sidecar-5xx.log'; exit 1; }
+          echo -n "Hello World!" | diff - /tmp/sidecar-5xx/hello.world || echo "hello.world mismatch"
+          check test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
+          check test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
+          check test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
+          echo -n "This absolutely exists" | diff - /tmp/sidecar-5xx/absolute.txt || { echo "absolute.txt mismatch"; exit 1; }
+          echo -n "This relatively exists" | diff - /tmp/sidecar-5xx/relative.txt || { echo "relative.txt mismatch"; exit 1; }
+          echo -n "This change-dir exists" | diff - /tmp/sidecar-5xx/change-dir.txt || { echo "change-dir.txt mismatch"; exit 1; }
+          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-configmap.txt || { echo "similar-configmap.txt mismatch"; exit 1; }
+          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-secret.txt || { echo "similar-secret.txt mismatch"; exit 1; }
+          test ! -s /tmp/sidecar-5xx/500.txt && echo "No 5xx file created"
+          ls /tmp/sidecar-5xx/script_result || echo "script_result missing"
+
+          echo "All sidecar-5xx files after initial sync verified successfully."
       - name: Verify sidecar-python logs after initial sync
         shell: bash
         run: |
@@ -286,5 +292,6 @@ jobs:
         run: |
           # Check that the file is empty (or has a defined content) in case of an error.
           test ! -s /tmp/sidecar/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
+          test ! -s /tmp/sidecar-5xx/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
           # Optional: Check logs for error messages.
           grep "Max retries exceeded for URL" /tmp/logs/sidecar.log || { echo "Expected error log not found"; exit 1; }             
