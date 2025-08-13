@@ -221,18 +221,26 @@ jobs:
       - name: Verify sidecar files after initial sync
         shell: bash
         run: |
-          echo -n "Hello World!" | diff - /tmp/sidecar/hello.world &&
-          diff test/kubelogo.png /tmp/sidecar/cm-kubelogo.png &&
-          diff test/kubelogo.png /tmp/sidecar/secret-kubelogo.png &&
-          diff test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png &&
-          echo -n "This absolutely exists" | diff - /tmp/sidecar/absolute.txt &&
-          echo -n "This relatively exists" | diff - /tmp/sidecar/relative.txt &&
-          echo -n "This change-dir exists" | diff - /tmp/sidecar/change-dir.txt &&
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt &&
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt &&
-          echo -n "allowed" | diff - /tmp/sidecar/secured.txt &&
-          [ ! -f /tmp/sidecar/500.txt ] && echo "No 5xx file created" &&
-          ls /tmp/sidecar/script_result
+          set -e
+
+          check() {
+            diff "$1" "$2" || { echo "File mismatch: $1 vs $2"; exit 1; }
+          }
+
+          echo -n "Hello World!" | diff - /tmp/sidecar/hello.world || { echo "hello.world mismatch"; exit 1; }
+          check test/kubelogo.png /tmp/sidecar/cm-kubelogo.png
+          check test/kubelogo.png /tmp/sidecar/secret-kubelogo.png
+          check test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
+          echo -n "This absolutely exists" | diff - /tmp/sidecar/absolute.txt || { echo "absolute.txt mismatch"; exit 1; }
+          echo -n "This relatively exists" | diff - /tmp/sidecar/relative.txt || { echo "relative.txt mismatch"; exit 1; }
+          echo -n "This change-dir exists" | diff - /tmp/sidecar/change-dir.txt || { echo "change-dir.txt mismatch"; exit 1; }
+          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt || { echo "similar-configmap.txt mismatch"; exit 1; }
+          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt || { echo "similar-secret.txt mismatch"; exit 1; }
+          echo -n "allowed" | diff - /tmp/sidecar/secured.txt || { echo "secured.txt mismatch"; exit 1; }
+          [ ! -f /tmp/sidecar/500.txt ] || { echo "500.txt should not exist"; exit 1; }
+          ls /tmp/sidecar/script_result || { echo "script_result missing"; exit 1; }
+
+          echo "All sidecar files after initial sync verified successfully."
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
@@ -275,3 +283,10 @@ jobs:
           kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
           kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
+      - name: Verify 5xx error handling
+        shell: bash
+        run: |
+          # Check that the file is empty (or has a defined content) in case of an error.
+          test ! -s /tmp/sidecar/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
+          # Optional: Check logs for error messages.
+          grep "Max retries exceeded for URL" /tmp/logs/sidecar.log || { echo "Expected error log not found"; exit 1; }             
