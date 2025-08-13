@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys, re
+import ssl
 
 from kubernetes import client, config
 from kubernetes.client import ApiException
@@ -146,12 +147,20 @@ def _initialize_kubeclient_configuration():
 
     # this is where kube_config is going to look for a config file
     kube_config = os.path.expanduser(KUBE_CONFIG_DEFAULT_LOCATION)
-    if os.path.exists(kube_config):
-        logger.info(f"Loading config from '{kube_config}'...")
-        config.load_kube_config(kube_config)
-    else:
-        logger.info("Loading incluster config ...")
-        config.load_incluster_config()
+    try:
+        if os.path.exists(kube_config):
+            logger.info(f"Loading config from '{kube_config}'...")
+            config.load_kube_config(kube_config)
+        else:
+            logger.info("Loading incluster config...")
+            config.load_incluster_config()
+    except ssl.SSLCertVerificationError as e:
+        logger.error(f"SSL certificate verification failed when initializing Kubernetes client: {e}")
+        logger.error("Check if the CA certificate at /var/run/secrets/kubernetes.io/serviceaccount/ca.crt is correct or set SKIP_TLS_VERIFY=true (insecure).")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error during Kubernetes client initialization: {e}")
+        raise
 
     if os.getenv(SKIP_TLS_VERIFY) == "true":
         configuration = client.Configuration.get_default_copy()
