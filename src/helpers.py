@@ -179,6 +179,8 @@ def request(url, method, enable_5xx=False, payload=None):
             logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
             return
         return res
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP error for URL {url}: {e}")
     except requests.exceptions.SSLError as e:
         logger.error(f"SSL certificate verification failed for URL {url}: {e}")   
     except requests.exceptions.RetryError as e:
