@@ -221,26 +221,20 @@ jobs:
       - name: Verify sidecar files after initial sync
         shell: bash
         run: |
-          set -e
+          source /tmp/sidecar_helpers.sh
 
-          check() {
-            diff "$1" "$2" || { echo "File mismatch: $1 vs $2"; exit 1; }
-          }
-
-          echo -n "Hello World!" | diff - /tmp/sidecar/hello.world || { echo "hello.world mismatch"; exit 1; }
-          check test/kubelogo.png /tmp/sidecar/cm-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar/secret-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
-          echo -n "This absolutely exists" | diff - /tmp/sidecar/absolute.txt || { echo "absolute.txt mismatch"; exit 1; }
-          echo -n "This relatively exists" | diff - /tmp/sidecar/relative.txt || { echo "relative.txt mismatch"; exit 1; }
-          echo -n "This change-dir exists" | diff - /tmp/sidecar/change-dir.txt || { echo "change-dir.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt || { echo "similar-configmap.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt || { echo "similar-secret.txt mismatch"; exit 1; }
-          echo -n "allowed" | diff - /tmp/sidecar/secured.txt || { echo "secured.txt mismatch"; exit 1; }
-          test ! -s /tmp/sidecar/500.txt && echo "No 5xx file created"
-          ls /tmp/sidecar/script_result || echo "script_result missing"
-
-          echo "All sidecar files after initial sync verified successfully."
+          grep -E '/secured.*Not authenticated' /tmp/logs/sidecar-5xx.log || { echo '"detail":"Not authenticated" not found in sidecar-5xx.log'; exit 1; }
+          check_content "Hello World!" /tmp/sidecar-5xx/hello.world
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
+          check_content "This absolutely exists" /tmp/sidecar-5xx/absolute.txt
+          check_content "This relatively exists" /tmp/sidecar-5xx/relative.txt
+          check_content "This change-dir exists" /tmp/sidecar-5xx/change-dir.txt
+          check_content "I'm very similar" /tmp/sidecar-5xx/similar-configmap.txt
+          check_content "I'm very similar" /tmp/sidecar-5xx/similar-secret.txt
+          check_empty_or_missing /tmp/sidecar-5xx/500.txt
+          ls /tmp/sidecar-5xx/script_result || echo "script_result missing"
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
@@ -292,8 +286,9 @@ jobs:
       - name: Verify 5xx error handling
         shell: bash
         run: |
+          source /tmp/sidecar_helpers.sh
           # Check that the file is empty (or has a defined content) in case of an error.
-          test ! -s /tmp/sidecar/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
-          test ! -s /tmp/sidecar-5xx/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
+          check_empty_or_missing /tmp/sidecar/500.txt
+          check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
-          grep "Max retries exceeded for URL" /tmp/logs/sidecar.log || { echo "Expected error log not found"; exit 1; }             
+          check_log_contains "Max retries exceeded for URL" /tmp/logs/sidecar.log
