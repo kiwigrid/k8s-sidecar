@@ -216,51 +216,109 @@ jobs:
           done
           # 20 more seconds after the last thing appeared in the logs.
           sleep 20
+      - name: Define helper functions
+        shell: bash
+        run: |
+          cat <<'EOF' > /tmp/sidecar_helpers.sh
+          check_exists() {
+            kubectl exec sidecar -- sh -c "test -e $1" || { echo "$1 missing after update"; return 1; }
+          }
+          check_not_exists() {
+            kubectl exec sidecar -- sh -c "! test -e $1" || { echo "$1 still exists after update"; return 1; }
+          }
+          check_log_contains() {
+            grep "$2" "$1" > /dev/null || { echo "Log $1 does not contain '$2'"; return 1; }
+          }
+          check_diff() {
+            diff "$1" "$2" > /dev/null || { echo "File mismatch: $1 vs $2"; return 1; }
+          }
+          check_content() {
+            echo -n "$1" | diff - "$2" > /dev/null || { echo "$2 mismatch"; return 1; }
+          }
+          check_empty_or_missing() {
+            file="$1"
+            if [ ! -s "$file" ]; then
+              echo "$file is empty or missing (as expected for error case)"
+              return 0
+            else
+              echo "$file should be empty on request error"
+              return 1
+            fi
+          }
+          check_log_count() {
+            file="$1"
+            pattern="$2"
+            expected="$3"
+            count=$(grep "$pattern" "$file" | wc -l)
+            if [ "$count" -eq "$expected" ]; then
+              echo "$file: found $expected lines matching '$pattern'"
+              return 0
+            else
+              echo "$file: expected $expected, got $count for pattern '$pattern'"
+              return 1
+            fi
+          }
+          check_pod_log_count() {
+            pod="$1"
+            file="$2"
+            pattern="$3"
+            expected="$4"
+            count=$(kubectl exec "$pod" -- sh -c "grep '$pattern' $file | wc -l")
+            if [ "$count" -eq "$expected" ]; then
+              echo "$file in $pod: found $expected lines matching '$pattern'"
+              return 0
+            else
+              echo "$file in $pod: expected $expected, got $count for pattern '$pattern'"
+              return 1
+            fi
+          }
+          check_pod_file_exists() {
+            pod="$1"
+            file="$2"
+            kubectl exec "$pod" -- sh -c "test -e $file" || { echo "$file missing in pod $pod"; return 1; }
+          }
+          EOF
       - name: Verify sidecar files after initial sync
         shell: bash
         run: |
-          set -e
-
-          check() {
-            diff "$1" "$2" || { echo "File mismatch: $1 vs $2"; exit 1; }
-          }
-
-          echo -n "Hello World!" | diff - /tmp/sidecar/hello.world || { echo "hello.world mismatch"; exit 1; }
-          check test/kubelogo.png /tmp/sidecar/cm-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar/secret-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
-          echo -n "This absolutely exists" | diff - /tmp/sidecar/absolute.txt || { echo "absolute.txt mismatch"; exit 1; }
-          echo -n "This relatively exists" | diff - /tmp/sidecar/relative.txt || { echo "relative.txt mismatch"; exit 1; }
-          echo -n "This change-dir exists" | diff - /tmp/sidecar/change-dir.txt || { echo "change-dir.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-configmap.txt || { echo "similar-configmap.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar/similar-secret.txt || { echo "similar-secret.txt mismatch"; exit 1; }
-          echo -n "allowed" | diff - /tmp/sidecar/secured.txt || { echo "secured.txt mismatch"; exit 1; }
-          test ! -s /tmp/sidecar/500.txt && echo "No 5xx file created"
+          source /tmp/sidecar_helpers.sh
+          
+          check_content "Hello World!" /tmp/sidecar/hello.world
+          check_diff test/kubelogo.png /tmp/sidecar/cm-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar/secret-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
+          check_content "This absolutely exists" /tmp/sidecar/absolute.txt
+          check_content "This relatively exists" /tmp/sidecar/relative.txt
+          check_content "This change-dir exists" /tmp/sidecar/change-dir.txt
+          check_content "I'm very similar" /tmp/sidecar/similar-configmap.txt
+          check_content "I'm very similar" /tmp/sidecar/similar-secret.txt
+          check_content "allowed" /tmp/sidecar/secured.txt
+          check_empty_or_missing /tmp/sidecar/500.txt
           ls /tmp/sidecar/script_result || echo "script_result missing"
 
           echo "All sidecar files after initial sync verified successfully."
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
-          echo -n "allowed" | diff - /tmp/sidecar-basicauth-args/secured.txt          
+          source /tmp/sidecar_helpers.sh
+
+          check_content "allowed" /tmp/sidecar-basicauth-args/secured.txt          
       - name: Verify sidecar-5xx files after initial sync
         shell: bash
         run: |
-          check() {
-            diff "$1" "$2" || { echo "File mismatch: $1 vs $2"; exit 1; }
-          }
+          source /tmp/sidecar_helpers.sh
 
           grep -E '/secured.*Not authenticated' /tmp/logs/sidecar-5xx.log || { echo '"detail":"Not authenticated" not found in sidecar-5xx.log'; exit 1; }
-          echo -n "Hello World!" | diff - /tmp/sidecar-5xx/hello.world || echo "hello.world mismatch"
-          check test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
-          check test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
-          echo -n "This absolutely exists" | diff - /tmp/sidecar-5xx/absolute.txt || { echo "absolute.txt mismatch"; exit 1; }
-          echo -n "This relatively exists" | diff - /tmp/sidecar-5xx/relative.txt || { echo "relative.txt mismatch"; exit 1; }
-          echo -n "This change-dir exists" | diff - /tmp/sidecar-5xx/change-dir.txt || { echo "change-dir.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-configmap.txt || { echo "similar-configmap.txt mismatch"; exit 1; }
-          echo -n "I'm very similar" | diff - /tmp/sidecar-5xx/similar-secret.txt || { echo "similar-secret.txt mismatch"; exit 1; }
-          test ! -s /tmp/sidecar-5xx/500.txt && echo "No 5xx file created"
+          check_content "Hello World!" /tmp/sidecar-5xx/hello.world
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
+          check_diff test/kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
+          check_content "This absolutely exists" /tmp/sidecar-5xx/absolute.txt
+          check_content "This relatively exists" /tmp/sidecar-5xx/relative.txt
+          check_content "This change-dir exists" /tmp/sidecar-5xx/change-dir.txt
+          check_content "I'm very similar" /tmp/sidecar-5xx/similar-configmap.txt
+          check_content "I'm very similar" /tmp/sidecar-5xx/similar-secret.txt
+          check_empty_or_missing /tmp/sidecar-5xx/500.txt
           ls /tmp/sidecar-5xx/script_result || echo "script_result missing"
 
           echo "All sidecar-5xx files after initial sync verified successfully."
@@ -270,53 +328,55 @@ jobs:
           # Make sure to update this number this when adding or removing configmap or secrets
           # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
           # Total is (10 + 7)
-          count1=$(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l)
-          test "$count1" = "10" || echo "sidecar-pythonscript.log: expected 10, got $count1"
+          source /tmp/sidecar_helpers.sh
 
-          count2=$(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l)
-          test "$count2" = "10" || echo "sidecar-pythonscript-logfile.log: expected 10, got $count2"
-
-          count3=$(cat /tmp/logs/sidecar-pythonscript-resource-name.log | grep "Hello from python script!" | wc -l)
-          test "$count3" = "2" || echo "sidecar-pythonscript-resource-name.log: expected 2, got $count3"
-
-          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" || echo "/opt/logs/sidecar.log missing"
-
-          count4=$(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l')
-          test "$count4" = "17" || echo "sidecar.log in pod: expected 16, got $count4"
+          check_log_count /tmp/logs/sidecar-pythonscript.log "Hello from python script!" 10
+          check_log_count /tmp/logs/sidecar-pythonscript-logfile.log "Hello from python script!" 10
+          check_log_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 2
+          check_pod_file_exists sidecar-logtofile-pythonscript /opt/logs/sidecar.log
+          check_pod_log_count sidecar-logtofile-pythonscript /opt/logs/sidecar.log "Hello from python script!" 17
       - name: Verify sidecar files after update
         shell: bash
         run: |
-          kubectl exec sidecar -- sh -c "ls /tmp/" &&
-          check_exists() {
-            kubectl exec sidecar -- sh -c "test -e $1" || echo "$1 missing after update"
-          }
-          check_not_exists() {
-            kubectl exec sidecar -- sh -c "! test -e $1" || echo "$1 still exists after update"
-          }
+          source /tmp/sidecar_helpers.sh
 
-          check_not_exists "/tmp/hello.world"
-          check_exists "/tmp/change-hello.world"
-          check_not_exists "/tmp/cm-kubelogo.png"
-          check_exists "/tmp/change-cm-kubelogo.png"
-          check_not_exists "/tmp/secret-kubelogo.png"
-          check_exists "/tmp/change-secret-kubelogo.png"
-          check_not_exists "/tmp/absolute/absolute.txt"
-          check_exists "/tmp/absolute/change-absolute.txt"
-          check_not_exists "/tmp/relative/relative.txt"
-          check_exists "/tmp/relative/change-relative.txt"
-          check_not_exists "/tmp/orig-dir/change-dir.txt"
-          check_exists "/tmp/new-dir/change-dir.txt"
-          check_not_exists "/tmp/similar-configmap.txt"
-          check_exists "/tmp/change-similar-configmap.txt"
-          check_not_exists "/tmp/similar-secret.txt"
-          check_exists "/tmp/change-similar-secret.txt"
+          kubectl exec sidecar -- sh -c "ls /tmp/"
+
+          files_not_exist=(
+            "/tmp/hello.world"
+            "/tmp/cm-kubelogo.png"
+            "/tmp/secret-kubelogo.png"
+            "/tmp/absolute/absolute.txt"
+            "/tmp/relative/relative.txt"
+            "/tmp/orig-dir/change-dir.txt"
+            "/tmp/similar-configmap.txt"
+            "/tmp/similar-secret.txt"
+          )
+          files_exist=(
+            "/tmp/change-hello.world"
+            "/tmp/change-cm-kubelogo.png"
+            "/tmp/change-secret-kubelogo.png"
+            "/tmp/absolute/change-absolute.txt"
+            "/tmp/relative/change-relative.txt"
+            "/tmp/new-dir/change-dir.txt"
+            "/tmp/change-similar-configmap.txt"
+            "/tmp/change-similar-secret.txt"
+          )
+
+          for f in "${files_not_exist[@]}"; do
+            check_not_exists "$f"
+          done
+          for f in "${files_exist[@]}"; do
+            check_exists "$f"
+          done
 
           echo "Sidecar files after update verified (see warnings above if mismatches occurred)."      
       - name: Verify 5xx error handling
         shell: bash
         run: |
+          source /tmp/sidecar_helpers.sh
           # Check that the file is empty (or has a defined content) in case of an error.
-          test ! -s /tmp/sidecar/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
-          test ! -s /tmp/sidecar-5xx/500.txt || { echo "500.txt should be empty on request error"; exit 1; }
+          check_empty_or_missing /tmp/sidecar/500.txt
+          check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
-          grep "Max retries exceeded for URL" /tmp/logs/sidecar.log || { echo "Expected error log not found"; exit 1; }             
+          check_log_contains "Max retries exceeded for URL" /tmp/logs/sidecar.log
