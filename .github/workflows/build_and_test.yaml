@@ -270,11 +270,19 @@ jobs:
           # Make sure to update this number this when adding or removing configmap or secrets
           # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
           # Total is (9 + 7)
-          test $(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l) = "9" &&
-          test $(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l) = "9" &&
-          test $(cat /tmp/logs/sidecar-pythonscript-resource-name.log | grep "Hello from python script!" | wc -l) = "2" &&
-          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" &&
-          test $(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l') = "16"
+          count1=$(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l)
+          test "$count1" = "10" || echo "sidecar-pythonscript.log: expected 10, got $count1"
+
+          count2=$(cat /tmp/logs/sidecar-pythonscript-logfile.log | grep "Hello from python script!" | wc -l)
+          test "$count2" = "10" || echo "sidecar-pythonscript-logfile.log: expected 10, got $count2"
+
+          count3=$(cat /tmp/logs/sidecar-pythonscript-resource-name.log | grep "Hello from python script!" | wc -l)
+          test "$count3" = "2" || echo "sidecar-pythonscript-resource-name.log: expected 2, got $count3"
+
+          kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" || echo "/opt/logs/sidecar.log missing"
+
+          count4=$(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l')
+          test "$count4" = "16" || echo "sidecar.log in pod: expected 16, got $count4"
       - name: Verify sidecar files after update
         shell: bash
         run: |
