@@ -84,9 +84,13 @@ jobs:
         shell: bash
         run: |
           wait_for_pod_ready() {
-            while [[ $(kubectl get pods $1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do echo "waiting for pod '$1' to become ready..." && sleep 5; done
-            echo "Pod '$1' ready."
+            while ! kubectl wait --for=condition=ready --timeout=120s pod/$1 2>/dev/null; do
+              echo "Waiting for pod $1..."
+              sleep 5
+            done
+            echo "Pod $1 is ready."
           }
+
           echo "Installing sidecar..."
           kubectl apply -f "test/resources/sidecar.yaml"
 
@@ -227,7 +231,7 @@ jobs:
             kubectl exec sidecar -- sh -c "! test -e $1" || { echo "$1 still exists after update"; return 1; }
           }
           check_log_contains() {
-            grep "$2" "$1" > /dev/null || { echo "Log $1 does not contain '$2'"; return 1; }
+            grep "$1" "$2" > /dev/null || { echo "Log $2 does not contain '$1'"; return 1; }
           }
           check_diff() {
             diff "$1" "$2" > /dev/null || { echo "File mismatch: $1 vs $2"; return 1; }
