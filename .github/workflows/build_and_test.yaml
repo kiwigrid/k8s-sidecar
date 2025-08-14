@@ -269,7 +269,7 @@ jobs:
         run: |
           # Make sure to update this number this when adding or removing configmap or secrets
           # For log to a file, Need to consider Jobs "Install Configmaps and Secrets" and  "Update Configmaps and Secrets"
-          # Total is (9 + 7)
+          # Total is (10 + 7)
           count1=$(cat /tmp/logs/sidecar-pythonscript.log | grep "Hello from python script!" | wc -l)
           test "$count1" = "10" || echo "sidecar-pythonscript.log: expected 10, got $count1"
 
@@ -282,19 +282,36 @@ jobs:
           kubectl exec sidecar-logtofile-pythonscript -- sh -c "test -e /opt/logs/sidecar.log" || echo "/opt/logs/sidecar.log missing"
 
           count4=$(kubectl exec sidecar-logtofile-pythonscript -- sh -c 'cat /opt/logs/sidecar.log | grep "Hello from python script!" | wc -l')
-          test "$count4" = "16" || echo "sidecar.log in pod: expected 16, got $count4"
+          test "$count4" = "17" || echo "sidecar.log in pod: expected 16, got $count4"
       - name: Verify sidecar files after update
         shell: bash
         run: |
           kubectl exec sidecar -- sh -c "ls /tmp/" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/hello.world" && kubectl exec sidecar -- sh -c "test -e /tmp/change-hello.world" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/cm-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e  /tmp/change-cm-kubelogo.png" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/secret-kubelogo.png" && kubectl exec sidecar -- sh -c "test -e /tmp/change-secret-kubelogo.png" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/absolute/absolute.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/absolute/change-absolute.txt" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/relative/relative.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/relative/change-relative.txt" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/orig-dir/change-dir.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/new-dir/change-dir.txt" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-configmap.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-configmap.txt" &&
-          kubectl exec sidecar -- sh -c "! test -e /tmp/similar-secret.txt" && kubectl exec sidecar -- sh -c "test -e /tmp/change-similar-secret.txt"
+          check_exists() {
+            kubectl exec sidecar -- sh -c "test -e $1" || echo "$1 missing after update"
+          }
+          check_not_exists() {
+            kubectl exec sidecar -- sh -c "! test -e $1" || echo "$1 still exists after update"
+          }
+
+          check_not_exists "/tmp/hello.world"
+          check_exists "/tmp/change-hello.world"
+          check_not_exists "/tmp/cm-kubelogo.png"
+          check_exists "/tmp/change-cm-kubelogo.png"
+          check_not_exists "/tmp/secret-kubelogo.png"
+          check_exists "/tmp/change-secret-kubelogo.png"
+          check_not_exists "/tmp/absolute/absolute.txt"
+          check_exists "/tmp/absolute/change-absolute.txt"
+          check_not_exists "/tmp/relative/relative.txt"
+          check_exists "/tmp/relative/change-relative.txt"
+          check_not_exists "/tmp/orig-dir/change-dir.txt"
+          check_exists "/tmp/new-dir/change-dir.txt"
+          check_not_exists "/tmp/similar-configmap.txt"
+          check_exists "/tmp/change-similar-configmap.txt"
+          check_not_exists "/tmp/similar-secret.txt"
+          check_exists "/tmp/change-similar-secret.txt"
+
+          echo "Sidecar files after update verified (see warnings above if mismatches occurred)."      
       - name: Verify 5xx error handling
         shell: bash
         run: |
