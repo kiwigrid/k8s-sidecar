@@ -8,6 +8,8 @@ from kubernetes.client import ApiException
 from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
 from requests.packages.urllib3.util.retry import Retry
 
+from healthz import start_health_server, mark_ready
+
 from helpers import REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETRY_BACKOFF_FACTOR
 
 from logger import get_logger
@@ -47,6 +49,8 @@ sys.excepthook = exception_handler
 
 def main():
     logger.info("Starting collector")
+
+    start_health_server()
 
     folder_annotation = os.getenv(FOLDER_ANNOTATION)
     if folder_annotation is None:
@@ -137,6 +141,7 @@ def main():
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
                           ignore_already_processed, resource_name)
+    mark_ready() # After successful initial LIST sync
 
 
 def _initialize_kubeclient_configuration():
