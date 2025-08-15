@@ -74,12 +74,60 @@ spec:
         value: "ascii"
       - name: LOG_LEVEL
         value: "DEBUG"
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+  - name: script-volume
+    configMap:
+      name: script-configmap
+      defaultMode: 0777
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-healthcheck
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    - name: script-volume
+      mountPath: /opt/script.sh
+      subPath: script.sh
+    env:
+      - name: LABEL
+        value: "findme"
+      - name: FOLDER
+        value: /tmp/
+      - name: RESOURCE
+        value: both
+      - name: SCRIPT
+        value: "/opt/script.sh"
+      - name: REQ_USERNAME
+        value: "user1"
+      - name: REQ_PASSWORD
+        value: "abcdefghijklmnopqrstuvwxyz"
+      - name: REQ_BASIC_AUTH_ENCODING
+        # the python server we're using for the tests expects ascii encoding of basic auth credentials, hence we can't use non-ascii characters in the password or username
+        value: "ascii"
+      - name: LOG_LEVEL
+        value: "DEBUG"
     readinessProbe:
       httpGet:
         path: /healthz
         port: 8080
-      initialDelaySeconds: 5
+      initialDelaySeconds: 25
       periodSeconds: 5
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 35
+      periodSeconds: 10
   volumes:
   - name: shared-volume
     emptyDir: {}
@@ -115,12 +163,6 @@ spec:
           value: "/opt/script.py"
         - name: LOG_LEVEL
           value: "DEBUG"
-      readinessProbe:
-        httpGet:
-          path: /healthz
-          port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -155,15 +197,8 @@ spec:
       - name: SCRIPT
         value: "/opt-5xx/script.sh"
       - name: ENABLE_5XX
-        value: "true"
       - name: LOG_LEVEL
         value: "DEBUG"
-    readinessProbe:
-      httpGet:
-        path: /healthz
-        port: 8080
-      initialDelaySeconds: 5
-      periodSeconds: 5
   volumes:
   - name: shared-volume
     emptyDir: {}
@@ -266,12 +301,6 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
-      readinessProbe:
-        httpGet:
-          path: /healthz
-          port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -313,12 +342,6 @@ spec:
           value: "/opt/script.py"
         - name: LOG_LEVEL
           value: "DEBUG"
-      readinessProbe:
-        httpGet:
-          path: /healthz
-          port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -360,12 +383,6 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
-      readinessProbe:
-        httpGet:
-          path: /healthz
-          port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -441,12 +458,6 @@ spec:
         value: "ascii"
       - name: LOG_LEVEL
         value: "DEBUG"
-    readinessProbe:
-      httpGet:
-        path: /healthz
-        port: 8080
-      initialDelaySeconds: 5
-      periodSeconds: 5
   volumes:
   - name: auth-creds
     secret:
