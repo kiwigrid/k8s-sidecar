@@ -11,6 +11,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from requests.packages.urllib3.util.retry import Retry
+from types import SimpleNamespace
 
 from logger import get_logger
 import argparse
@@ -166,18 +167,29 @@ def request(url, method, enable_5xx=False, payload=None):
         logger.warning(f"No url provided. Doing nothing.")
         return
 
-    # If method is not provided use GET as default
-    if method == "GET" or not method:
-        res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
-        logger.info(f"Request sent to {url}." f"Response: {res.status_code} {res.reason} {res.text}")
-    elif method == "POST":
-        res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
-        logger.info(f"{payload} sent to {url}." f"Response: {res.status_code} {res.reason} {res.text}")
-    else:
-        logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
-        return
-    return res
-
+    try:
+        # If method is not provided use GET as default
+        if method == "GET" or not method:
+            res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+            logger.info(f"Request sent to {url}. Response: {res.status_code} {res.reason} {res.text}")
+        elif method == "POST":
+            res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+            logger.info(f"{payload} sent to {url}. Response: {res.status_code} {res.reason} {res.text}")
+        else:
+            logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
+            return
+        return res
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP error for URL {url}: {e}")
+    except requests.exceptions.SSLError as e:
+        logger.error(f"SSL certificate verification failed for URL {url}: {e}")   
+    except requests.exceptions.RetryError as e:
+        logger.error(f"Max retries exceeded for URL {url}: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during request to {url}: {e}")
+    # Return a dummy-object with empty attributes to avoid AttributeError if no response is returned (e.g. MaxRetryError)
+    logger.debug(f"Returning dummy response for URL {url}")
+    return SimpleNamespace(text="", content=b"")
 
 def timestamp():
     """Get a timestamp of the current time for logging."""
