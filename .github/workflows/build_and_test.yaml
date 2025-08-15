@@ -99,6 +99,7 @@ jobs:
           kubectl get pods
 
           wait_for_pod_ready "sidecar"
+          wait_for_pod_ready "sidecar-healthcheck"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
@@ -106,7 +107,6 @@ jobs:
           wait_for_pod_ready "sidecar-pythonscript-resource-name"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
-
       - name: Install Configmaps and Secrets
         id: install_configmaps_and_secrets
         shell: bash
@@ -143,6 +143,7 @@ jobs:
         run: |
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
+          kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
@@ -301,6 +302,13 @@ jobs:
           ls /tmp/sidecar/script_result || echo "script_result missing"
 
           echo "All sidecar files after initial sync verified successfully."
+      - name: Verify health server startup
+        shell: bash
+        run: |
+          echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
+          source /tmp/sidecar_helpers.sh
+
+          check_log_contains "Uvicorn running" /tmp/logs/sidecar-healthcheck.log
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
@@ -384,3 +392,29 @@ jobs:
           check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
           check_log_contains "Max retries exceeded for URL" /tmp/logs/sidecar.log
+      - name: Verify liveness probe on watcher process failure
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying liveness probe ---"
+          initial_restarts=$(kubectl get pod sidecar -o jsonpath='{.status.containerStatuses[0].restartCount}')
+          echo "Initial restart count for 'sidecar' pod: $initial_restarts"
+
+          echo "Killing watcher process inside 'sidecar' pod..."
+          # The watcher processes run _watch_resource_loop. We kill one of them.
+          # The main process is PID 1, the watchers are its children. We kill all children of PID 1.
+          kubectl exec sidecar -- pkill -P 1
+
+          echo "Waiting for liveness probe to fail and container to restart..."
+          for i in {1..15}; do
+            current_restarts=$(kubectl get pod sidecar -o jsonpath='{.status.containerStatuses[0].restartCount}' || echo "$initial_restarts")
+            if [ "$current_restarts" -gt "$initial_restarts" ]; then
+              echo "Container successfully restarted. Restart count is now $current_restarts."
+              exit 0
+            fi
+            echo "Waited $((i*5)) seconds. Current restarts: $current_restarts. Waiting..."
+            sleep 5
+          done
+
+          echo "Error: Timed out waiting for container to restart. Liveness probe did not trigger a restart as expected."
+          exit 1
