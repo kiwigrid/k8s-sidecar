@@ -74,6 +74,12 @@ spec:
         value: "ascii"
       - name: LOG_LEVEL
         value: "DEBUG"
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
   volumes:
   - name: shared-volume
     emptyDir: {}
@@ -109,6 +115,12 @@ spec:
           value: "/opt/script.py"
         - name: LOG_LEVEL
           value: "DEBUG"
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -146,6 +158,12 @@ spec:
         value: "true"
       - name: LOG_LEVEL
         value: "DEBUG"
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
   volumes:
   - name: shared-volume
     emptyDir: {}
@@ -248,6 +266,12 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -259,7 +283,6 @@ spec:
       configMap:
         name: logger-config
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
@@ -290,6 +313,12 @@ spec:
           value: "/opt/script.py"
         - name: LOG_LEVEL
           value: "DEBUG"
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -297,7 +326,6 @@ spec:
       configMap:
         name: script-configmap
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
@@ -332,6 +360,12 @@ spec:
           value: "DEBUG"
         - name: LOG_CONFIG
           value: "/etc/k8s-sidecar/log_conf.yaml"
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 5
   volumes:
     - name: shared-volume
       emptyDir: { }
@@ -345,7 +379,6 @@ spec:
       configMap:
         name: logger-config-tofile
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
@@ -408,6 +441,12 @@ spec:
         value: "ascii"
       - name: LOG_LEVEL
         value: "DEBUG"
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 5
   volumes:
   - name: auth-creds
     secret:
