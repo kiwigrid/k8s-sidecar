@@ -14,6 +14,7 @@ from time import sleep
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError, ProtocolError
+from healthz import update_k8s_contact, register_watcher_processes
 
 from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
@@ -430,19 +431,25 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
                                          ignore_already_processed, resource_name)
+ 
+    procs_only = [p for p, ns, resource in processes]
+    register_watcher_processes(procs_only)
 
     while True:
+        # Update k8s contact timestamp to show the main process is alive and watchers are running
+        update_k8s_contact()
         died = False
         for proc, ns, resource in processes:
             if not proc.is_alive():
-                logger.fatal(f"Process for {ns}/{resource} died")
+                logger.error(f"Process for {ns}/{resource} died")
                 died = True
         if died:
             logger.fatal("At least one process died. Stopping and exiting")
             for proc, ns, resource in processes:
                 if proc.is_alive():
                     proc.terminate()
-            raise Exception("Loop died")
+            # Exit with a non-zero status code to indicate an error
+            sys.exit(1)
 
         sleep(5)
 
