@@ -194,6 +194,7 @@ def _process_secret(dest_folder, secret, resource, unique_filenames, enable_5xx,
     old_secret = _resources_object_map[resource].get(secret.metadata.namespace + secret.metadata.name) or copy.deepcopy(secret)
     old_dest_folder = _resources_dest_folder_map[resource].get(secret.metadata.namespace + secret.metadata.name) or dest_folder
     if is_removed:
+        dest_folder = old_dest_folder
         _resources_object_map[resource].pop(secret.metadata.namespace + secret.metadata.name, None)
     else:
         _resources_object_map[resource][secret.metadata.namespace + secret.metadata.name] = copy.deepcopy(secret)
@@ -234,6 +235,7 @@ def _process_config_map(dest_folder, config_map, resource, unique_filenames, ena
     old_config_map = _resources_object_map[resource].get(config_map.metadata.namespace + config_map.metadata.name) or copy.deepcopy(config_map)
     old_dest_folder = _resources_dest_folder_map[resource].get(config_map.metadata.namespace + config_map.metadata.name) or dest_folder
     if is_removed:
+        dest_folder = old_dest_folder
         _resources_object_map[resource].pop(config_map.metadata.namespace + config_map.metadata.name, None)
     else:
         _resources_object_map[resource][config_map.metadata.namespace + config_map.metadata.name] = copy.deepcopy(config_map)
