@@ -196,6 +196,35 @@ def _initialize_kubeclient_configuration():
 
     logger.info(f"Config for cluster api at '{configuration.host}' loaded.")
 
+def _ensure_kube_config_in_child():
+    """Ensure Kubernetes client is configured inside forked/spawned processes."""
+    # Try in-cluster first (works in Pods), fall back to kubeconfig for local runs/tests.
+    try:
+        # Prefer in-cluster if SA token present or env is set
+        if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token") or os.getenv("KUBERNETES_SERVICE_HOST"):
+            config.load_incluster_config()
+        else:
+            config.load_kube_config()
+    except Exception:
+        # Last resort: try kubeconfig (useful for local test runners)
+        try:
+            config.load_kube_config()
+        except Exception as e:
+            # Don't swallow — make it visible in logs
+            logger.error(f"Failed to initialize Kubernetes config in child process: {e}")
+            raise
+
+    # Mirror retry setup from main process
+    cfg = client.Configuration.get_default_copy()
+    cfg.retries = Retry(
+        total=REQ_RETRY_TOTAL,
+        connect=REQ_RETRY_CONNECT,
+        read=REQ_RETRY_READ,
+        backoff_factor=REQ_RETRY_BACKOFF_FACTOR,
+    )
+    client.Configuration.set_default(cfg)
+    logger.info(f"[child] Kubernetes client configured for host: {cfg.host}")
+
 
 if __name__ == "__main__":
     main()
