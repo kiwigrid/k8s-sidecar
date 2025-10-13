@@ -112,8 +112,20 @@ jobs:
         shell: bash
         run: |
           wait_for_pod_log() {
-            while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-            echo "Pod '$1' logs contains '$2'"
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
           }
           # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
           sleep 20
@@ -209,6 +221,20 @@ jobs:
           wait_for_pod_log() {
             while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
             echo "Pod '$1' logs contains '$2'"
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" --since-time ${current_time} | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
           }
           echo "Updating resources..."
           kubectl apply -f "test/resources/change_resources.yaml"
