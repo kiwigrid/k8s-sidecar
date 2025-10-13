@@ -21,15 +21,15 @@ parser.add_argument("--req-username-file", type=str, metavar=argparse.REMAINDER,
 parser.add_argument("--req-password-file", type=str, metavar=argparse.REMAINDER, help="path to file containing basic-auth password for REQ. This takes precedence over the environment variable REQ_PASSWORD")
 args = parser.parse_args()
 
-CONTENT_TYPE_TEXT = "ascii"
+CONTENT_TYPE_TEXT          = "ascii"
 CONTENT_TYPE_BASE64_BINARY = "binary"
 
-REQ_RETRY_TOTAL = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
-REQ_RETRY_CONNECT = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(os.getenv("REQ_RETRY_CONNECT"))
-REQ_RETRY_READ = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
+REQ_RETRY_TOTAL          = 5 if os.getenv("REQ_RETRY_TOTAL") is None else int(os.getenv("REQ_RETRY_TOTAL"))
+REQ_RETRY_CONNECT        = 10 if os.getenv("REQ_RETRY_CONNECT") is None else int(os.getenv("REQ_RETRY_CONNECT"))
+REQ_RETRY_READ           = 5 if os.getenv("REQ_RETRY_READ") is None else int(os.getenv("REQ_RETRY_READ"))
 REQ_RETRY_BACKOFF_FACTOR = 1.1 if os.getenv("REQ_RETRY_BACKOFF_FACTOR") is None else float(
     os.getenv("REQ_RETRY_BACKOFF_FACTOR"))
-REQ_TIMEOUT = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
+REQ_TIMEOUT              = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.getenv("REQ_TIMEOUT"))
 
 # Allows to suppress TLS verification for all HTTPs requests (except to the API server, which are controller by SKIP_TLS_VERIFY)
 # This is particularly useful when the connection to the main container happens as "localhost"
