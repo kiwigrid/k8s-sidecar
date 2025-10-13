@@ -4,4 +4,4 @@ python-json-logger==4.0.0
 logfmter==0.0.10
 argparse==1.4.0
 fastapi==0.115.2
-uvicorn==0.34.2
+uvicorn==0.37.0
