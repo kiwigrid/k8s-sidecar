@@ -16,20 +16,20 @@ from logger import get_logger
 from resources import list_resources, watch_for_changes, prepare_payload
 
 
-METHOD = "METHOD"
-UNIQUE_FILENAMES = "UNIQUE_FILENAMES"
-SKIP_TLS_VERIFY = "SKIP_TLS_VERIFY"
-FOLDER = "FOLDER"
-FOLDER_ANNOTATION = "FOLDER_ANNOTATION"
-LABEL = "LABEL"
-LABEL_VALUE = "LABEL_VALUE"
-RESOURCE = "RESOURCE"
-RESOURCE_NAME = "RESOURCE_NAME"
-REQ_PAYLOAD = "REQ_PAYLOAD"
-REQ_URL = "REQ_URL"
-REQ_METHOD = "REQ_METHOD"
-SCRIPT = "SCRIPT"
-ENABLE_5XX = "ENABLE_5XX"
+METHOD                   = "METHOD"
+UNIQUE_FILENAMES         = "UNIQUE_FILENAMES"
+SKIP_TLS_VERIFY          = "SKIP_TLS_VERIFY"
+FOLDER                   = "FOLDER"
+FOLDER_ANNOTATION        = "FOLDER_ANNOTATION"
+LABEL                    = "LABEL"
+LABEL_VALUE              = "LABEL_VALUE"
+RESOURCE                 = "RESOURCE"
+RESOURCE_NAME            = "RESOURCE_NAME"
+REQ_PAYLOAD              = "REQ_PAYLOAD"
+REQ_URL                  = "REQ_URL"
+REQ_METHOD               = "REQ_METHOD"
+SCRIPT                   = "SCRIPT"
+ENABLE_5XX               = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
 
 # Get logger
@@ -181,17 +181,19 @@ def _initialize_kubeclient_configuration():
         raise
 
     if os.getenv(SKIP_TLS_VERIFY) == "true":
-        configuration = client.Configuration.get_default_copy()
+        configuration            = client.Configuration.get_default_copy()
         configuration.verify_ssl = False
-        configuration.debug = False
+        configuration.debug      = False
         client.Configuration.set_default(configuration)
 
     # push urllib3 retries to k8s client config
     configuration = client.Configuration.get_default_copy()
-    configuration.retries = Retry(total=REQ_RETRY_TOTAL,
-                                  connect=REQ_RETRY_CONNECT,
-                                  read=REQ_RETRY_READ,
-                                  backoff_factor=REQ_RETRY_BACKOFF_FACTOR)
+    configuration.retries = Retry(
+        total          = REQ_RETRY_TOTAL,
+        connect        = REQ_RETRY_CONNECT,
+        read           = REQ_RETRY_READ,
+        backoff_factor = REQ_RETRY_BACKOFF_FACTOR,
+    )
     client.Configuration.set_default(configuration)
 
     logger.info(f"Config for cluster api at '{configuration.host}' loaded.")
@@ -215,15 +217,15 @@ def _ensure_kube_config_in_child():
             raise
 
     # Mirror retry setup from main process
-    cfg = client.Configuration.get_default_copy()
-    cfg.retries = Retry(
-        total=REQ_RETRY_TOTAL,
-        connect=REQ_RETRY_CONNECT,
-        read=REQ_RETRY_READ,
-        backoff_factor=REQ_RETRY_BACKOFF_FACTOR,
+    configuration = client.Configuration.get_default_copy()
+    configuration.retries = Retry(
+        total          = REQ_RETRY_TOTAL,
+        connect        = REQ_RETRY_CONNECT,
+        read           = REQ_RETRY_READ,
+        backoff_factor = REQ_RETRY_BACKOFF_FACTOR,
     )
-    client.Configuration.set_default(cfg)
-    logger.info(f"[child] Kubernetes client configured for host: {cfg.host}")
+    client.Configuration.set_default(configuration)
+    logger.info(f"[child] Kubernetes client configured for host: {configuration.host}")
 
 
 if __name__ == "__main__":
