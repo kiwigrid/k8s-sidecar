@@ -85,7 +85,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: sidecar-healthz
+  name: sidecar-healthcheck
   namespace: default
 spec:
   serviceAccountName: sample-acc
@@ -120,16 +120,14 @@ spec:
       httpGet:
         path: /healthz
         port: 8080
-      initialDelaySeconds: 5
+      initialDelaySeconds: 25
       periodSeconds: 5
-      failureThreshold: 3
     livenessProbe:
       httpGet:
         path: /healthz
         port: 8080
-      initialDelaySeconds: 10
+      initialDelaySeconds: 35
       periodSeconds: 10
-      failureThreshold: 3        
   volumes:
   - name: shared-volume
     emptyDir: {}
@@ -199,7 +197,6 @@ spec:
       - name: SCRIPT
         value: "/opt-5xx/script.sh"
       - name: ENABLE_5XX
-        value: "true"
       - name: LOG_LEVEL
         value: "DEBUG"
   volumes:
@@ -315,7 +312,6 @@ spec:
       configMap:
         name: logger-config
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
@@ -353,7 +349,6 @@ spec:
       configMap:
         name: script-configmap
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
@@ -401,7 +396,6 @@ spec:
       configMap:
         name: logger-config-tofile
         defaultMode: 0777
-
 ---
 apiVersion: v1
 kind: Pod
