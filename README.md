@@ -100,3 +100,41 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `LOG_FORMAT`               | Set a log format. (JSON or LOGFMT)                                                                                                                                                                                                                                                                                                  | false    | `JSON`                                    | string  |
 | `LOG_TZ`                   | Set the log timezone. (LOCAL or UTC)                                                                                                                                                                                                                                                                                                | false    | `LOCAL`                                   | string  |
 | `LOG_CONFIG`               | Log configuration file path. If not configured, uses the default log config for backward compatibility support. When not configured `LOG_LEVEL, LOG_FORMAT and LOG_TZ` would be used. Refer to [Python logging](https://docs.python.org/3/library/logging.config.html) for log configuration. For sample configuration file  refer to file examples/example_logconfig.yaml | false    | -                                         | string  |
+| `HEALTH_PORT`              | The port for the health endpoint (`/healthz`).                                                                                                                                                                                                                                                                                          | false    | `8080`                                    | integer |
+
+## Health Endpoint
+
+The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes.
+
+### Readiness Probe
+The endpoint will return `HTTP 200 OK` only after the initial synchronization of all configured resources (`ConfigMap`s and/or `Secret`s) is complete. Before that, it will return `HTTP 503 Service Unavailable`. This ensures that the main application container does not start or receive traffic before its configuration is fully available.
+
+Example readinessProbe configuration: 
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 20
+  periodSeconds: 5
+```
+
+### Liveness Probe
+
+The endpoint also serves as a liveness probe, checking for two conditions:
+1. Kubernetes API Contact: It verifies that the sidecar has had successful contact with the Kubernetes API within the last 60 seconds.
+1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly. 
+
+If any of these checks fail, the endpoint will return `HTTP 503 Service Unavailable`, signaling Kubernetes to restart the container.
+
+Example livenessProbe configuration:
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 35
+  periodSeconds: 10
+```
