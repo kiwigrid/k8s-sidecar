@@ -20,6 +20,7 @@ from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
+from client import _initialize_kubeclient_configuration
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -395,6 +396,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 def _watch_resource_loop(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                          ignore_already_processed, resource_name):
+    _initialize_kubeclient_configuration()
     while True:
         try:
             if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
