@@ -20,6 +20,7 @@ RESOURCE_NAME            = "RESOURCE_NAME"
 REQ_PAYLOAD              = "REQ_PAYLOAD"
 REQ_URL                  = "REQ_URL"
 REQ_METHOD               = "REQ_METHOD"
+REQ_SKIP_INIT            = "REQ_SKIP_INIT"
 SCRIPT                   = "SCRIPT"
 ENABLE_5XX               = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
@@ -73,7 +74,8 @@ def main():
 
     request_method = os.getenv(REQ_METHOD)
     request_url = os.getenv(REQ_URL)
-   
+    request_skip_init = os.getenv(REQ_SKIP_INIT, "false").lower() == "true"
+
     request_payload = os.getenv(REQ_PAYLOAD)
     if request_payload:
         request_payload = prepare_payload(os.getenv(REQ_PAYLOAD))
@@ -133,11 +135,15 @@ def main():
     else:
         # For watch/sleep methods, do an initial list first to ensure files are there at startup
         logger.info("Performing initial list-based sync before starting watch.")
+        init_request_url = request_url
+        if request_skip_init:
+            init_request_url = None
+            logger.info("Skipping initial request to external endpoint.")
         for res in resources:
             for ns in namespace.split(','):
                 # For this initial list, we can set ignore_already_processed to True
                 # so the subsequent watch doesn't re-process immediately if that is enabled.
-                list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
+                list_resources(label, label_value, target_folder, init_request_url, request_method, request_payload,
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx,
                                True, resource_name)
 
