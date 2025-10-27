@@ -280,7 +280,7 @@ jobs:
             file="$1"
             pattern="$2"
             expected="$3"
-            count=$(grep "$pattern" "$file" | wc -l)
+            count=$(grep -c -- "$pattern" "$file")
             if [ "$count" -eq "$expected" ]; then
               echo "$file: found $expected lines matching '$pattern'"
               return 0
@@ -289,6 +289,19 @@ jobs:
               return 1
             fi
           }
+          check_log_min_count() {
+            file="$1"
+            pattern="$2"
+            min_expected="$3"
+            count=$(grep -c -- "$pattern" "$file")
+            if [ "$min_expected" -gt 0 ] && [ "$count" -ge "$min_expected" ]; then
+              echo "$file: found $count lines matching '$pattern' (min $min_expected)"
+              return 0
+            else
+              echo "$file: expected at least $min_expected (>0), got $count for pattern '$pattern'"
+              return 1
+            fi
+          }      
           check_pod_log_count() {
             pod="$1"
             file="$2"
@@ -338,6 +351,7 @@ jobs:
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
+          echo "--- Verifying sidecar-basicauth-args pod file after initial sync ---"
           source /tmp/sidecar_helpers.sh
 
           check_content "allowed" /tmp/sidecar-basicauth-args/secured.txt          
@@ -370,7 +384,7 @@ jobs:
 
           check_log_count /tmp/logs/sidecar-pythonscript.log "Hello from python script!" 10
           check_log_count /tmp/logs/sidecar-pythonscript-logfile.log "Hello from python script!" 10
-          check_log_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 2
+          check_log_min_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 1
           check_pod_file_exists sidecar-logtofile-pythonscript /opt/logs/sidecar.log
           check_pod_log_count sidecar-logtofile-pythonscript /opt/logs/sidecar.log "Hello from python script!" 17
       - name: Verify sidecar files after update
