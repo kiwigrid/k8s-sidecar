@@ -384,7 +384,6 @@ jobs:
 
           check_log_count /tmp/logs/sidecar-pythonscript.log "Hello from python script!" 10
           check_log_count /tmp/logs/sidecar-pythonscript-logfile.log "Hello from python script!" 10
-#          check_log_min_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 1
           check_pod_file_exists sidecar-logtofile-pythonscript /opt/logs/sidecar.log
           check_pod_log_count sidecar-logtofile-pythonscript /opt/logs/sidecar.log "Hello from python script!" 17
       - name: Verify sidecar files after update
