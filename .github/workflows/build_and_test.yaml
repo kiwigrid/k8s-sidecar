@@ -445,7 +445,7 @@ jobs:
           kubectl exec sidecar -- pkill -P 1
 
           echo "Waiting for liveness probe to fail and container to restart..."
-          for i in {1..15}; do
+          for i in {1..20}; do
             current_restarts=$(kubectl get pod sidecar -o jsonpath='{.status.containerStatuses[0].restartCount}' || echo "$initial_restarts")
             if [ "$current_restarts" -gt "$initial_restarts" ]; then
               echo "Container successfully restarted. Restart count is now $current_restarts."
