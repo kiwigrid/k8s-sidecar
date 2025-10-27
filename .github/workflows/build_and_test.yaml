@@ -425,7 +425,7 @@ jobs:
         shell: bash
         run: |
           source /tmp/sidecar_helpers.sh
-          echo "--- Check that some files are empty (or has a defined content) in case of an error. ---""
+          echo "--- Check that some files are empty (or has a defined content) in case of an error. ---"
           check_empty_or_missing /tmp/sidecar/500.txt
           check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
