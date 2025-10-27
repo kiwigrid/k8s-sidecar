@@ -14,14 +14,12 @@ from time import sleep
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError, ProtocolError
-#from requests.packages.urllib3.util.retry import Retry
-#from healthz import update_k8s_contact, register_watcher_processes
 
 from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
-
+from client import _initialize_kubeclient_configuration
 from healthz import mark_ready, register_watcher_processes, update_k8s_contact
 
 RESOURCE_SECRET = "secret"
@@ -416,7 +414,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 def _watch_resource_loop(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                          ignore_already_processed, resource_name):
-    _init_kube_in_child_if_needed()  # ensure config in child
+    _initialize_kubeclient_configuration()  # ensure k8s config in child
     
     while True:
         try:
