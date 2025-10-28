@@ -79,174 +79,6 @@ jobs:
         run: |
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
           kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
-      - name: Install Sidecar and Dummy Server
-        id: install_sidecar
-        shell: bash
-        run: |
-          wait_for_pod_ready() {
-            while ! kubectl wait --for=condition=ready --timeout=120s pod/$1 2>/dev/null; do
-              echo "Waiting for pod $1..."
-              sleep 5
-            done
-            echo "Pod $1 is ready."
-          }
-
-          echo "Installing sidecar..."
-          kubectl apply -f "test/resources/sidecar.yaml"
-
-          sleep 10
-
-          kubectl get pods
-
-          wait_for_pod_ready "sidecar"
-          wait_for_pod_ready "sidecar-healthcheck"
-          wait_for_pod_ready "sidecar-basicauth-args"
-          wait_for_pod_ready "sidecar-5xx"
-          wait_for_pod_ready "sidecar-pythonscript"
-          wait_for_pod_ready "sidecar-pythonscript-logfile"
-          wait_for_pod_ready "sidecar-pythonscript-resource-name"
-          wait_for_pod_ready "sidecar-logtofile-pythonscript"
-          wait_for_pod_ready "dummy-server-pod"
-      - name: Install Configmaps and Secrets
-        id: install_configmaps_and_secrets
-        shell: bash
-        run: |
-          wait_for_pod_log() {
-            local pod="$1"
-            local pattern="$2"
-            local retries=30 # 30 * 5s = 150s timeout
-            local count=0
-            while [[ $(kubectl logs "$pod" | grep "$pattern") == "" ]]; do
-              count=$((count + 1))
-              if [[ "$count" -gt "$retries" ]]; then
-                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
-                kubectl logs "$pod"
-                exit 1
-              fi
-              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
-            done
-            echo "Pod '$pod' logs contains '$pattern'"
-          }
-          # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
-          sleep 20
-          echo "Installing resources..."
-          kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
-          for p in ${pods[*]}; do
-            for r in ${resources[*]}; do
-              wait_for_pod_log $p $r
-            done
-          done
-
-          # monitor only specified resources for sidecar-pythonscript-resource-name
-          pods=("sidecar-pythonscript-resource-name")
-          resources=("sample-configmap" "sample-secret-binary")
-          for p in ${pods[*]}; do
-            for r in ${resources[*]}; do
-              wait_for_pod_log $p $r
-            done
-          done
-
-          # 10 more seconds after the last thing appeared in the logs.
-          sleep 10
-      - name: Retrieve pod logs
-        shell: bash
-        run: |
-          mkdir /tmp/logs
-          kubectl logs sidecar > /tmp/logs/sidecar.log
-          kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
-          kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
-          kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
-          kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
-          kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
-          kubectl logs sidecar-pythonscript-resource-name > /tmp/logs/sidecar-pythonscript-resource-name.log
-          kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
-      - name: Upload artifacts (pod logs)
-        uses: actions/upload-artifact@v4
-        with:
-          name: pod-logs_${{ matrix.k8s.maj_min }}
-          path: /tmp/logs/*
-      - name: Download expected files from cluster
-        shell: bash
-        run: |
-          mkdir /tmp/sidecar
-          mkdir /tmp/sidecar-5xx
-          echo "Downloading resource files from sidecar..."
-          kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
-          kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
-          kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/sidecar/secret-kubelogo.png
-          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
-          # script also generates into '/tmp'
-          kubectl cp sidecar:/tmp/script_result /tmp/sidecar/script_result
-          # absolute path in configmap points to /tmp in 'absolute-configmap'
-          kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/sidecar/absolute.txt
-          kubectl cp sidecar:/tmp/relative/relative.txt /tmp/sidecar/relative.txt
-          kubectl cp sidecar:/tmp/orig-dir/change-dir.txt /tmp/sidecar/change-dir.txt
-          kubectl cp sidecar:/tmp/500.txt /tmp/sidecar/500.txt || true
-          kubectl cp sidecar:/tmp/secured.txt /tmp/sidecar/secured.txt
-          kubectl cp sidecar:/tmp/similar-configmap.txt /tmp/sidecar/similar-configmap.txt
-          kubectl cp sidecar:/tmp/similar-secret.txt /tmp/sidecar/similar-secret.txt
-
-          echo "Downloading resource files from sidecar-basicauth-args pod"
-          kubectl cp sidecar-basicauth-args:/tmp/secured.txt /tmp/sidecar-basicauth-args/secured.txt
-
-          echo "Downloading resource files from sidecar-5xx..."
-          kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
-          kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
-          kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
-          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
-          # script also generates into '/tmp'
-          kubectl cp sidecar-5xx:/tmp/script_result /tmp/sidecar-5xx/script_result
-          # absolute path in configmap points to /tmp in 'absolute-configmap'
-          kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/sidecar-5xx/absolute.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/sidecar-5xx/relative.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/orig-dir/change-dir.txt /tmp/sidecar-5xx/change-dir.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/sidecar-5xx/500.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/sidecar-5xx/secured.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
-          kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
-      - name: Upload artifacts (expected files from cluster)
-        uses: actions/upload-artifact@v4
-        with:
-          name: expected-files_${{ matrix.k8s.maj_min }}
-          path: |
-            /tmp/sidecar/**
-            /tmp/sidecar-5xx/**
-      - name: Update Configmaps and Secrets
-        shell: bash
-        run: |
-          sleep 5
-          current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          wait_for_pod_log() {
-            while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-            echo "Pod '$1' logs contains '$2'"
-            local pod="$1"
-            local pattern="$2"
-            local retries=30 # 30 * 5s = 150s timeout
-            local count=0
-            while [[ $(kubectl logs "$pod" --since-time ${current_time} | grep "$pattern") == "" ]]; do
-              count=$((count + 1))
-              if [[ "$count" -gt "$retries" ]]; then
-                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
-                kubectl logs "$pod"
-                exit 1
-              fi
-              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
-            done
-            echo "Pod '$pod' logs contains '$pattern'"
-          }
-          echo "Updating resources..."
-          kubectl apply -f "test/resources/change_resources.yaml"
-          pods=("sidecar" "sidecar-5xx")
-          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
-          for p in ${pods[*]}; do
-            for r in ${resources[*]}; do
-              wait_for_pod_log $p $r
-            done
-          done
-          # 20 more seconds after the last thing appeared in the logs.
-          sleep 20
       - name: Define helper functions
         shell: bash
         run: |
@@ -321,7 +153,185 @@ jobs:
             file="$2"
             kubectl exec "$pod" -- sh -c "test -e $file" || { echo "$file missing in pod $pod"; return 1; }
           }
+          wait_for_pod_ready() {
+            while ! kubectl wait --for=condition=ready --timeout=120s pod/$1 2>/dev/null; do
+              echo "Waiting for pod $1..."
+              sleep 5
+            done
+            echo "Pod $1 is ready."
+          }
+          wait_for_pod_log() {
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
+          }
           EOF
+      - name: Install Sidecar and Dummy Server
+        id: install_sidecar
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Installing sidecar... ---"
+          kubectl apply -f "test/resources/sidecar.yaml"
+          sleep 10
+          kubectl get pods
+          wait_for_pod_ready "sidecar"
+          wait_for_pod_ready "sidecar-healthcheck"
+          wait_for_pod_ready "sidecar-basicauth-args"
+          wait_for_pod_ready "sidecar-5xx"
+          wait_for_pod_ready "sidecar-pythonscript"
+          wait_for_pod_ready "sidecar-pythonscript-logfile"
+          wait_for_pod_ready "sidecar-pythonscript-resource-name"
+          wait_for_pod_ready "sidecar-logtofile-pythonscript"
+          wait_for_pod_ready "dummy-server-pod"
+          wait_for_pod_ready "sidecar-sleep"
+      - name: Install Configmaps and Secrets
+        id: install_configmaps_and_secrets
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time."
+          sleep 20
+          echo "Installing resources..."
+          kubectl apply -f "test/resources/resources.yaml"
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+
+          # monitor only specified resources for sidecar-pythonscript-resource-name
+          pods=("sidecar-pythonscript-resource-name")
+          resources=("sample-configmap" "sample-secret-binary")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+
+          # 10 more seconds after the last thing appeared in the logs.
+          sleep 10
+      - name: Verify K8s Config Loading
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          K8S_API_IP=$(kubectl get svc kubernetes -o jsonpath='{.spec.clusterIP}')
+          echo "Kubernetes API ClusterIP is: $K8S_API_IP"
+          wait_for_pod_log "sidecar" "Config for cluster api at 'https://$K8S_API_IP:443'"
+          wait_for_pod_log "sidecar-sleep" "Config for cluster api at 'https://$K8S_API_IP:443'
+      - name: Retrieve pod logs
+        shell: bash
+        run: |
+          mkdir /tmp/logs
+          kubectl logs sidecar > /tmp/logs/sidecar.log
+          kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
+          kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
+          kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
+          kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
+          kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
+          kubectl logs sidecar-pythonscript-resource-name > /tmp/logs/sidecar-pythonscript-resource-name.log
+          kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+          kubectl logs sidecar-sleep > /tmp/logs/sidecar-sleep.log
+      - name: Upload artifacts (pod logs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pod-logs_${{ matrix.k8s.maj_min }}
+          path: /tmp/logs/*
+      - name: Download expected files from cluster
+        shell: bash
+        run: |
+          mkdir /tmp/sidecar
+          mkdir /tmp/sidecar-5xx
+          echo "Downloading resource files from sidecar..."
+          kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
+          kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
+          kubectl cp sidecar:/tmp/secret-kubelogo.png /tmp/sidecar/secret-kubelogo.png
+          kubectl cp sidecar:/tmp/url-downloaded-kubelogo.png /tmp/sidecar/url-downloaded-kubelogo.png
+          # script also generates into '/tmp'
+          kubectl cp sidecar:/tmp/script_result /tmp/sidecar/script_result
+          # absolute path in configmap points to /tmp in 'absolute-configmap'
+          kubectl cp sidecar:/tmp/absolute/absolute.txt /tmp/sidecar/absolute.txt
+          kubectl cp sidecar:/tmp/relative/relative.txt /tmp/sidecar/relative.txt
+          kubectl cp sidecar:/tmp/orig-dir/change-dir.txt /tmp/sidecar/change-dir.txt
+          kubectl cp sidecar:/tmp/500.txt /tmp/sidecar/500.txt || true
+          kubectl cp sidecar:/tmp/secured.txt /tmp/sidecar/secured.txt
+          kubectl cp sidecar:/tmp/similar-configmap.txt /tmp/sidecar/similar-configmap.txt
+          kubectl cp sidecar:/tmp/similar-secret.txt /tmp/sidecar/similar-secret.txt
+
+          echo "Downloading resource files from sidecar-basicauth-args pod"
+          kubectl cp sidecar-basicauth-args:/tmp/secured.txt /tmp/sidecar-basicauth-args/secured.txt
+
+          echo "Downloading resource files from sidecar-5xx..."
+          kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
+          kubectl cp sidecar-5xx:/tmp-5xx/cm-kubelogo.png /tmp/sidecar-5xx/cm-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/secret-kubelogo.png /tmp/sidecar-5xx/secret-kubelogo.png
+          kubectl cp sidecar-5xx:/tmp-5xx/url-downloaded-kubelogo.png /tmp/sidecar-5xx/url-downloaded-kubelogo.png
+          # script also generates into '/tmp'
+          kubectl cp sidecar-5xx:/tmp/script_result /tmp/sidecar-5xx/script_result
+          # absolute path in configmap points to /tmp in 'absolute-configmap'
+          kubectl cp sidecar-5xx:/tmp/absolute/absolute.txt /tmp/sidecar-5xx/absolute.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/relative/relative.txt /tmp/sidecar-5xx/relative.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/orig-dir/change-dir.txt /tmp/sidecar-5xx/change-dir.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/500.txt /tmp/sidecar-5xx/500.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/secured.txt /tmp/sidecar-5xx/secured.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
+          kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
+      - name: Upload artifacts (expected files from cluster)
+        uses: actions/upload-artifact@v4
+        with:
+          name: expected-files_${{ matrix.k8s.maj_min }}
+          path: |
+            /tmp/sidecar/**
+            /tmp/sidecar-5xx/**
+      - name: Update Configmaps and Secrets
+        shell: bash
+        run: |
+          #source /tmp/sidecar_helpers.sh
+          echo "Updating resources..."
+          sleep 5
+          current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          wait_for_pod_log() {
+            while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
+            echo "Pod '$1' logs contains '$2'"
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" --since-time ${current_time} | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
+          }
+          echo "Updating resources..."
+          kubectl apply -f "test/resources/change_resources.yaml"
+          pods=("sidecar" "sidecar-5xx")
+          resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
+          for p in ${pods[*]}; do
+            for r in ${resources[*]}; do
+              wait_for_pod_log $p $r
+            done
+          done
+          # 20 more seconds after the last thing appeared in the logs.
+          sleep 20
       - name: Verify sidecar files after initial sync
         shell: bash
         run: |
