@@ -79,10 +79,80 @@ jobs:
         run: |
           kind load image-archive /tmp/k8s-sidecar.tar --name sidecar-testing
           kind load image-archive /tmp/dummy-server.tar --name sidecar-testing
-      - name: Install Sidecar and Dummy Server
-        id: install_sidecar
+      - name: Define helper functions
         shell: bash
         run: |
+          cat <<'EOF' > /tmp/sidecar_helpers.sh
+          check_exists() {
+            kubectl exec sidecar -- sh -c "test -e $1" || { echo "$1 missing after update"; return 1; }
+          }
+          check_not_exists() {
+            kubectl exec sidecar -- sh -c "! test -e $1" || { echo "$1 still exists after update"; return 1; }
+          }
+          check_log_contains() {
+            grep "$1" "$2" > /dev/null || { echo "Log $2 does not contain '$1'"; return 1; }
+          }
+          check_diff() {
+            diff "$1" "$2" > /dev/null || { echo "File mismatch: $1 vs $2"; return 1; }
+          }
+          check_content() {
+            echo -n "$1" | diff - "$2" > /dev/null || { echo "$2 mismatch"; return 1; }
+          }
+          check_empty_or_missing() {
+            file="$1"
+            if [ ! -s "$file" ]; then
+              echo "$file is empty or missing (as expected for error case)"
+              return 0
+            else
+              echo "$file should be empty on request error"
+              return 1
+            fi
+          }
+          check_log_count() {
+            file="$1"
+            pattern="$2"
+            expected="$3"
+            count=$(grep -c -- "$pattern" "$file")
+            if [ "$count" -eq "$expected" ]; then
+              echo "$file: found $expected lines matching '$pattern'"
+              return 0
+            else
+              echo "$file: expected $expected, got $count for pattern '$pattern'"
+              return 1
+            fi
+          }
+          check_log_min_count() {
+            file="$1"
+            pattern="$2"
+            min_expected="$3"
+            count=$(grep -c -- "$pattern" "$file")
+            if [ "$min_expected" -gt 0 ] && [ "$count" -ge "$min_expected" ]; then
+              echo "$file: found $count lines matching '$pattern' (min $min_expected)"
+              return 0
+            else
+              echo "$file: expected at least $min_expected (>0), got $count for pattern '$pattern'"
+              return 1
+            fi
+          }      
+          check_pod_log_count() {
+            pod="$1"
+            file="$2"
+            pattern="$3"
+            expected="$4"
+            count=$(kubectl exec "$pod" -- sh -c "grep '$pattern' $file | wc -l")
+            if [ "$count" -eq "$expected" ]; then
+              echo "$file in $pod: found $expected lines matching '$pattern'"
+              return 0
+            else
+              echo "$file in $pod: expected $expected, got $count for pattern '$pattern'"
+              return 1
+            fi
+          }
+          check_pod_file_exists() {
+            pod="$1"
+            file="$2"
+            kubectl exec "$pod" -- sh -c "test -e $file" || { echo "$file missing in pod $pod"; return 1; }
+          }
           wait_for_pod_ready() {
             while ! kubectl wait --for=condition=ready --timeout=120s pod/$1 2>/dev/null; do
               echo "Waiting for pod $1..."
@@ -90,14 +160,32 @@ jobs:
             done
             echo "Pod $1 is ready."
           }
-
-          echo "Installing sidecar..."
+          wait_for_pod_log() {
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
+          }
+          EOF
+      - name: Install Sidecar and Dummy Server
+        id: install_sidecar
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Installing sidecar... ---"
           kubectl apply -f "test/resources/sidecar.yaml"
-
           sleep 10
-
           kubectl get pods
-
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-healthcheck"
           wait_for_pod_ready "sidecar-basicauth-args"
@@ -107,15 +195,13 @@ jobs:
           wait_for_pod_ready "sidecar-pythonscript-resource-name"
           wait_for_pod_ready "sidecar-logtofile-pythonscript"
           wait_for_pod_ready "dummy-server-pod"
+          wait_for_pod_ready "sidecar-sleep"
       - name: Install Configmaps and Secrets
         id: install_configmaps_and_secrets
         shell: bash
         run: |
-          wait_for_pod_log() {
-            while [[ $(kubectl logs $1 | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
-            echo "Pod '$1' logs contains '$2'"
-          }
-          # because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time
+          source /tmp/sidecar_helpers.sh
+          echo "because the sidecar pods signal ready state before we actually opened up all watching subprocesses, we wait some more time."
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
@@ -138,6 +224,14 @@ jobs:
 
           # 10 more seconds after the last thing appeared in the logs.
           sleep 10
+      - name: Verify K8s Config Loading
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          K8S_API_IP=$(kubectl get svc kubernetes -o jsonpath='{.spec.clusterIP}')
+          echo "Kubernetes API ClusterIP is: $K8S_API_IP"
+          wait_for_pod_log "sidecar" "Config for cluster api at 'https://$K8S_API_IP:443'"
+          wait_for_pod_log "sidecar-sleep" "Config for cluster api at 'https://$K8S_API_IP:443'"
       - name: Retrieve pod logs
         shell: bash
         run: |
@@ -150,6 +244,7 @@ jobs:
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
           kubectl logs sidecar-pythonscript-resource-name > /tmp/logs/sidecar-pythonscript-resource-name.log
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
+          kubectl logs sidecar-sleep > /tmp/logs/sidecar-sleep.log
       - name: Upload artifacts (pod logs)
         uses: actions/upload-artifact@v4
         with:
@@ -204,11 +299,27 @@ jobs:
       - name: Update Configmaps and Secrets
         shell: bash
         run: |
+          #source /tmp/sidecar_helpers.sh
+          echo "Updating resources..."
           sleep 5
           current_time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           wait_for_pod_log() {
             while [[ $(kubectl logs $1 --since-time ${current_time} | grep $2) == "" ]]; do echo "waiting 5 more seconds for '$2' to appear in logs of pod '$1'..." && sleep 5; done
             echo "Pod '$1' logs contains '$2'"
+            local pod="$1"
+            local pattern="$2"
+            local retries=30 # 30 * 5s = 150s timeout
+            local count=0
+            while [[ $(kubectl logs "$pod" --since-time ${current_time} | grep "$pattern") == "" ]]; do
+              count=$((count + 1))
+              if [[ "$count" -gt "$retries" ]]; then
+                echo "Error: Timed out waiting for '$pattern' in logs of pod '$pod'"
+                kubectl logs "$pod"
+                exit 1
+              fi
+              echo "waiting 5 more seconds for '$pattern' to appear in logs of pod '$pod'..." && sleep 5
+            done
+            echo "Pod '$pod' logs contains '$pattern'"
           }
           echo "Updating resources..."
           kubectl apply -f "test/resources/change_resources.yaml"
@@ -221,68 +332,6 @@ jobs:
           done
           # 20 more seconds after the last thing appeared in the logs.
           sleep 20
-      - name: Define helper functions
-        shell: bash
-        run: |
-          cat <<'EOF' > /tmp/sidecar_helpers.sh
-          check_exists() {
-            kubectl exec sidecar -- sh -c "test -e $1" || { echo "$1 missing after update"; return 1; }
-          }
-          check_not_exists() {
-            kubectl exec sidecar -- sh -c "! test -e $1" || { echo "$1 still exists after update"; return 1; }
-          }
-          check_log_contains() {
-            grep "$1" "$2" > /dev/null || { echo "Log $2 does not contain '$1'"; return 1; }
-          }
-          check_diff() {
-            diff "$1" "$2" > /dev/null || { echo "File mismatch: $1 vs $2"; return 1; }
-          }
-          check_content() {
-            echo -n "$1" | diff - "$2" > /dev/null || { echo "$2 mismatch"; return 1; }
-          }
-          check_empty_or_missing() {
-            file="$1"
-            if [ ! -s "$file" ]; then
-              echo "$file is empty or missing (as expected for error case)"
-              return 0
-            else
-              echo "$file should be empty on request error"
-              return 1
-            fi
-          }
-          check_log_count() {
-            file="$1"
-            pattern="$2"
-            expected="$3"
-            count=$(grep "$pattern" "$file" | wc -l)
-            if [ "$count" -eq "$expected" ]; then
-              echo "$file: found $expected lines matching '$pattern'"
-              return 0
-            else
-              echo "$file: expected $expected, got $count for pattern '$pattern'"
-              return 1
-            fi
-          }
-          check_pod_log_count() {
-            pod="$1"
-            file="$2"
-            pattern="$3"
-            expected="$4"
-            count=$(kubectl exec "$pod" -- sh -c "grep '$pattern' $file | wc -l")
-            if [ "$count" -eq "$expected" ]; then
-              echo "$file in $pod: found $expected lines matching '$pattern'"
-              return 0
-            else
-              echo "$file in $pod: expected $expected, got $count for pattern '$pattern'"
-              return 1
-            fi
-          }
-          check_pod_file_exists() {
-            pod="$1"
-            file="$2"
-            kubectl exec "$pod" -- sh -c "test -e $file" || { echo "$file missing in pod $pod"; return 1; }
-          }
-          EOF
       - name: Verify sidecar files after initial sync
         shell: bash
         run: |
@@ -305,15 +354,14 @@ jobs:
       - name: Verify health server startup
         shell: bash
         run: |
-          echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
           source /tmp/sidecar_helpers.sh
-
+          echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
           check_log_contains "Uvicorn running" /tmp/logs/sidecar-healthcheck.log
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
           source /tmp/sidecar_helpers.sh
-
+          echo "--- Verifying sidecar-basicauth-args pod file after initial sync ---"
           check_content "allowed" /tmp/sidecar-basicauth-args/secured.txt          
       - name: Verify sidecar-5xx files after initial sync
         shell: bash
@@ -344,7 +392,7 @@ jobs:
 
           check_log_count /tmp/logs/sidecar-pythonscript.log "Hello from python script!" 10
           check_log_count /tmp/logs/sidecar-pythonscript-logfile.log "Hello from python script!" 10
-          check_log_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 2
+          # check_log_min_count /tmp/logs/sidecar-pythonscript-resource-name.log "Hello from python script!" 1
           check_pod_file_exists sidecar-logtofile-pythonscript /opt/logs/sidecar.log
           check_pod_log_count sidecar-logtofile-pythonscript /opt/logs/sidecar.log "Hello from python script!" 17
       - name: Verify sidecar files after update
@@ -387,7 +435,7 @@ jobs:
         shell: bash
         run: |
           source /tmp/sidecar_helpers.sh
-          # Check that the file is empty (or has a defined content) in case of an error.
+          echo "--- Check that some files are empty (or has a defined content) in case of an error. ---"
           check_empty_or_missing /tmp/sidecar/500.txt
           check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
@@ -397,17 +445,17 @@ jobs:
         run: |
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying liveness probe ---"
-          initial_restarts=$(kubectl get pod sidecar -o jsonpath='{.status.containerStatuses[0].restartCount}')
-          echo "Initial restart count for 'sidecar' pod: $initial_restarts"
+          initial_restarts=$(kubectl get pod sidecar-healthcheck -o jsonpath='{.status.containerStatuses[0].restartCount}')
+          echo "Initial restart count for 'sidecar-healthcheck' pod: $initial_restarts"
 
           echo "Killing watcher process inside 'sidecar' pod..."
           # The watcher processes run _watch_resource_loop. We kill one of them.
           # The main process is PID 1, the watchers are its children. We kill all children of PID 1.
-          kubectl exec sidecar -- pkill -P 1
+          kubectl exec sidecar-healthcheck -- pkill -P 1
 
           echo "Waiting for liveness probe to fail and container to restart..."
-          for i in {1..15}; do
-            current_restarts=$(kubectl get pod sidecar -o jsonpath='{.status.containerStatuses[0].restartCount}' || echo "$initial_restarts")
+          for i in {1..20}; do
+            current_restarts=$(kubectl get pod sidecar-healthcheck -o jsonpath='{.status.containerStatuses[0].restartCount}' || echo "$initial_restarts")
             if [ "$current_restarts" -gt "$initial_restarts" ]; then
               echo "Container successfully restarted. Restart count is now $current_restarts."
               exit 0

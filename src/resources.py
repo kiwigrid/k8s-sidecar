@@ -14,12 +14,13 @@ from time import sleep
 from kubernetes import client, watch
 from kubernetes.client.rest import ApiException
 from urllib3.exceptions import MaxRetryError, ProtocolError
-from healthz import update_k8s_contact, register_watcher_processes
 
 from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
+from client import _initialize_kubeclient_configuration
+from healthz import mark_ready, register_watcher_processes, update_k8s_contact
 
 RESOURCE_SECRET = "secret"
 RESOURCE_CONFIGMAP = "configmap"
@@ -107,6 +108,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed, resource_name):
+    _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api()
 
     additional_args = {}
@@ -332,10 +334,10 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         logger.exception(f"Error when updating from '%s' into '%s'", data_key, dest_folder)
         return False
 
-
 def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                              ignore_already_processed):
+    _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
@@ -352,11 +354,19 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
     stream = watch.Watch().stream(getattr(v1, _list_namespace[namespace][resource]), **additional_args)
 
-    # Process events
+    first_event = True
+
+    # Process events 
     for event in stream:
+        if first_event:
+            mark_ready() # After successful initial WATCH sync
+            first_event = False
+
         item = event['object']
         metadata = item.metadata
         event_type = event['type']
+
+        update_k8s_contact()  # To be sure that every event received is counted as “K8s alive”
 
         # Ignore already processed resource
         # Avoid numerous logs about useless resource processing each time the WATCH loop reconnects
@@ -395,6 +405,8 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 def _watch_resource_loop(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                          ignore_already_processed, resource_name):
+    _initialize_kubeclient_configuration()  # ensure k8s config in child
+    
     while True:
         try:
             if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
