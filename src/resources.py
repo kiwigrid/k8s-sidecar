@@ -108,7 +108,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed, resource_name):
-    _init_kube_in_child_if_needed()  # ensure config in child (SLEEP mode)
+    _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api()
 
     additional_args = {}
@@ -334,19 +334,10 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
         logger.exception(f"Error when updating from '%s' into '%s'", data_key, dest_folder)
         return False
 
-def _init_kube_in_child_if_needed():
-    """Lazy-import sidecar initializer to avoid import cycles."""
-    try:
-        from sidecar import _ensure_kube_config_in_child
-        _ensure_kube_config_in_child()
-    except Exception as e:
-        # Fallback: log only; main process may already be configured.
-        logger.warning(f"[child] Failed to ensure kube config via sidecar: {e}")
-
 def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                              ignore_already_processed):
-    _init_kube_in_child_if_needed()  # ensure config in child
+    _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api()
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
