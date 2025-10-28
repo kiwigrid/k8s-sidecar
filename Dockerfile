@@ -5,7 +5,12 @@ WORKDIR /app
 RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptools
 COPY        src/ /app/
 RUN apk add --no-cache gcc && \
-	.venv/bin/pip install --no-cache-dir -r requirements.txt && \
+    if [ "$TARGETARCH" = "s390x" ]; then \
+        echo "s390x detected, installing pydantic without binary." && \
+        PYDANTIC_NO_BINARY=1 .venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    else \
+        .venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    fi && \
     rm requirements.txt && \
 	find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
 
