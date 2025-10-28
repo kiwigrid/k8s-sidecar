@@ -231,7 +231,7 @@ jobs:
           K8S_API_IP=$(kubectl get svc kubernetes -o jsonpath='{.spec.clusterIP}')
           echo "Kubernetes API ClusterIP is: $K8S_API_IP"
           wait_for_pod_log "sidecar" "Config for cluster api at 'https://$K8S_API_IP:443'"
-          wait_for_pod_log "sidecar-sleep" "Config for cluster api at 'https://$K8S_API_IP:443'
+          wait_for_pod_log "sidecar-sleep" "Config for cluster api at 'https://$K8S_API_IP:443'"
       - name: Retrieve pod logs
         shell: bash
         run: |
