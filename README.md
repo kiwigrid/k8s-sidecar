@@ -25,7 +25,7 @@ Images are available at:
 - [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
 - [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
 
-All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le` and `s390x`
+All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7` and `ppc64le`
 
 # Features
 
