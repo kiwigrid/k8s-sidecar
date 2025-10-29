@@ -25,7 +25,13 @@ Images are available at:
 - [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
 - [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
 
-All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7` and `ppc64le`
+All are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`.
+
+## Dropped support for `ppc64le` and `s390x`
+
+With v2.x we have dropped support for the `ppc64le` and `s390x` architectures.
+If you still have a need for those architectures please get in touch.
+A possible solution would be to setup a dedicated build job using a native runner instead of qemu.
 
 # Features
 
