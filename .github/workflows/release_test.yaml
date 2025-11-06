@@ -1,6 +1,8 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Release Workflow Tests
+permissions:
+  contents: write
 # This workflow tests the tag and changelog action and can be used to detect (some) breaking changes.
 on:
   workflow_dispatch:
