@@ -1,7 +1,7 @@
 kubernetes==32.0.1 #400
 requests==2.32.5
 python-json-logger==4.0.0
-logfmter==0.0.10
+logfmter==0.0.11
 argparse==1.4.0
 fastapi==0.115.2
 uvicorn==0.34.2
