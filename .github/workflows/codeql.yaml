@@ -1,0 +1,49 @@
+# .github/workflows/codeql.yml
+name: "CodeQL"
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+    # Run checks on reopened draft PRs to support triggering PR checks on draft PRs that were opened
+    # by other workflows.
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "30 18 * * 4"
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      actions: read
+      contents: read
+      security-events: write    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ "python", "actions" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+        with:
+          config-file: ./.github/workflows/codeql-config.json
+          languages: ${{ matrix.language }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+        with:
+          category: "/language:${{ matrix.language }}"

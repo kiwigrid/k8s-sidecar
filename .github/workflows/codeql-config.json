@@ -1,0 +1,23 @@
+{
+    "name": "CodeQL config",
+    "disable-default-queries": false,
+    "queries": [
+        {
+            "uses": "security-and-quality"
+        },
+        {
+            "name": "Enable all security queries",
+            "uses": "security-extended"
+        }
+    ],
+    "query-filters": [
+        {
+            "exclude": {
+                "problem.severity": [
+                    "warning",
+                    "recommendation"
+                ]
+            }
+        }
+    ]
+}
