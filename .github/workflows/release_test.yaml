@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: '0'
       - name: Bump version and push tag
         id: tagging
-        uses: anothrNick/github-tag-action@1.73.0
+        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 # 1.75.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: master
@@ -28,26 +28,26 @@ jobs:
           DRY_RUN: true
       - name: "Set up QEMU"
         if: steps.tagging.outputs.part
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
       - name: "Set up Docker Buildx"
         if: steps.tagging.outputs.part
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
       - name: "Login to DockerHub"
         if: steps.tagging.outputs.part
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: "Login to Quay.io"
         if: steps.tagging.outputs.part
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_BOT_USERNAME }}
           password: ${{ secrets.QUAY_BOT_PASSWORD }}
       - name: "Login to ghcr.io"
         if: steps.tagging.outputs.part
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -55,9 +55,10 @@ jobs:
       - name: "Build and push"
         if: steps.tagging.outputs.part
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           push: true
+          provenance: true          
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
             docker.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
@@ -66,19 +67,19 @@ jobs:
       - name: "Build Changelog"
         if: steps.tagging.outputs.part
         id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v5
+        uses: mikepenz/release-changelog-builder-action@d702b5bb7c23735c8afc130dac9c4c8b8eb669e8 # v6.0.0
         with:
           configuration: ".github/workflows/release-notes-config.json"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Create Github Release"
         if: steps.tagging.outputs.part
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 #v2.4.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: ${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
-          release_name: v${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+          name: v${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
           body: ${{ steps.build_changelog.outputs.changelog }}
           draft: true
           prerelease: false
