@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
       - name: Build sidecar
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
@@ -24,14 +24,14 @@ jobs:
         run: |
           cp test/kubelogo.png test/server/static/
       - name: Build dummy server
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: "test/server"
           push: false
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: images
           path: /tmp/*.tar
@@ -62,17 +62,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
-        uses: helm/kind-action@v1.12.0 # use kind release v0.26.0
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0 # use kind release v0.26.0
         with:
           node_image: kindest/node@${{ matrix.k8s.digest }}
           config: test/kind-config.yaml
           cluster_name: sidecar-testing
           wait: 5m
       - name: Download artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: images
           path: /tmp
@@ -248,7 +248,7 @@ jobs:
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
           kubectl logs sidecar-sleep > /tmp/logs/sidecar-sleep.log
       - name: Upload artifacts (pod logs)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pod-logs_${{ matrix.k8s.maj_min }}
           path: /tmp/logs/*
@@ -292,7 +292,7 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
           kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
       - name: Upload artifacts (expected files from cluster)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: expected-files_${{ matrix.k8s.maj_min }}
           path: |
