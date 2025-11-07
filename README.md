@@ -39,7 +39,7 @@ A possible solution would be to setup a dedicated build job using a native runne
 - Filter based on label
 - Update/Delete on change of configmap or secret
 - Enforce unique filenames
-- CI tests for k8s v1.25-v1.32
+- CI tests for k8s v1.25-v1.33
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables
