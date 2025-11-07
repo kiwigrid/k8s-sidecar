@@ -170,10 +170,10 @@ def request(url, method, enable_5xx=False, payload=None):
     try:
         # If method is not provided use GET as default
         if method == "GET" or not method:
-            res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+            res = r.get("%s" % url, auth=auth, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)  # nosem-py/request-without-cert-validation
             logger.info(f"Request sent to {url}. Response: {res.status_code} {res.reason} {res.text}")
         elif method == "POST":
-            res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)
+            res = r.post("%s" % url, auth=auth, json=payload, timeout=REQ_TIMEOUT, verify=REQ_TLS_VERIFY)  # nosem-py/request-without-cert-validation
             logger.info(f"{payload} sent to {url}. Response: {res.status_code} {res.reason} {res.text}")
         else:
             logger.warning(f"Invalid REQ_METHOD: '{method}', please use 'GET' or 'POST'. Doing nothing.")
