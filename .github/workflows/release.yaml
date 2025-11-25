@@ -23,7 +23,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: master
           INITIAL_VERSION: 1.0.0
-          DEFAULT_BUMP: none
           BRANCH_HISTORY: last
       - name: "Set up QEMU"
         if: steps.tagging.outputs.part
