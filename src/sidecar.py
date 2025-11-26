@@ -7,7 +7,7 @@ from kubernetes.client import ApiException
 from healthz import start_health_server, mark_ready
 from logger import get_logger
 from resources import list_resources, watch_for_changes, prepare_payload
-from client import _initialize_kubeclient_configuration
+from client import _initialize_kubeclient_configuration, get_api_client
 
 METHOD                   = "METHOD"
 UNIQUE_FILENAMES         = "UNIQUE_FILENAMES"
@@ -103,7 +103,7 @@ def main():
     if os.getenv(IGNORE_ALREADY_PROCESSED) is not None and os.getenv(IGNORE_ALREADY_PROCESSED).lower() == "true":
         # Check API version
         try:
-            version = client.VersionApi().get_code()
+            version = client.VersionApi(api_client=get_api_client()).get_code()
             # Filter version content and retain only numbers
             v_major = re.sub(r'\D', '', version.major)
             v_minor = re.sub(r'\D', '', version.minor)

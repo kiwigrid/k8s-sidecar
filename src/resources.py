@@ -19,7 +19,7 @@ from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
-from client import _initialize_kubeclient_configuration
+from client import _initialize_kubeclient_configuration, get_api_client
 from healthz import mark_ready, register_watcher_processes, update_k8s_contact
 
 RESOURCE_SECRET = "secret"
@@ -127,7 +127,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed, resource_name):
     _initialize_kubeclient_configuration()
-    v1 = client.CoreV1Api()
+    v1 = client.CoreV1Api(api_client=get_api_client())
 
     additional_args = {}
 
@@ -357,7 +357,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                              ignore_already_processed):
     _initialize_kubeclient_configuration()
-    v1 = client.CoreV1Api()
+    v1 = client.CoreV1Api(api_client=get_api_client())
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
 
@@ -375,7 +375,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
     first_event = True
 
-    # Process events 
+    # Process events
     for event in stream:
         if first_event:
             mark_ready() # After successful initial WATCH sync
@@ -462,7 +462,7 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
                                          ignore_already_processed, resource_name)
- 
+
     procs_only = [p for p, ns, resource in processes]
     register_watcher_processes(procs_only)
 
