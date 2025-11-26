@@ -45,7 +45,7 @@ A possible solution would be to setup a dedicated build job using a native runne
   - Values can also be base64 encoded URLs that download binary data e.g. executables
     - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
-# Usage 
+# Usage
 
 Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
 ```shell
@@ -95,6 +95,7 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `SCRIPT`                   | Absolute path to a script to execute after a configmap got reloaded. It runs before calls to `REQ_URI`. If the file is not executable it will be passed to `sh`. Otherwise it's executed as is. [Shebangs](https://en.wikipedia.org/wiki/Shebang_(Unix)) known to work are `#!/bin/sh` and `#!/usr/bin/env python`                  | false    | -                                         | string  |
 | `ERROR_THROTTLE_SLEEP`     | How many seconds to wait before watching resources again when an error occurs                                                                                                                                                                                                                                                       | false    | `5`                                       | integer |
 | `SKIP_TLS_VERIFY`          | Set to `true` to skip tls verification for kube api calls                                                                                                                                                                                                                                                                           | false    | -                                         | boolean |
+| `DISABLE_X509_STRICT_VERIFICATION` | Set to `true` to disable strict X.509 certificate verification (useful for old K8s clusters).                                                                                                                                                                                                                                       | false    | -                                         | boolean |
 | `REQ_SKIP_TLS_VERIFY`      | Set to `true` to skip tls verification for all HTTP requests (except the Kube API server, which are controlled by `SKIP_TLS_VERIFY`).                                      | false    | -                                         | boolean |
 | `UNIQUE_FILENAMES`         | Set to true to produce unique filenames where duplicate data keys exist between ConfigMaps and/or Secrets within the same or multiple Namespaces.                                                                                                                                                                                   | false    | `false`                                   | boolean |
 | `DEFAULT_FILE_MODE`        | The default file system permission for every file. Use three digits (e.g. '500', '440', ...)                                                                                                                                                                                                                                        | false    | -                                         | string  |
@@ -116,7 +117,7 @@ The sidecar provides a health endpoint at `/healthz` on port `8080` (or as confi
 ### Readiness Probe
 The endpoint will return `HTTP 200 OK` only after the initial synchronization of all configured resources (`ConfigMap`s and/or `Secret`s) is complete. Before that, it will return `HTTP 503 Service Unavailable`. This ensures that the main application container does not start or receive traffic before its configuration is fully available.
 
-Example readinessProbe configuration: 
+Example readinessProbe configuration:
 
 ```yaml
 readinessProbe:
@@ -131,7 +132,7 @@ readinessProbe:
 
 The endpoint also serves as a liveness probe, checking for two conditions:
 1. Kubernetes API Contact: It verifies that the sidecar has had successful contact with the Kubernetes API within the last 60 seconds.
-1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly. 
+1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly.
 
 If any of these checks fail, the endpoint will return `HTTP 503 Service Unavailable`, signaling Kubernetes to restart the container.
 
