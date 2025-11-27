@@ -1,9 +1,9 @@
 
-
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kiwigrid/k8s-sidecar?style=flat)](https://github.com/kiwigrid/k8s-sidecar/releases)
 [![Release](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml/badge.svg)](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=flat)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
 ![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/kiwigrid/k8s-sidecar)
+
 # What?
 
 This is a docker container intended to run inside a kubernetes cluster to collect config maps with a specified label and store the included files in an local folder. It can also send an HTTP request to a specified URL after a configmap change. The main target is to be run as a sidecar container to supply an application with information from the cluster.
@@ -45,14 +45,16 @@ A possible solution would be to setup a dedicated build job using a native runne
   - Values can also be base64 encoded URLs that download binary data e.g. executables
     - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
-# Usage 
+# Usage
 
 Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
+
 ```shell
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin   --user $(gcloud config get-value account)
 ```
 
 One can override the default directory that files are copied into using a configmap annotation defined by the environment variable `FOLDER_ANNOTATION` (if not present it will default to `k8s-sidecar-target-directory`). The sidecar will attempt to create directories defined by configmaps if they are not present. Example configmap annotation:
+
 ```yaml
 metadata:
   annotations:
@@ -62,6 +64,7 @@ metadata:
 If the filename ends with `.url` suffix, the content will be processed as a URL which the target file contents will be downloaded from.
 
 ## Configuration CLI Flags
+
 | name                  | description                                                                                                                                                      | required | default | type    |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|---------|
 | `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_USERNAME` | false    | -       | string  |
@@ -78,7 +81,7 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `NAMESPACE`                | Comma separated list of namespaces. If specified, the sidecar will search for config-maps inside these namespaces. It's also possible to specify `ALL` to search in all namespaces.                                                                                                                                                 | false    | namespace in which the sidecar is running | string  |
 | `RESOURCE`                 | Resource type, which is monitored by the sidecar. Options: `configmap`, `secret`, `both`                                                                                                                                                                                                                                            | false    | `configmap`                               | string  |
 | `RESOURCE_NAME`            | Comma separated list of resource names, which are monitored by the sidecar. Items can be prefixed by the namespace and the resource type. E.g. `secret/resource-name` or `namespace/secret/resource-name`. Setting this will result `method` set to `WATCH` being treated as `SLEEP`                                             | false    | -                                         | string  |
-| `METHOD`                   | If `METHOD` is set to `LIST`, the sidecar will just list config-maps/secrets and exit. With `SLEEP` it will list all config-maps/secrets, then sleep for `SLEEP_TIME` seconds. Anything else will continuously watch for changes (see https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes). | false    | -                                         | string  |
+| `METHOD`                   | If `METHOD` is set to `LIST`, the sidecar will just list config-maps/secrets and exit. With `SLEEP` it will list all config-maps/secrets, then sleep for `SLEEP_TIME` seconds. Anything else will continuously watch for changes (see [Kubernetes Doc](https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes)). | false    | -                                         | string  |
 | `SLEEP_TIME`               | How many seconds to wait before updating config-maps/secrets when using `SLEEP` method.                                                                                                                                                                                                                                             | false    | `60`                                      | integer |
 | `REQ_URL`                  | URL to which send a request after a configmap/secret got reloaded                                                                                                                                                                                                                                                                   | false    | -                                         | URI     |
 | `REQ_METHOD`               | Request method `GET` or `POST` for requests tp `REQ_URL`                                                                                                                                                                                                                                                                            | false    | `GET`                                     | string  |
@@ -114,9 +117,10 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes.
 
 ### Readiness Probe
+
 The endpoint will return `HTTP 200 OK` only after the initial synchronization of all configured resources (`ConfigMap`s and/or `Secret`s) is complete. Before that, it will return `HTTP 503 Service Unavailable`. This ensures that the main application container does not start or receive traffic before its configuration is fully available.
 
-Example readinessProbe configuration: 
+Example readinessProbe configuration:
 
 ```yaml
 readinessProbe:
@@ -130,8 +134,9 @@ readinessProbe:
 ### Liveness Probe
 
 The endpoint also serves as a liveness probe, checking for two conditions:
+
 1. Kubernetes API Contact: It verifies that the sidecar has had successful contact with the Kubernetes API within the last 60 seconds.
-1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly. 
+1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly.
 
 If any of these checks fail, the endpoint will return `HTTP 503 Service Unavailable`, signaling Kubernetes to restart the container.
 
@@ -145,3 +150,91 @@ livenessProbe:
   initialDelaySeconds: 35
   periodSeconds: 10
 ```
+
+## CI & Release workflows
+
+This repository uses three main GitHub Actions workflows:
+
+### 1. Build and Test (`.github/workflows/build_and_test.yaml`)
+
+**Purpose:** End-to-end tests of the sidecar against a local `kind` cluster.
+
+- **Triggers:**
+  - `pull_request`
+  - `workflow_dispatch`
+- **What it does:**
+  - Builds a local Docker image of the sidecar (not pushed to any registry).
+  - Builds a dummy server image.
+  - Loads both images into a `kind` cluster.
+  - Runs a comprehensive test suite against multiple Kubernetes versions (matrix).
+
+This workflow does **not** create tags, releases, or push images to registries.
+
+---
+
+### 2. Release (`.github/workflows/release.yaml`)
+
+**Purpose:** Build and publish release images and create GitHub releases.
+
+- **Trigger:**
+  - `push` to `master`
+- **Tagging & versioning:**
+  - Uses [`anothrNick/github-tag-action`](https://github.com/anothrNick/github-tag-action).
+  - `DEFAULT_BUMP` is set to `none`, so **no new tag is created by default**.
+  - A new tag is only created when the merge commit message contains one of:
+    - `#patch`
+    - `#minor`
+    - `#major`
+- **Guard condition:**
+  - All steps that build/push images or create a release run only when  
+    `steps.tagging.outputs.new_tag != ''`.
+- **What it does when a new tag is created:**
+  - Builds multi-arch images for the sidecar.
+  - Pushes images to:
+    - `docker.io/kiwigrid/k8s-sidecar`
+    - `quay.io/kiwigrid/k8s-sidecar`
+    - `ghcr.io/kiwigrid/k8s-sidecar`
+  - Tags: `<new_tag>` and `latest`.
+  - Builds a changelog.
+  - Creates a GitHub release for the new tag.
+
+This ensures that:
+
+- CI-only changes (e.g. workflow updates) do **not** create a new release.
+- Existing tags remain **immutable** (no rebuilds for old tags).
+
+**Examples:**
+
+- CI / documentation change only:
+  - Commit message: `chore(ci): bump github actions`
+  - → no `#patch/#minor/#major` → no new tag → no release.
+- Bugfix release:
+  - Commit message: `fix: handle empty configmap #patch`
+  - → new patch tag (e.g. `2.12.3`) → images + GitHub release are created.
+
+---
+
+### 3. Release Workflow Tests (`.github/workflows/release_test.yaml`)
+
+**Purpose:** Manually test the release workflow logic (tagging, changelog, image build)
+without touching real release tags.
+
+- **Trigger:**
+  - `workflow_dispatch` (manual run only)
+- **Tagging behaviour:**
+  - Uses `github-tag-action` with:
+    - `DEFAULT_BUMP: patch`
+    - `DRY_RUN: true`
+  - This means:
+    - A simulated `new_tag` is always produced.
+    - No real tags are pushed to the repository.
+- **Guard condition:**
+  - All release-like steps run only when  
+    `steps.tagging.outputs.new_tag != ''`.
+- **What it does:**
+  - Builds and pushes test images for `<new_tag>-testing` to the registries.
+  - Builds a changelog.
+  - Creates a **draft** GitHub release with tag name `<new_tag>-testing`.
+
+This workflow is intended for maintainers to validate changes to the release
+pipeline itself (tagging, changelog generation, image build) in a safe way.
