@@ -176,18 +176,21 @@ This workflow does **not** create tags, releases, or push images to registries.
 
 **Purpose:** Build and publish release images and create GitHub releases.
 
-- **Trigger:**
-  - `push` to `master`
-- **Tagging & versioning:**
+- **Triggers:**
+  - `push` to `master` that touches:
+    - `src/**`
+    - `Dockerfile`
+- **Versioning & tagging:**
   - Uses [`anothrNick/github-tag-action`](https://github.com/anothrNick/github-tag-action).
-  - `DEFAULT_BUMP` is set to `none`, so **no new tag is created by default**.
-  - A new tag is only created when the merge commit message contains one of:
-    - `#patch`
-    - `#minor`
-    - `#major`
+  - By default, each qualifying push bumps the **patch** version
+    (e.g. `2.1.3` → `2.1.4`).
+  - The bump behaviour can be overridden via commit message tokens:
+    - `#minor` → minor bump
+    - `#major` → major bump
+    - `#none`  → **no bump**, no build, no release
 - **Guard condition:**
   - All steps that build/push images or create a release run only when  
-    `steps.tagging.outputs.new_tag != ''`.
+    the tag action reports a real bump (`part != '' && part != 'none'`).
 - **What it does when a new tag is created:**
   - Builds multi-arch images for the sidecar.
   - Pushes images to:
@@ -200,41 +203,34 @@ This workflow does **not** create tags, releases, or push images to registries.
 
 This ensures that:
 
-- CI-only changes (e.g. workflow updates) do **not** create a new release.
-- Existing tags remain **immutable** (no rebuilds for old tags).
-
-**Examples:**
-
-- CI / documentation change only:
-  - Commit message: `chore(ci): bump github actions`
-  - → no `#patch/#minor/#major` → no new tag → no release.
-- Bugfix release:
-  - Commit message: `fix: handle empty configmap #patch`
-  - → new patch tag (e.g. `2.12.3`) → images + GitHub release are created.
+- Only code changes in `src/**` or `Dockerfile` produce new images.
+- Existing tags are not rebuilt and remain **immutable**.
+- CI-only or documentation-only changes do not trigger a release.
 
 ---
 
 ### 3. Release Workflow Tests (`.github/workflows/release_test.yaml`)
 
 **Purpose:** Manually test the release workflow logic (tagging, changelog, image build)
-without touching real release tags.
+without touching real production tags.
 
 - **Trigger:**
-  - `workflow_dispatch` (manual run only)
+  - `workflow_dispatch` (manual run only).
 - **Tagging behaviour:**
   - Uses `github-tag-action` with:
     - `DEFAULT_BUMP: patch`
     - `DRY_RUN: true`
   - This means:
-    - A simulated `new_tag` is always produced.
+    - A bump is always simulated.
     - No real tags are pushed to the repository.
 - **Guard condition:**
-  - All release-like steps run only when  
-    `steps.tagging.outputs.new_tag != ''`.
+  - All release-like steps run only when the tag action reports a real bump
+    (`part != '' && part != 'none'`), mirroring the production workflow.
 - **What it does:**
-  - Builds and pushes test images for `<new_tag>-testing` to the registries.
+  - Builds and pushes test images tagged as `<resolved_tag>-testing` to the registries.
   - Builds a changelog.
-  - Creates a **draft** GitHub release with tag name `<new_tag>-testing`.
+  - Creates a **draft** GitHub release with tag name `<resolved_tag>-testing`.
 
 This workflow is intended for maintainers to validate changes to the release
-pipeline itself (tagging, changelog generation, image build) in a safe way.
+pipeline (tagging, changelog generation, image build) in a safe way while
+keeping production tags immutable.
