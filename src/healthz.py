@@ -41,9 +41,9 @@ def healthz():
     if (now - last_k8s_contact) > timedelta(seconds=K8S_CONTACT_THRESHOLD_SECONDS):
         return PlainTextResponse("NOT LIVE (K8s contact lost)", status_code=503)
  
-    # Check liveness of watcher processes
+    # Check liveness of watcher threads
     if watcher_processes and not all(p.is_alive() for p in watcher_processes):
-        return PlainTextResponse("NOT LIVE (watcher process died)", status_code=503)
+        return PlainTextResponse("NOT LIVE (watcher thread died)", status_code=503)
  
     return PlainTextResponse("OK", status_code=200)
 
@@ -65,7 +65,7 @@ def update_k8s_contact():
 
 def register_watcher_processes(processes: List[Process]):
     """
-    Register the list of watcher processes to be monitored for liveness.
+    Register the list of watcher threads to be monitored for liveness.
     """
     global watcher_processes
     watcher_processes = processes

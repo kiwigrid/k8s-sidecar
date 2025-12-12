@@ -136,7 +136,7 @@ readinessProbe:
 The endpoint also serves as a liveness probe, checking for two conditions:
 
 1. Kubernetes API Contact: It verifies that the sidecar has had successful contact with the Kubernetes API within the last 60 seconds.
-1. Watcher Processes: It ensures that all internal watcher subprocesses (for `ConfigMap`s and `Secret`s) are running correctly.
+1. Watcher Threads: It ensures that all internal watcher threads (for `ConfigMap`s and `Secret`s) are running correctly.
 
 If any of these checks fail, the endpoint will return `HTTP 503 Service Unavailable`, signaling Kubernetes to restart the container.
 

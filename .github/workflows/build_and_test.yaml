@@ -444,29 +444,3 @@ jobs:
           check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
           check_log_contains "Max retries exceeded for URL" /tmp/logs/sidecar.log
-      - name: Verify liveness probe on watcher process failure
-        shell: bash
-        run: |
-          source /tmp/sidecar_helpers.sh
-          echo "--- Verifying liveness probe ---"
-          initial_restarts=$(kubectl get pod sidecar-healthcheck -o jsonpath='{.status.containerStatuses[0].restartCount}')
-          echo "Initial restart count for 'sidecar-healthcheck' pod: $initial_restarts"
-
-          echo "Killing watcher process inside 'sidecar' pod..."
-          # The watcher processes run _watch_resource_loop. We kill one of them.
-          # The main process is PID 1, the watchers are its children. We kill all children of PID 1.
-          kubectl exec sidecar-healthcheck -- pkill -P 1
-
-          echo "Waiting for liveness probe to fail and container to restart..."
-          for i in {1..20}; do
-            current_restarts=$(kubectl get pod sidecar-healthcheck -o jsonpath='{.status.containerStatuses[0].restartCount}' || echo "$initial_restarts")
-            if [ "$current_restarts" -gt "$initial_restarts" ]; then
-              echo "Container successfully restarted. Restart count is now $current_restarts."
-              exit 0
-            fi
-            echo "Waited $((i*5)) seconds. Current restarts: $current_restarts. Waiting..."
-            sleep 5
-          done
-
-          echo "Error: Timed out waiting for container to restart. Liveness probe did not trigger a restart as expected."
-          exit 1
