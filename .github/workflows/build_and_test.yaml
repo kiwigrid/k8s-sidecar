@@ -31,7 +31,7 @@ jobs:
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
       - name: Upload artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: images
           path: /tmp/*.tar
@@ -250,7 +250,7 @@ jobs:
           kubectl logs dummy-server-pod > /tmp/logs/dummy-server.log
           kubectl logs sidecar-sleep > /tmp/logs/sidecar-sleep.log
       - name: Upload artifacts (pod logs)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: pod-logs_${{ matrix.k8s.maj_min }}
           path: /tmp/logs/*
@@ -294,7 +294,7 @@ jobs:
           kubectl cp sidecar-5xx:/tmp-5xx/similar-configmap.txt /tmp/sidecar-5xx/similar-configmap.txt
           kubectl cp sidecar-5xx:/tmp-5xx/similar-secret.txt /tmp/sidecar-5xx/similar-secret.txt
       - name: Upload artifacts (expected files from cluster)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: expected-files_${{ matrix.k8s.maj_min }}
           path: |
