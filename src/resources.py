@@ -104,6 +104,24 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
         return dest_folder
     return default_folder
 
+def _iter_k8s_items(list_fn, *, limit=5, **kwargs):
+    """
+    Iterate over k8s list_* results, handling pagination under the hood.
+    """
+    continue_token = None
+
+    while True:
+        resp = list_fn(limit=limit, _continue=continue_token, **kwargs)
+
+        # Yield each item from this page
+        for item in resp.items:
+            yield item
+
+        # Check if there is another page
+        continue_token = getattr(resp.metadata, "_continue", None)
+        if not continue_token:
+            break
+
 
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
@@ -142,8 +160,9 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
 
     else:
         additional_args['label_selector'] = f"{label}={label_value}" if label_value else label
-        ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
-        items = ret.items
+
+        list_fn = getattr(v1, _list_namespace[namespace][resource])
+        items = _iter_k8s_items(list_fn, limit=5, **additional_args)
 
     files_changed = False
     exist_keys = set()
