@@ -56,7 +56,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         # Liveness check (watcher processes)
         elif watcher_processes and not all(p.is_alive() for p in watcher_processes):
             status = 503
-            body = "NOT LIVE (watcher process died)"
+            body = "NOT LIVE (watcher thread died)"
         else:
             status = 200
             body = "OK"
@@ -100,7 +100,7 @@ def update_k8s_contact():
 
 def register_watcher_processes(processes: List[Process]):
     """
-    Register the list of watcher processes to be monitored for liveness.
+    Register the list of watcher threads to be monitored for liveness.
     """
     global watcher_processes
     watcher_processes = processes
