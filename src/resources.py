@@ -8,7 +8,7 @@ import sys
 import traceback
 import json
 from collections import defaultdict
-from multiprocessing import Process
+from threading import Thread
 from time import sleep
 
 from kubernetes import client, watch
@@ -472,7 +472,7 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
-            proc = Process(target=_watch_resource_loop,
+            proc = Thread(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
                                  ignore_already_processed, resource_name)
