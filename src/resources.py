@@ -426,28 +426,6 @@ def _watch_resource_loop(mode, label, label_value, target_folder, request_url, r
                          ignore_already_processed, resource_name):
     _initialize_kubeclient_configuration()  # ensure k8s config in child
 
-    for key in list(_resources_object_map):
-        if key != resource:
-            del _resources_object_map[key]
-            continue
-        for name in list(_resources_object_map[key]):
-            if not name.startswith(namespace):
-                del _resources_object_map[key][name]
-    for key in list(_resources_version_map):
-        if key != resource:
-            del _resources_version_map[key]
-            continue
-        for name in list(_resources_version_map[key]):
-            if not name.startswith(namespace):
-                del _resources_version_map[key][name]
-    for key in list(_resources_dest_folder_map):
-        if key != resource:
-            del _resources_dest_folder_map[key]
-            continue
-        for name in list(_resources_dest_folder_map[key]):
-            if not name.startswith(namespace):
-                del _resources_dest_folder_map[key][name]
-
     while True:
         try:
             if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
@@ -521,15 +499,6 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
             proc.daemon = True
             proc.start()
             processes.append((proc, ns, resource))
-        for key in list(_resources_object_map):
-            if key == resource:
-                del _resources_object_map[key]
-        for key in list(_resources_version_map):
-            if key == resource:
-                del _resources_version_map[key]
-        for key in list(_resources_dest_folder_map):
-            if key == resource:
-                del _resources_dest_folder_map[key]
 
 
     return processes
