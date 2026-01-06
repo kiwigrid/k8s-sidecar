@@ -360,7 +360,7 @@ jobs:
         run: |
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
-          check_log_contains "Uvicorn running" /tmp/logs/sidecar-healthcheck.log
+          check_log_contains "Starting health server on" /tmp/logs/sidecar-healthcheck.log
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
