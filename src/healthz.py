@@ -76,7 +76,6 @@ def start_health_server():
     """
     def run():
         log_config = get_log_config()
-        log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
         # Define the filter in the config to be callable
         log_config.setdefault('filters', {})
@@ -84,20 +83,12 @@ def start_health_server():
             '()': 'healthz.HealthCheckFilter'
         }
 
-        # Add a simple formatter for uvicorn to avoid color codes and extra fields
-        log_config.setdefault('formatters', {})
-        log_config['formatters']['uvicorn_simple'] = {
-            'format': '%(levelname)s: %(message)s'
-        }
-        log_config.setdefault('handlers', {})
-        log_config['handlers']['uvicorn_console'] = {'class': 'logging.StreamHandler', 'formatter': 'uvicorn_simple'}
-
-        # Add uvicorn loggers to the existing config and have them propagate to the root logger
+        # Make all uvicorn logs use the default JSON handler from logger.py
+        # and prevent them from propagating to avoid duplicate logs.
         log_config.setdefault('loggers', {})
-        log_config['loggers']['uvicorn'] = {'level': log_level, 'propagate': True}
-        log_config['loggers']['uvicorn.error'] = {'level': log_level, 'propagate': True}
-        # Add a filter to the access logger to exclude /healthz requests
-        log_config['loggers']['uvicorn.access'] = {'level': log_level, 'handlers': ['uvicorn_console'], 'propagate': False, 'filters': ['health_check_filter']}
+        log_config['loggers']['uvicorn'] = {'handlers': ['console'], 'propagate': False}
+        log_config['loggers']['uvicorn.error'] = {'handlers': ['console'], 'propagate': False}
+        log_config['loggers']['uvicorn.access'] = {'handlers': ['console'], 'propagate': False, 'filters': ['health_check_filter']}
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
         uvicorn.run(app, host="0.0.0.0", port=health_port, log_config=log_config)
