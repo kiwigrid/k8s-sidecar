@@ -111,7 +111,6 @@ def start_health_server():
     """
     def run():
         log_config = get_log_config()
-        log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
         # Define the filter in the config to be callable
         log_config.setdefault('filters', {})
