@@ -94,7 +94,7 @@ def start_health_server():
 
         # Add uvicorn loggers to the existing config and have them propagate to the root logger
         log_config.setdefault('loggers', {})
-        log_config['loggers']['uvicorn'] = {'level': log_level, 'propagate': True}
+        log_config['loggers']['uvicorn'] = {'level': log_level, 'propagate': False}
         log_config['loggers']['uvicorn.error'] = {'level': log_level, 'propagate': True}
         # Add a filter to the access logger to exclude /healthz requests
         log_config['loggers']['uvicorn.access'] = {'level': log_level, 'handlers': ['uvicorn_console'], 'propagate': False, 'filters': ['health_check_filter']}
