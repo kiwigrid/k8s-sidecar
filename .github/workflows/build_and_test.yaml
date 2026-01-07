@@ -158,11 +158,16 @@ jobs:
             kubectl exec "$pod" -- sh -c "test -e $file" || { echo "$file missing in pod $pod"; return 1; }
           }
           wait_for_pod_ready() {
-            while ! kubectl wait --for=condition=ready --timeout=120s pod/$1 2>/dev/null; do
-              echo "Waiting for pod $1..."
-              sleep 5
-            done
-            echo "Pod $1 is ready."
+            local pod="$1"
+            local timeout_seconds=180 # Increased timeout slightly for robustness
+            echo "Waiting for pod $pod to be ready (timeout: ${timeout_seconds}s)..."
+            if ! kubectl wait --for=condition=ready --timeout="${timeout_seconds}s" pod/"${pod}" > /dev/null; then
+              echo "Error: Pod ${pod} did not become ready within ${timeout_seconds} seconds." >&2
+              kubectl describe pod "${pod}" >&2 # Output describe for debugging
+              kubectl logs "${pod}" >&2          # Output logs for debugging
+              exit 1
+            fi
+            echo "Pod ${pod} is ready."
           }
           wait_for_pod_log() {
             local pod="$1"
@@ -192,6 +197,7 @@ jobs:
           kubectl get pods
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-healthcheck"
+          wait_for_pod_log "sidecar-healthcheck" "Starting health server on 0.0.0.0:8888"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
@@ -360,7 +366,7 @@ jobs:
         run: |
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
-          check_log_contains "Starting health server on" /tmp/logs/sidecar-healthcheck.log
+          check_log_contains "Starting health server on 0.0.0.0:8888" /tmp/logs/sidecar-healthcheck.log
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
