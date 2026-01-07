@@ -119,10 +119,9 @@ def start_health_server():
         }
 
         log_config.setdefault("loggers", {})
-        # Access logger for this tiny server
+        # Loggers for this tiny server. Explicitly use 'console' handler and no propagation.
+        # This ensures they use the global logLevel and JSON formatting from logger.py.
         log_config["loggers"].setdefault("health_server.access", {
-            "level": log_level,
-            "propagate": True,
             "filters": ["health_check_filter"],
         })
 
