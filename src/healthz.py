@@ -1,22 +1,13 @@
-from fastapi import FastAPI
-from fastapi.responses import PlainTextResponse
-from datetime import datetime, timedelta, timezone
 import logging
-import threading
-import uvicorn
+import logging.config
 import os
-from logger import get_log_config
-from typing import List
+import threading
+from datetime import datetime, timedelta, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from multiprocessing import Process
+from typing import List
 
-# Create FastAPI app
-app = FastAPI()
-
-# Create a logging filter to exclude health check endpoint logs
-class HealthCheckFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        # Filter out logs for the /healthz endpoint to reduce noise
-        return record.getMessage().find("/healthz") == -1
+from logger import get_log_config
 
 # Health state variables
 is_ready = False
@@ -26,26 +17,70 @@ watcher_processes: List[Process] = []
 # Settings
 K8S_CONTACT_THRESHOLD_SECONDS = 60  # tolerated delay before declaring not live
 
-@app.get("/healthz")
-def healthz():
-    """
-    Health endpoint for readiness and liveness probes.
-    """
-    now = datetime.now(timezone.utc)
 
-    # Check readiness
-    if not is_ready:
-        return PlainTextResponse("NOT READY", status_code=503)
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Filter out logs for the /healthz endpoint to reduce noise
+        msg = record.getMessage()
+        return "/healthz" not in msg
 
-    # Check liveness
-    if (now - last_k8s_contact) > timedelta(seconds=K8S_CONTACT_THRESHOLD_SECONDS):
-        return PlainTextResponse("NOT LIVE (K8s contact lost)", status_code=503)
- 
-    # Check liveness of watcher threads
-    if watcher_processes and not all(p.is_alive() for p in watcher_processes):
-        return PlainTextResponse("NOT LIVE (watcher thread died)", status_code=503)
- 
-    return PlainTextResponse("OK", status_code=200)
+
+class HealthHandler(BaseHTTPRequestHandler):
+    # Keep responses as small/plain as possible
+    server_version = "HealthHTTP/1.0"
+
+    def do_GET(self):
+        global is_ready, last_k8s_contact, watcher_processes
+
+        if self.path != "/healthz":
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            body = "Not Found"
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body.encode("utf-8"))
+            return
+
+        now = datetime.now(timezone.utc)
+
+        # Readiness check
+        if not is_ready:
+            status = 503
+            body = "NOT READY"
+        # Liveness check (k8s contact)
+        elif (now - last_k8s_contact) > timedelta(
+                seconds=K8S_CONTACT_THRESHOLD_SECONDS
+        ):
+            status = 503
+            body = "NOT LIVE (K8s contact lost)"
+        # Liveness check (watcher processes)
+        elif watcher_processes and not all(p.is_alive() for p in watcher_processes):
+            status = 503
+            body = "NOT LIVE (watcher thread died)"
+        else:
+            status = 200
+            body = "OK"
+
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body.encode("utf-8"))
+
+    # Avoid noisy default stderr logging; push to logging module instead
+    def log_message(self, format: str, *args):
+        # Skip logging /healthz entirely, or you can route it through the filter
+        if self.path == "/healthz":
+            return
+
+        logger = logging.getLogger("health_server.access")
+        logger.info(
+            "%s - - [%s] " + format,
+            self.client_address[0],
+            self.log_date_time_string(),
+            *args,
+            )
+
 
 # Public helper functions
 
@@ -72,7 +107,7 @@ def register_watcher_processes(processes: List[Process]):
 
 def start_health_server():
     """
-    Start the FastAPI health server in a background thread.
+    Start the lightweight health HTTP server in a background thread.
     """
     def run():
         log_config = get_log_config()
@@ -83,15 +118,28 @@ def start_health_server():
             '()': 'healthz.HealthCheckFilter'
         }
 
-        # Make all uvicorn logs use the default JSON handler from logger.py
-        # and prevent them from propagating to avoid duplicate logs.
-        log_config.setdefault('loggers', {})
-        log_config['loggers']['uvicorn'] = {'handlers': ['console'], 'propagate': False}
-        log_config['loggers']['uvicorn.error'] = {'handlers': ['console'], 'propagate': False}
-        log_config['loggers']['uvicorn.access'] = {'handlers': ['console'], 'propagate': False, 'filters': ['health_check_filter']}
+        log_config.setdefault("loggers", {})
+        # Loggers for this tiny server. Explicitly use 'console' handler and no propagation.
+        # This ensures they use the global logLevel and JSON formatting from logger.py.
+        log_config["loggers"].setdefault("health_server.access", {
+            "filters": ["health_check_filter"],
+        })
+
+        logging.config.dictConfig(log_config)
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
-        uvicorn.run(app, host="0.0.0.0", port=health_port, log_config=log_config)
+        server = ThreadingHTTPServer(("0.0.0.0", health_port), HealthHandler)
+
+        logging.getLogger("health_server").info(
+            "Starting health server on 0.0.0.0:%d", health_port
+        )
+
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.server_close()
 
     thread = threading.Thread(target=run)
     thread.daemon = True

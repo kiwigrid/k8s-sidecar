@@ -116,16 +116,18 @@ spec:
         value: "ascii"
       - name: LOG_LEVEL
         value: "DEBUG"
+      - name: HEALTH_PORT
+        value: "8888"
     readinessProbe:
       httpGet:
         path: /healthz
-        port: 8080
+        port: 8888
       initialDelaySeconds: 25
       periodSeconds: 5
     livenessProbe:
       httpGet:
         path: /healthz
-        port: 8080
+        port: 8888
       initialDelaySeconds: 35
       periodSeconds: 10
   volumes:
