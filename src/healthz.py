@@ -91,7 +91,7 @@ def start_health_server():
         log_config['loggers']['uvicorn.access'] = {'handlers': ['console'], 'propagate': False, 'filters': ['health_check_filter']}
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
-        uvicorn.run(app, host="0.0.0.0", port=health_port, log_config=log_config)
+        uvicorn.run(app, host="", port=health_port, log_config=log_config)
 
     thread = threading.Thread(target=run)
     thread.daemon = True

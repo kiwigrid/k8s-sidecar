@@ -3,4 +3,4 @@ RUN pip install fastapi uvicorn
 EXPOSE 80
 COPY server.py /server.py
 COPY static /static/
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "server:app", "--host", "", "--port", "80"]
