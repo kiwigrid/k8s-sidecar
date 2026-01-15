@@ -128,10 +128,10 @@ def start_health_server():
         logging.config.dictConfig(log_config)
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
-        server = ThreadingHTTPServer(("0.0.0.0", health_port), HealthHandler)
+        server = ThreadingHTTPServer(("", health_port), HealthHandler)
 
         logging.getLogger("health_server").info(
-            "Starting health server on 0.0.0.0:%d", health_port
+            "Starting health server on port %d", health_port
         )
 
         try:

@@ -197,7 +197,7 @@ jobs:
           kubectl get pods
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-healthcheck"
-          wait_for_pod_log "sidecar-healthcheck" "Starting health server on 0.0.0.0:8888"
+          wait_for_pod_log "sidecar-healthcheck" "Starting health server on port 8888"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
@@ -366,7 +366,7 @@ jobs:
         run: |
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
-          check_log_contains "Starting health server on 0.0.0.0:8888" /tmp/logs/sidecar-healthcheck.log
+          check_log_contains "Starting health server on port 8888" /tmp/logs/sidecar-healthcheck.log
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
