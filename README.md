@@ -114,7 +114,7 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 
 ## Health Endpoint
 
-The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes.
+The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes. The endpoint is compatible with both IPv4 and IPv6 (dual-stack).
 
 ### Readiness Probe
 
