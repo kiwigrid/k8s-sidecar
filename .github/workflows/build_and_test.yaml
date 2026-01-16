@@ -367,6 +367,16 @@ jobs:
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying health server startup in pod sidecar-healthcheck ---"
           check_log_contains "Starting health server on port 8888" /tmp/logs/sidecar-healthcheck.log
+      - name: Verify health server startup on IPv4
+        shell: bash
+        run: |
+          echo "--- Verifying health server response on IPv4 in pod sidecar-healthcheck ---"
+          kubectl exec sidecar-healthcheck -- python -c "import urllib.request; res = urllib.request.urlopen('http://0.0.0.0:8888/healthz'); print(res.read().decode())"
+      - name: Verify health server startup on IPv6
+        shell: bash
+        run: |
+          echo "--- Verifying health server response on IPv6 in pod sidecar-healthcheck ---"
+          kubectl exec sidecar-healthcheck -- python -c "import urllib.request; res = urllib.request.urlopen('http://[::1]:8888/healthz'); print(res.read().decode())"
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |

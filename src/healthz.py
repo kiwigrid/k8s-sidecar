@@ -1,6 +1,7 @@
 import logging
 import logging.config
 import os
+import socket
 import threading
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -128,6 +129,7 @@ def start_health_server():
         logging.config.dictConfig(log_config)
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
+        ThreadingHTTPServer.address_family = socket.AF_INET6
         server = ThreadingHTTPServer(("", health_port), HealthHandler)
 
         logging.getLogger("health_server").info(
