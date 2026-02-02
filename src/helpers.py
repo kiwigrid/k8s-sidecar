@@ -16,7 +16,7 @@ from types import SimpleNamespace
 from logger import get_logger
 import argparse
 
-parser = argparse.ArgumentParser(description="CLI flags for kiwigrid sidecar")
+parser = argparse.ArgumentParser(description="CLI flags for naishy sidecar")
 parser.add_argument("--req-username-file", type=str, metavar=argparse.REMAINDER, help="path to file containing basic-auth username for REQ. This takes precedence over the environment variable REQ_USERNAME")
 parser.add_argument("--req-password-file", type=str, metavar=argparse.REMAINDER, help="path to file containing basic-auth password for REQ. This takes precedence over the environment variable REQ_PASSWORD")
 args = parser.parse_args()

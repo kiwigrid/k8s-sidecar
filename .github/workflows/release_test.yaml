@@ -71,9 +71,9 @@ jobs:
           provenance: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: |
-            docker.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
-            quay.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
-            ghcr.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+            docker.io/naishy/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+            quay.io/naishy/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
+            ghcr.io/naishy/k8s-sidecar:${{ steps.tagging.outputs.tag }}-${{ env.TEST_TAG }}
 
       - name: Build Changelog
         if: steps.tagging.outputs.part

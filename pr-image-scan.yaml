@@ -1,0 +1,505 @@
+# PR Image Scanner Workflow
+# Detects changes to images in dockerimages.yaml and runs parallel security scans
+# Uses shared actions to avoid duplicating logic across workflows
+
+name: PR Image Scanner
+
+on:
+  pull_request:
+    paths:
+      - 'dockerimages.yaml'
+    branches:
+      - main
+
+jobs:
+  detect-changes:
+    name: Detect changed images
+    runs-on: ubuntu-latest
+    outputs:
+      changed_images: ${{ steps.detect.outputs.changed_images }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+
+      - name: Checkout base branch for comparison
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Detect changed image blocks
+        id: detect
+        run: ./scripts/detect-changed-images.sh base/dockerimages.yaml
+
+  scan-images:
+    name: Scan ${{ matrix.image.name }}
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: vnet-integrated
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJson(needs.detect-changes.outputs.changed_images) }}
+    permissions:
+      id-token: write
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+
+      - name: Login to Azure
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Key Vault Secrets (for Nominet images)
+        id: get-secrets
+        if: contains(matrix.image.source, 'nominet.jfrog.io')
+        shell: bash
+        run: ./scripts/get-keyvault-secrets.sh "${{ vars.KEY_VAULT_NAME }}" artifactory-password
+
+      # Use shared action for pulling and authenticating
+      - name: Pull and verify source image
+        uses: ./.github/actions/pull-source-image
+        with:
+          source: ${{ matrix.image.source }}
+          version: ${{ matrix.image.version }}
+          digest: ${{ matrix.image.digest }}
+          artifactory_password: ${{ steps.get-secrets.outputs.ARTIFACTORY_PASSWORD }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_actor: ${{ github.actor }}
+
+      # Use shared scan-image action (DRY principle)
+      # Note: This step will fail if vulnerabilities are detected (unless bypass is enabled)
+      # Subsequent steps use if: always() to ensure results are still collected
+      - name: Run security scans
+        id: scan
+        uses: ./.github/actions/scan-image
+        with:
+          image_reference: ${{ matrix.image.source }}:${{ matrix.image.version }}
+          dockle_ignore: ${{ matrix.image.dockle_ignore }}
+          trivy_ignore: ${{ matrix.image.trivy_ignore }}
+          bypass_failures: ${{ matrix.image.bypass_scans }}
+          upload_sarif: 'false'
+
+      # Create scan summary JSON for the PR comment job (runs even if scan failed)
+      - name: Create scan summary
+        id: summary
+        if: always()
+        shell: bash
+        run: |
+          echo "Creating scan summary for ${{ matrix.image.name }}"
+
+          # Get values from scan outputs, with defaults
+          DOCKLE_RESULT="${{ steps.scan.outputs.dockle_result }}"
+          TRIVY_RESULT="${{ steps.scan.outputs.trivy_result }}"
+          : "${DOCKLE_RESULT:=failure}"
+          : "${TRIVY_RESULT:=failure}"
+
+          TRIVY_CRITICAL="${{ steps.scan.outputs.trivy_critical }}"
+          TRIVY_HIGH="${{ steps.scan.outputs.trivy_high }}"
+          TRIVY_MEDIUM="${{ steps.scan.outputs.trivy_medium }}"
+          TRIVY_LOW="${{ steps.scan.outputs.trivy_low }}"
+          TRIVY_SEVERITY="${{ steps.scan.outputs.trivy_severity }}"
+          DOCKLE_FATAL="${{ steps.scan.outputs.dockle_fatal }}"
+          DOCKLE_WARN="${{ steps.scan.outputs.dockle_warn }}"
+          : "${TRIVY_CRITICAL:=0}" "${TRIVY_HIGH:=0}" "${TRIVY_MEDIUM:=0}" "${TRIVY_LOW:=0}" "${DOCKLE_FATAL:=0}" "${DOCKLE_WARN:=0}"
+          : "${TRIVY_SEVERITY:=CRITICAL,HIGH}"
+
+          # Determine overall result
+          if [ "$DOCKLE_RESULT" == "success" ] && [ "$TRIVY_RESULT" == "success" ]; then
+            OVERALL_RESULT="passed"
+          elif [ "${{ matrix.image.bypass_scans }}" == "true" ]; then
+            OVERALL_RESULT="bypassed"
+          else
+            OVERALL_RESULT="failed"
+          fi
+
+          # Build jq filter based on configured severity levels
+          # This ensures we extract vulnerabilities matching the configured fail_on_severity
+          SEVERITY_FILTER=""
+          if echo "$TRIVY_SEVERITY" | grep -qi "CRITICAL"; then
+            SEVERITY_FILTER='.Severity == "CRITICAL"'
+          fi
+          if echo "$TRIVY_SEVERITY" | grep -qi "HIGH"; then
+            [ -n "$SEVERITY_FILTER" ] && SEVERITY_FILTER="$SEVERITY_FILTER or "
+            SEVERITY_FILTER="${SEVERITY_FILTER}.Severity == \"HIGH\""
+          fi
+          if echo "$TRIVY_SEVERITY" | grep -qi "MEDIUM"; then
+            [ -n "$SEVERITY_FILTER" ] && SEVERITY_FILTER="$SEVERITY_FILTER or "
+            SEVERITY_FILTER="${SEVERITY_FILTER}.Severity == \"MEDIUM\""
+          fi
+          if echo "$TRIVY_SEVERITY" | grep -qi "LOW"; then
+            [ -n "$SEVERITY_FILTER" ] && SEVERITY_FILTER="$SEVERITY_FILTER or "
+            SEVERITY_FILTER="${SEVERITY_FILTER}.Severity == \"LOW\""
+          fi
+          # Default to CRITICAL,HIGH if nothing matched
+          [ -z "$SEVERITY_FILTER" ] && SEVERITY_FILTER='.Severity == "CRITICAL" or .Severity == "HIGH"'
+
+          echo "Extracting vulnerabilities with filter: $SEVERITY_FILTER"
+
+          # Extract Trivy vulnerabilities matching configured severity
+          TRIVY_VULNS="[]"
+          [ -f "trivy-results.json" ] && TRIVY_VULNS=$(jq --arg filter "$SEVERITY_FILTER" '[.Results[]? | select(.Vulnerabilities) | .Vulnerabilities[] | select('"$SEVERITY_FILTER"') | {id: .VulnerabilityID, severity: .Severity, package: .PkgName, installed_version: .InstalledVersion, fixed_version: (.FixedVersion // "Not fixed"), title: ((.Title // "N/A") | gsub("\n"; " ") | .[0:100])}]' trivy-results.json 2>/dev/null) || TRIVY_VULNS="[]"
+
+          # Extract Dockle issues
+          DOCKLE_ISSUES="[]"
+          [ -f "dockle-results.json" ] && DOCKLE_ISSUES=$(jq '[.details[]? | select(.level == "FATAL" or .level == "WARN") | {code, level, title, alerts: [.alerts[]? | .[0:100]]}]' dockle-results.json 2>/dev/null) || DOCKLE_ISSUES="[]"
+
+          # Create summary JSON (using heredoc for cleaner output)
+          cat > scan-summary.json <<EOF
+          {
+            "name": "${{ matrix.image.name }}",
+            "source": "${{ matrix.image.source }}",
+            "version": "${{ matrix.image.version }}",
+            "dockle_result": "$DOCKLE_RESULT",
+            "trivy_result": "$TRIVY_RESULT",
+            "overall_result": "$OVERALL_RESULT",
+            "bypass_scans": ${{ matrix.image.bypass_scans }},
+            "dockle_ignore": "${{ matrix.image.dockle_ignore }}",
+            "trivy_ignore": "${{ matrix.image.trivy_ignore }}",
+            "trivy_critical": $TRIVY_CRITICAL,
+            "trivy_high": $TRIVY_HIGH,
+            "trivy_medium": $TRIVY_MEDIUM,
+            "trivy_low": $TRIVY_LOW,
+            "trivy_severity": "$TRIVY_SEVERITY",
+            "dockle_fatal": $DOCKLE_FATAL,
+            "dockle_warn": $DOCKLE_WARN,
+            "trivy_vulns": $TRIVY_VULNS,
+            "dockle_issues": $DOCKLE_ISSUES
+          }
+          EOF
+
+          echo "Scan summary:"
+          cat scan-summary.json
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results-${{ matrix.image.name }}
+          path: |
+            scan-summary.json
+            trivy-results.json
+            dockle-results.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Single job to create PR comment after all scans complete
+  update-pr-comment:
+    name: Update PR Comment
+    needs: [detect-changes, scan-images]
+    if: always() && needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      actions: read
+    steps:
+      - name: Download all scan artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scan-results-*
+          path: scan-results
+          merge-multiple: false
+
+      - name: Collect all scan results
+        id: collect
+        shell: bash
+        run: |
+          echo "Collecting scan results from artifacts..."
+
+          # Combine all scan summaries using jq slurp mode (file-based, avoids ARG_MAX limits)
+          # This handles large scan-summary.json files (e.g., images with many vulnerabilities)
+          SUMMARY_FILES=()
+          for dir in scan-results/*/; do
+            if [ -f "${dir}scan-summary.json" ]; then
+              SUMMARY_FILES+=("${dir}scan-summary.json")
+              echo "Found results: ${dir}scan-summary.json"
+            fi
+          done
+
+          if [ ${#SUMMARY_FILES[@]} -gt 0 ]; then
+            # Use jq -s (slurp) to combine all JSON files into an array
+            jq -s '.' "${SUMMARY_FILES[@]}" > all-results.json
+            echo "Combined ${#SUMMARY_FILES[@]} scan results"
+          else
+            echo "[]" > all-results.json
+            echo "No scan results found"
+          fi
+
+          # Also check for any images that didn't produce artifacts (failed early)
+          CHANGED_IMAGES='${{ needs.detect-changes.outputs.changed_images }}'
+          FOUND_NAMES=$(jq -r '.[].name' all-results.json)
+
+          for img in $(echo "$CHANGED_IMAGES" | jq -r '.[].name'); do
+            if ! echo "$FOUND_NAMES" | grep -q "^${img}$"; then
+              echo "WARNING: No results found for $img - scan may have failed early"
+              # Add a placeholder result using file-based approach
+              SOURCE=$(echo "$CHANGED_IMAGES" | jq -r ".[] | select(.name == \"$img\") | .source")
+              VERSION=$(echo "$CHANGED_IMAGES" | jq -r ".[] | select(.name == \"$img\") | .version")
+              BYPASS=$(echo "$CHANGED_IMAGES" | jq -r ".[] | select(.name == \"$img\") | .bypass_scans")
+
+              # Create placeholder in a temp file to avoid ARG_MAX issues
+              jq -n \
+                --arg name "$img" \
+                --arg source "$SOURCE" \
+                --arg version "$VERSION" \
+                --argjson bypass_scans "${BYPASS:-false}" \
+                '{
+                  name: $name,
+                  source: $source,
+                  version: $version,
+                  dockle_result: "error",
+                  trivy_result: "error",
+                  overall_result: "error",
+                  bypass_scans: $bypass_scans,
+                  dockle_ignore: "",
+                  trivy_ignore: "",
+                  trivy_critical: 0,
+                  trivy_high: 0,
+                  trivy_medium: 0,
+                  trivy_low: 0,
+                  trivy_severity: "CRITICAL,HIGH",
+                  dockle_fatal: 0,
+                  dockle_warn: 0,
+                  trivy_vulns: [],
+                  dockle_issues: []
+                }' > placeholder.json
+
+              # Merge placeholder into results using file-based slurp
+              jq -s '.[0] + [.[1]]' all-results.json placeholder.json > all-results-new.json
+              mv all-results-new.json all-results.json
+              rm -f placeholder.json
+            fi
+          done
+
+          echo "Total results collected: $(jq 'length' all-results.json)"
+
+      - name: Create or update PR comment
+        uses: actions/github-script@v7
+        env:
+          SCAN_JOB_RESULT: ${{ needs.scan-images.result }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- airport-scanner-pr-results -->';
+
+            // Load all scan results
+            const allResults = JSON.parse(fs.readFileSync('all-results.json', 'utf8'));
+            const scanJobResult = process.env.SCAN_JOB_RESULT;
+
+            // Helper functions
+            const getStatusIcon = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'error') return '❓';
+              return '❌';
+            };
+
+            const getOverallStatusText = (result) => {
+              if (result === 'passed') return '✅ Passed';
+              if (result === 'bypassed') return '⚠️ Bypassed';
+              if (result === 'error') return '❓ Error';
+              return '❌ Failed';
+            };
+
+            const getCveLink = (cveId) => {
+              if (cveId.startsWith('CVE-')) {
+                const year = cveId.split('-')[1];
+                return `[${cveId}](https://avd.aquasec.com/nvd/${year}/${cveId.toLowerCase()}/)`;
+              }
+              return cveId;
+            };
+
+            const getDockleCheckLink = (code) => {
+              const anchor = code.toLowerCase();
+              return `[${code}](https://github.com/goodwithtech/dockle/blob/master/CHECKPOINT.md#${anchor})`;
+            };
+
+            // Build summary table
+            let summaryTable = `| Image | Dockle | Trivy | Ignored | Status |
+            |-------|--------|-------|---------|--------|
+            `;
+
+            // Sort results by name for consistent ordering
+            allResults.sort((a, b) => a.name.localeCompare(b.name));
+
+            for (const result of allResults) {
+              const dockleIcon = getStatusIcon(result.dockle_result);
+              const trivyIcon = getStatusIcon(result.trivy_result);
+              const statusText = getOverallStatusText(result.overall_result);
+              const bypassWarning = result.bypass_scans ? ' ⚠️' : '';
+
+              // Build vulnerability counts - include all configured severity levels
+              const dockleCount = (result.dockle_fatal > 0 || result.dockle_warn > 0)
+                ? ` (${result.dockle_fatal}F/${result.dockle_warn}W)` : '';
+
+              // Build Trivy count based on configured severity
+              const trivySeverity = result.trivy_severity || 'CRITICAL,HIGH';
+              const trivyCountParts = [];
+              if (trivySeverity.includes('CRITICAL') && result.trivy_critical > 0) trivyCountParts.push(`${result.trivy_critical}C`);
+              if (trivySeverity.includes('HIGH') && result.trivy_high > 0) trivyCountParts.push(`${result.trivy_high}H`);
+              if (trivySeverity.includes('MEDIUM') && (result.trivy_medium || 0) > 0) trivyCountParts.push(`${result.trivy_medium}M`);
+              if (trivySeverity.includes('LOW') && (result.trivy_low || 0) > 0) trivyCountParts.push(`${result.trivy_low}L`);
+              const trivyCount = trivyCountParts.length > 0 ? ` (${trivyCountParts.join('/')})` : '';
+
+              // Build exclusion counts
+              const dockleIgnoreCount = result.dockle_ignore ? result.dockle_ignore.split(',').filter(x => x.trim()).length : 0;
+              const trivyIgnoreCount = result.trivy_ignore ? result.trivy_ignore.split(',').filter(x => x.trim()).length : 0;
+              const ignoredCol = (dockleIgnoreCount > 0 || trivyIgnoreCount > 0)
+                ? `${dockleIgnoreCount}D / ${trivyIgnoreCount}T` : '-';
+
+              summaryTable += `| \`${result.name}:${result.version}\`${bypassWarning} | ${dockleIcon}${dockleCount} | ${trivyIcon}${trivyCount} | ${ignoredCol} | ${statusText} |\n`;
+            }
+
+            // Check for bypass warnings
+            const bypassImages = allResults.filter(r => r.bypass_scans);
+            let bypassWarning = '';
+            if (bypassImages.length > 0) {
+              bypassWarning = `\n> ⚠️ **WARNING: Security scan bypass enabled**\n> The following images have \`bypass_security_scans: true\` set:\n${bypassImages.map(img => `> - \`${img.name}\``).join('\n')}\n> \n> These images will be promoted to the golden repository **regardless of scan results**.`;
+            }
+
+            // Build detailed sections for each image
+            let detailSections = '';
+
+            for (const result of allResults) {
+              // Skip if no issues found
+              const hasIssues = result.trivy_vulns.length > 0 || result.dockle_issues.length > 0;
+              const hasExclusions = result.dockle_ignore || result.trivy_ignore;
+
+              if (!hasIssues && !hasExclusions && result.overall_result === 'passed') {
+                continue; // Skip clean images
+              }
+
+              detailSections += `\n<details>\n<summary>📋 <strong>${result.name}</strong> - ${result.source}:${result.version}</summary>\n\n`;
+
+              // Exclusions section
+              if (hasExclusions) {
+                detailSections += `#### 🚫 Configured Exclusions\n`;
+                if (result.dockle_ignore) {
+                  const codes = result.dockle_ignore.split(',').map(c => getDockleCheckLink(c.trim())).join(', ');
+                  detailSections += `- **Dockle ignored:** ${codes}\n`;
+                }
+                if (result.trivy_ignore) {
+                  detailSections += `- **Trivy ignored:** \`${result.trivy_ignore}\`\n`;
+                }
+                detailSections += '\n';
+              }
+
+              // Bypass warning
+              if (result.bypass_scans) {
+                detailSections += `> ⚠️ **BYPASS ENABLED**: This image will be promoted regardless of scan failures!\n\n`;
+              }
+
+              // Combined vulnerabilities table
+              if (result.trivy_vulns.length > 0 || result.dockle_issues.length > 0) {
+                detailSections += `#### 🔍 Detected Issues\n\n`;
+                detailSections += `| Tool | ID | Severity | Details | Versions |\n`;
+                detailSections += `|------|-------|----------|---------|----------|\n`;
+
+                // Add Trivy vulnerabilities
+                for (const vuln of result.trivy_vulns) {
+                  const cveLink = getCveLink(vuln.id);
+                  let severity;
+                  switch (vuln.severity) {
+                    case 'CRITICAL': severity = '🔴 CRITICAL'; break;
+                    case 'HIGH': severity = '🟠 HIGH'; break;
+                    case 'MEDIUM': severity = '🟡 MEDIUM'; break;
+                    case 'LOW': severity = '🔵 LOW'; break;
+                    default: severity = `⚪ ${vuln.severity}`;
+                  }
+                  const versions = vuln.fixed_version !== 'Not fixed'
+                    ? `${vuln.installed_version} → ${vuln.fixed_version}`
+                    : `${vuln.installed_version} (no fix)`;
+                  const details = `**${vuln.package}**: ${vuln.title}`;
+                  detailSections += `| Trivy | ${cveLink} | ${severity} | ${details} | ${versions} |\n`;
+                }
+
+                // Add Dockle issues
+                for (const issue of result.dockle_issues) {
+                  const codeLink = getDockleCheckLink(issue.code);
+                  const severity = issue.level === 'FATAL' ? '🔴 FATAL' : '🟡 WARN';
+                  let details = issue.title;
+                  if (issue.alerts && issue.alerts.length > 0) {
+                    details += `: ${issue.alerts.slice(0, 2).join(', ')}`;
+                    if (issue.alerts.length > 2) {
+                      details += ` (+${issue.alerts.length - 2} more)`;
+                    }
+                  }
+                  detailSections += `| Dockle | ${codeLink} | ${severity} | ${details} | - |\n`;
+                }
+              } else if (result.overall_result === 'error') {
+                detailSections += `⚠️ **Scan error**: The scan did not complete successfully. Check the [workflow logs](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for details.\n`;
+              } else {
+                // Format severity levels for display
+                const trivySeverity = result.trivy_severity || 'CRITICAL,HIGH';
+                const severityList = trivySeverity.split(',').map(s => s.trim()).join(' or ');
+                detailSections += `✅ No ${severityList} vulnerabilities detected\n`;
+              }
+
+              detailSections += `\n</details>\n`;
+            }
+
+            // Build final status
+            let finalStatus;
+            if (scanJobResult === 'success') {
+              finalStatus = '✅ **All security scans completed successfully!**';
+            } else if (scanJobResult === 'failure') {
+              finalStatus = '❌ **Some security scans failed.** Please review the details above and consider:\n- Adding exclusions to `dockle_ignore` or `trivy_ignore`\n- Setting `bypass_security_scans: true` for special cases';
+            } else {
+              finalStatus = `⚠️ **Scan workflow completed with status: ${scanJobResult}**`;
+            }
+
+            // Compose the full comment
+            const body = `${marker}
+            ### 🔍 Security Scan Results
+
+            ${summaryTable}
+            ${bypassWarning}
+            ${detailSections}
+            ---
+            ${finalStatus}
+
+            [View Workflow Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+
+            // Find existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+              console.log('Updated existing PR comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+              console.log('Created new PR comment');
+            }
+
+      - name: Check overall status
+        shell: bash
+        run: |
+          if [ "${{ needs.scan-images.result }}" == "failure" ]; then
+            echo "❌ One or more image scans failed"
+            exit 1
+          else
+            echo "✅ All image scans passed (or were bypassed)"
+          fi

@@ -12,7 +12,7 @@ Security updates are provided for the latest version of the project.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it to us privately by visiting the [Security tab](https://github.com/kiwigrid/k8s-sidecar/security) and clicking on **"Report a vulnerability"**.
+If you discover a security vulnerability, please report it to us privately by visiting the [Security tab](https://github.com/naishy/k8s-sidecar/security) and clicking on **"Report a vulnerability"**.
 
 **Please do not create a public GitHub issue.**
 
