@@ -39,11 +39,6 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@b612e9be6c0c5eafe543bd1e46e1fc2e9b0c34e2 # v3.29.0
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
       - name: Run Trivy vulnerability scanner (JSON output)
         id: trivy-scan
         uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
