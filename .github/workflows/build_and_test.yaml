@@ -3,6 +3,8 @@
 name: "Build and Test"
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 on:
   - pull_request
   - workflow_dispatch
@@ -19,7 +21,7 @@ jobs:
         with:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
-          tags: "kiwigrid/k8s-sidecar:testing"
+          tags: "naishy/k8s-sidecar:testing"
       - name: Prepare dummy server static resources
         run: |
           cp test/kubelogo.png test/server/static/
@@ -30,6 +32,144 @@ jobs:
           push: false
           outputs: type=docker,dest=/tmp/dummy-server.tar
           tags: "dummy-server:1.0.0"
+      - name: Load image for scanning
+        run: docker load --input /tmp/k8s-sidecar.tar
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        with:
+          image-ref: 'naishy/k8s-sidecar:testing'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner (JSON output)
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        continue-on-error: true
+        with:
+          image-ref: 'naishy/k8s-sidecar:testing'
+          format: 'json'
+          output: 'trivy-results.json'
+          severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner (table output)
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
+        continue-on-error: true
+        with:
+          image-ref: 'naishy/k8s-sidecar:testing'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+      - name: Parse vulnerability counts
+        id: parse-vulns
+        if: always()
+        run: |
+          if [ -f "trivy-results.json" ]; then
+            CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-results.json 2>/dev/null || echo "0")
+            HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-results.json 2>/dev/null || echo "0")
+            MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' trivy-results.json 2>/dev/null || echo "0")
+            LOW=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "LOW")] | length' trivy-results.json 2>/dev/null || echo "0")
+            echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+            echo "high=$HIGH" >> $GITHUB_OUTPUT
+            echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
+            echo "low=$LOW" >> $GITHUB_OUTPUT
+            echo "Found: $CRITICAL critical, $HIGH high, $MEDIUM medium, $LOW low"
+          else
+            echo "critical=0" >> $GITHUB_OUTPUT
+            echo "high=0" >> $GITHUB_OUTPUT
+            echo "medium=0" >> $GITHUB_OUTPUT
+            echo "low=0" >> $GITHUB_OUTPUT
+          fi
+      - name: Post security scan results to PR
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- k8s-sidecar-security-scan -->';
+            
+            const critical = '${{ steps.parse-vulns.outputs.critical }}';
+            const high = '${{ steps.parse-vulns.outputs.high }}';
+            const medium = '${{ steps.parse-vulns.outputs.medium }}';
+            const low = '${{ steps.parse-vulns.outputs.low }}';
+            
+            const totalIssues = parseInt(critical) + parseInt(high);
+            const scanPassed = totalIssues === 0;
+            const statusIcon = scanPassed ? '✅' : '❌';
+            const statusText = scanPassed ? 'Passed' : 'Failed';
+            
+            let vulnDetails = '';
+            if (!scanPassed && fs.existsSync('trivy-results.json')) {
+              const trivyResults = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
+              const vulns = [];
+              
+              for (const result of (trivyResults.Results || [])) {
+                if (result.Vulnerabilities) {
+                  for (const vuln of result.Vulnerabilities) {
+                    if (vuln.Severity === 'CRITICAL' || vuln.Severity === 'HIGH') {
+                      vulns.push(vuln);
+                    }
+                  }
+                }
+              }
+              
+              if (vulns.length > 0) {
+                vulnDetails = '\n\n<details>\n<summary>🔍 Vulnerability Details</summary>\n\n';
+                vulnDetails += '| ID | Severity | Package | Installed | Fixed | Title |\n';
+                vulnDetails += '|-----|----------|---------|-----------|-------|-------|\n';
+                
+                for (const vuln of vulns.slice(0, 20)) {
+                  const severity = vuln.Severity === 'CRITICAL' ? '🔴 CRITICAL' : '🟠 HIGH';
+                  const cveId = vuln.VulnerabilityID;
+                  const cveLink = cveId.startsWith('CVE-') ? `[${cveId}](https://nvd.nist.gov/vuln/detail/${cveId})` : cveId;
+                  const fixedVer = vuln.FixedVersion || 'Not fixed';
+                  const title = (vuln.Title || 'N/A').substring(0, 80);
+                  vulnDetails += `| ${cveLink} | ${severity} | ${vuln.PkgName} | ${vuln.InstalledVersion} | ${fixedVer} | ${title} |\n`;
+                }
+                
+                if (vulns.length > 20) {
+                  vulnDetails += `\n*Showing 20 of ${vulns.length} vulnerabilities*\n`;
+                }
+                vulnDetails += '\n</details>\n';
+              }
+            }
+            
+            const body = `${marker}
+            ### 🔍 Security Scan Results
+            
+            | Status | Critical | High | Medium | Low |
+            |--------|----------|------|--------|-----|
+            | ${statusIcon} ${statusText} | ${critical} | ${high} | ${medium} | ${low} |
+            ${vulnDetails}
+            ---
+            [View Workflow Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) | [View Security Tab](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/security/code-scanning)
+            `;
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existing = comments.find(c => c.body.includes(marker));
+            
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+      - name: Fail if vulnerabilities found
+        if: steps.parse-vulns.outputs.critical != '0' || steps.parse-vulns.outputs.high != '0'
+        run: |
+          echo "❌ Found ${{ steps.parse-vulns.outputs.critical }} critical and ${{ steps.parse-vulns.outputs.high }} high severity vulnerabilities"
+          exit 1
       - name: Upload artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

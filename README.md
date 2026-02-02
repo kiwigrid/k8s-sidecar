@@ -1,8 +1,8 @@
 
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kiwigrid/k8s-sidecar?style=flat)](https://github.com/kiwigrid/k8s-sidecar/releases)
-[![Release](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml/badge.svg)](https://github.com/kiwigrid/k8s-sidecar/actions/workflows/release.yaml)
-[![Docker Pulls](https://img.shields.io/docker/pulls/kiwigrid/k8s-sidecar.svg?style=flat)](https://hub.docker.com/r/kiwigrid/k8s-sidecar/)
-![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/kiwigrid/k8s-sidecar)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/naishy/k8s-sidecar?style=flat)](https://github.com/naishy/k8s-sidecar/releases)
+[![Release](https://github.com/naishy/k8s-sidecar/actions/workflows/release.yaml/badge.svg)](https://github.com/naishy/k8s-sidecar/actions/workflows/release.yaml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/naishy/k8s-sidecar.svg?style=flat)](https://hub.docker.com/r/naishy/k8s-sidecar/)
+![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/naishy/k8s-sidecar)
 
 # What?
 
@@ -21,9 +21,9 @@ By adding additional env variables the container can send an HTTP request to spe
 
 Images are available at:
 
-- [docker.io/kiwigrid/k8s-sidecar](https://hub.docker.com/r/kiwigrid/k8s-sidecar)
-- [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
-- [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
+- [docker.io/naishy/k8s-sidecar](https://hub.docker.com/r/naishy/k8s-sidecar)
+- [quay.io/naishy/k8s-sidecar](https://quay.io/repository/naishy/k8s-sidecar)
+- [ghcr.io/naishy/k8s-sidecar](https://github.com/orgs/naishy/packages/container/package/k8s-sidecar)
 
 All are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`.
 
@@ -43,7 +43,7 @@ A possible solution would be to setup a dedicated build job using a native runne
 - Support `binaryData` for both `Secret` and `ConfigMap` kinds
   - Binary data content is base64 decoded before generating the file on disk
   - Values can also be base64 encoded URLs that download binary data e.g. executables
-    - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
+    - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/naishy/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
 # Usage
 
@@ -104,8 +104,8 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `DEFAULT_FILE_MODE`        | The default file system permission for every file. Use three digits (e.g. '500', '440', ...)                                                                                                                                                                                                                                        | false    | -                                         | string  |
 | `KUBECONFIG`               | if this is given and points to a file or `~/.kube/config` is mounted k8s config will be loaded from this file, otherwise "incluster" k8s configuration is tried.                                                                                                                                                                    | false    | -                                         | string  |
 | `ENABLE_5XX`               | Set to `true` to enable pulling of 5XX response content from config map. Used in case if the filename ends with `.url` suffix (Please refer to the `*.url` feature here.)                                                                                                                                                           | false    | -                                         | boolean |
-| `WATCH_SERVER_TIMEOUT`     | polite request to the server, asking it to cleanly close watch connections after this amount of seconds ([#85](https://github.com/kiwigrid/k8s-sidecar/issues/85))                                                                                                                                                                  | false    | `60`                                      | integer |
-| `WATCH_CLIENT_TIMEOUT`     | If you have a network outage dropping all packets with no RST/FIN, this is how many seconds your client waits on watches before realizing & dropping the connection. You can keep this number low. ([#85](https://github.com/kiwigrid/k8s-sidecar/issues/85))                                                                       | false    | `66`                                      | integer |
+| `WATCH_SERVER_TIMEOUT`     | polite request to the server, asking it to cleanly close watch connections after this amount of seconds ([#85](https://github.com/naishy/k8s-sidecar/issues/85))                                                                                                                                                                  | false    | `60`                                      | integer |
+| `WATCH_CLIENT_TIMEOUT`     | If you have a network outage dropping all packets with no RST/FIN, this is how many seconds your client waits on watches before realizing & dropping the connection. You can keep this number low. ([#85](https://github.com/naishy/k8s-sidecar/issues/85))                                                                       | false    | `66`                                      | integer |
 | `IGNORE_ALREADY_PROCESSED` | Ignore already processed resource version. Avoid numerous checks on same unchanged resource. req kubernetes api >= v1.19                                                                                                                                                                                                            | false    | `false`                                   | boolean |
 | `LOG_LEVEL`                | Set the logging level. (DEBUG, INFO, WARN, ERROR, CRITICAL)                                                                                                                                                                                                                                                                         | false    | `INFO`                                    | string  |
 | `LOG_FORMAT`               | Set a log format. (JSON or LOGFMT)                                                                                                                                                                                                                                                                                                  | false    | `JSON`                                    | string  |
@@ -195,9 +195,9 @@ This workflow does **not** create tags, releases, or push images to registries.
 - **What it does when a new tag is created:**
   - Builds multi-arch images for the sidecar.
   - Pushes images to:
-    - `docker.io/kiwigrid/k8s-sidecar`
-    - `quay.io/kiwigrid/k8s-sidecar`
-    - `ghcr.io/kiwigrid/k8s-sidecar`
+    - `docker.io/naishy/k8s-sidecar`
+    - `quay.io/naishy/k8s-sidecar`
+    - `ghcr.io/naishy/k8s-sidecar`
   - Tags: `<new_tag>` and `latest`.
   - Builds a changelog.
   - Creates a GitHub release for the new tag.

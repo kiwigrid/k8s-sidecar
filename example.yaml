@@ -1,0 +1,364 @@
+
+name: 'Scan Container Image'
+description: 'Performs security scanning with Dockle and Trivy in parallel'
+author: 'LECN Team'
+
+inputs:
+  image_reference:
+    description: 'Full image reference to scan'
+    required: true
+  upload_sarif:
+    description: 'Whether to upload SARIF results to GitHub Security'
+    required: false
+    default: 'true'
+  acr_name:
+    description: 'Azure Container Registry name for authentication'
+    required: false
+    default: ''
+  dockle_ignore:
+    description: 'Comma-separated list of Dockle checkpoints to ignore (e.g., CIS-DI-0001,DKL-DI-0006)'
+    required: false
+    default: ''
+  trivy_ignore:
+    description: 'Comma-separated list of vulnerability IDs for Trivy to ignore (e.g., CVE-2021-44228,CVE-2022-12345)'
+    required: false
+    default: ''
+  bypass_failures:
+    description: 'Allow scan failures without failing the build (WARNING: for special cases only)'
+    required: false
+    default: 'false'
+
+outputs:
+  dockle_result:
+    description: 'Dockle scan result (success/failure)'
+    value: ${{ steps.results.outputs.dockle_result }}
+  trivy_result:
+    description: 'Trivy scan result (success/failure)'
+    value: ${{ steps.results.outputs.trivy_result }}
+  trivy_critical:
+    description: 'Number of CRITICAL vulnerabilities found'
+    value: ${{ steps.parse-results.outputs.trivy_critical }}
+  trivy_high:
+    description: 'Number of HIGH vulnerabilities found'
+    value: ${{ steps.parse-results.outputs.trivy_high }}
+  trivy_medium:
+    description: 'Number of MEDIUM vulnerabilities found'
+    value: ${{ steps.parse-results.outputs.trivy_medium }}
+  trivy_low:
+    description: 'Number of LOW vulnerabilities found'
+    value: ${{ steps.parse-results.outputs.trivy_low }}
+  trivy_severity:
+    description: 'Configured Trivy severity levels'
+    value: ${{ steps.config.outputs.trivy_severity }}
+  dockle_fatal:
+    description: 'Number of FATAL Dockle issues found'
+    value: ${{ steps.parse-results.outputs.dockle_fatal }}
+  dockle_warn:
+    description: 'Number of WARNING Dockle issues found'
+    value: ${{ steps.parse-results.outputs.dockle_warn }}
+  bypassed:
+    description: 'Whether scan failures were bypassed'
+    value: ${{ steps.results.outputs.bypassed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Read security config
+      id: config
+      shell: bash
+      run: |
+        CONFIG_FILE="security-config.yaml"
+        
+        # Install yq if needed
+        if ! command -v yq &>/dev/null; then
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+        fi
+        
+        # Read config with defaults
+        if [[ -f "$CONFIG_FILE" ]]; then
+          TRIVY_SEVERITY=$(yq '.trivy.fail_on_severity // "CRITICAL,HIGH"' "$CONFIG_FILE")
+          TRIVY_TIMEOUT=$(yq '.trivy.timeout // "10m"' "$CONFIG_FILE")
+          DOCKLE_EXIT_LEVEL=$(yq '.dockle.exit_level // "warn"' "$CONFIG_FILE")
+        else
+          echo "⚠️ security-config.yaml not found, using defaults"
+          TRIVY_SEVERITY="CRITICAL,HIGH"
+          TRIVY_TIMEOUT="10m"
+          DOCKLE_EXIT_LEVEL="warn"
+        fi
+        
+        echo "trivy_severity=$TRIVY_SEVERITY" >> $GITHUB_OUTPUT
+        echo "trivy_timeout=$TRIVY_TIMEOUT" >> $GITHUB_OUTPUT
+        echo "dockle_exit_level=$DOCKLE_EXIT_LEVEL" >> $GITHUB_OUTPUT
+        
+        echo "📋 Security thresholds:"
+        echo "   Trivy severity: $TRIVY_SEVERITY"
+        echo "   Trivy timeout: $TRIVY_TIMEOUT"
+        echo "   Dockle exit level: $DOCKLE_EXIT_LEVEL"
+
+    - name: Login and pull image from ACR for scanning
+      if: inputs.acr_name != ''
+      shell: bash
+      run: |
+        az acr login --name ${{ inputs.acr_name }}
+        docker pull ${{ inputs.image_reference }}
+
+    - name: Create Trivy ignore file
+      if: inputs.trivy_ignore != ''
+      shell: bash
+      run: |
+        echo "Creating .trivyignore file with vulnerabilities to ignore"
+        echo "${{ inputs.trivy_ignore }}" | tr ',' '\n' > .trivyignore
+        echo "Contents of .trivyignore:"
+        cat .trivyignore
+
+    - name: Setup Dockle
+      shell: bash
+      run: ./scripts/install-dockle.sh
+
+    - name: Setup Trivy
+      uses: aquasecurity/setup-trivy@e6c2c5e321ed9123bda567646e2f96565e34abe1 # v0.2.0
+      with:
+        version: 'latest'
+
+    - name: Get current date
+      id: date
+      shell: bash
+      run: echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+    - name: Cache Trivy DB
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.1.2
+      with:
+        path: ~/.cache/trivy
+        key: trivy-db-${{ runner.os }}-${{ steps.date.outputs.date }}
+        restore-keys: |
+          trivy-db-${{ runner.os }}-
+
+    # Run Dockle and Trivy in parallel using background processes
+    - name: Run parallel security scans (Dockle + Trivy)
+      id: parallel-scan
+      shell: bash
+      run: |
+        echo "🔍 Starting parallel security scans..."
+        echo "Image: ${{ inputs.image_reference }}"
+        echo ""
+
+        # Create temp files for results
+        DOCKLE_LOG=$(mktemp)
+        TRIVY_LOG=$(mktemp)
+        DOCKLE_EXIT=$(mktemp)
+        TRIVY_EXIT=$(mktemp)
+
+        # Read config values
+        TRIVY_SEVERITY="${{ steps.config.outputs.trivy_severity }}"
+        TRIVY_TIMEOUT="${{ steps.config.outputs.trivy_timeout }}"
+        DOCKLE_EXIT_LEVEL="${{ steps.config.outputs.dockle_exit_level }}"
+
+        # Run Dockle in background (with JSON output for parsing)
+        echo "Starting Dockle scan..."
+        (
+          set +e  # Don't exit on error - we need to capture the exit code
+          
+          # Build ignore flags
+          IGNORE_FLAGS=""
+          if [ -n "${{ inputs.dockle_ignore }}" ]; then
+            for check in $(echo "${{ inputs.dockle_ignore }}" | tr ',' ' '); do
+              IGNORE_FLAGS="$IGNORE_FLAGS --ignore $check"
+            done
+          fi
+          
+          # Run with JSON output for later parsing (stdout only, stderr to log)
+          dockle --exit-code 1 --exit-level "$DOCKLE_EXIT_LEVEL" -f json $IGNORE_FLAGS \
+            "${{ inputs.image_reference }}" > dockle-results.json 2>"$DOCKLE_LOG"
+          DOCKLE_CODE=$?
+          
+          # Also capture text format for better log readability
+          dockle --exit-code 1 --exit-level "$DOCKLE_EXIT_LEVEL" $IGNORE_FLAGS \
+            "${{ inputs.image_reference }}" >> "$DOCKLE_LOG" 2>&1 || true
+          
+          echo $DOCKLE_CODE > "$DOCKLE_EXIT"
+        ) &
+        DOCKLE_PID=$!
+
+        # Run Trivy in background
+        echo "Starting Trivy scan..."
+        (
+          set +e  # Don't exit on error - we need to capture the exit code
+          
+          TRIVY_OPTS="--exit-code 1 --severity $TRIVY_SEVERITY --timeout $TRIVY_TIMEOUT"
+          [[ -f ".trivyignore" ]] && TRIVY_OPTS="$TRIVY_OPTS --ignorefile .trivyignore"
+          
+          trivy image "${{ inputs.image_reference }}" -f json -o trivy-results.json $TRIVY_OPTS > "$TRIVY_LOG" 2>&1
+          echo $? > "$TRIVY_EXIT"
+        ) &
+        TRIVY_PID=$!
+
+        echo "⏳ Waiting for scans to complete..."
+        echo "  Dockle PID: $DOCKLE_PID"
+        echo "  Trivy PID: $TRIVY_PID"
+
+        # Wait for both to complete (ignore exit codes from wait - we capture them from temp files)
+        wait $DOCKLE_PID || true
+        wait $TRIVY_PID || true
+
+        # Read exit codes from temp files (written by the subshells)
+        DOCKLE_RC=$(cat "$DOCKLE_EXIT" 2>/dev/null || echo "1")
+        TRIVY_RC=$(cat "$TRIVY_EXIT" 2>/dev/null || echo "1")
+
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📋 DOCKLE RESULTS (exit code: $DOCKLE_RC)"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        cat "$DOCKLE_LOG"
+        echo ""
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📋 TRIVY RESULTS (exit code: $TRIVY_RC)"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        cat "$TRIVY_LOG"
+        echo ""
+
+        # Store results for later steps
+        echo "dockle_exit_code=$DOCKLE_RC" >> $GITHUB_OUTPUT
+        echo "trivy_exit_code=$TRIVY_RC" >> $GITHUB_OUTPUT
+
+        # Clean up temp files
+        rm -f "$DOCKLE_LOG" "$TRIVY_LOG" "$DOCKLE_EXIT" "$TRIVY_EXIT"
+      env:
+        DOCKLE_IGNORE: ${{ inputs.dockle_ignore }}
+
+    - name: Parse vulnerability counts
+      id: parse-results
+      if: always()  # Must run to output counts even if scans found issues
+      shell: bash
+      run: |
+        echo "Parsing scan results for vulnerability counts..."
+        
+        # Parse Trivy results - count all severity levels
+        if [ -f "trivy-results.json" ]; then
+          CRITICAL_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-results.json 2>/dev/null || echo "0")
+          HIGH_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-results.json 2>/dev/null || echo "0")
+          MEDIUM_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' trivy-results.json 2>/dev/null || echo "0")
+          LOW_COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "LOW")] | length' trivy-results.json 2>/dev/null || echo "0")
+          echo "trivy_critical=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "trivy_high=$HIGH_COUNT" >> $GITHUB_OUTPUT
+          echo "trivy_medium=$MEDIUM_COUNT" >> $GITHUB_OUTPUT
+          echo "trivy_low=$LOW_COUNT" >> $GITHUB_OUTPUT
+          echo "Trivy: $CRITICAL_COUNT critical, $HIGH_COUNT high, $MEDIUM_COUNT medium, $LOW_COUNT low"
+        else
+          echo "trivy_critical=0" >> $GITHUB_OUTPUT
+          echo "trivy_high=0" >> $GITHUB_OUTPUT
+          echo "trivy_medium=0" >> $GITHUB_OUTPUT
+          echo "trivy_low=0" >> $GITHUB_OUTPUT
+        fi
+        
+        # Parse Dockle results from JSON
+        if [ -f "dockle-results.json" ]; then
+          FATAL_COUNT=$(jq '[.details[]? | select(.level == "FATAL")] | length' dockle-results.json 2>/dev/null || echo "0")
+          WARN_COUNT=$(jq '[.details[]? | select(.level == "WARN")] | length' dockle-results.json 2>/dev/null || echo "0")
+          echo "dockle_fatal=$FATAL_COUNT" >> $GITHUB_OUTPUT
+          echo "dockle_warn=$WARN_COUNT" >> $GITHUB_OUTPUT
+          echo "Dockle: $FATAL_COUNT fatal, $WARN_COUNT warnings"
+        else
+          echo "dockle_fatal=0" >> $GITHUB_OUTPUT
+          echo "dockle_warn=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Convert Trivy results
+      shell: bash
+      run: |
+        TRIVY_SEVERITY="${{ steps.config.outputs.trivy_severity }}"
+        
+        if [ -f "trivy-results.json" ]; then
+          echo "Converting Trivy JSON results to table and SARIF formats"
+          echo "Original JSON file size: $(ls -lh trivy-results.json)"
+
+          echo "=== Trivy Results (Table Format) ==="
+          trivy convert -f table --severity "$TRIVY_SEVERITY" trivy-results.json || true
+
+          echo "=== Converting to SARIF ==="
+          trivy convert -f sarif --severity "$TRIVY_SEVERITY" -o trivy-results.sarif trivy-results.json || true
+
+          if [ -f "trivy-results.sarif" ]; then
+            echo "SARIF file created: $(ls -lh trivy-results.sarif)"
+          else
+            echo "Warning: SARIF file was not created"
+            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Trivy"}},"results":[]}]}'> trivy-results.sarif
+          fi
+        else
+          echo "Warning: trivy-results.json not found"
+        fi
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@755f44910c12a3d7ca0d8c6e42c048b3362f7cec # v3.30.8
+      if: always() && hashFiles('trivy-results.sarif') != ''
+      continue-on-error: true
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Evaluate scan results
+      id: results
+      if: always()  # Must run to output results even if previous steps had issues
+      shell: bash
+      run: |
+        DOCKLE_RC="${{ steps.parallel-scan.outputs.dockle_exit_code }}"
+        TRIVY_RC="${{ steps.parallel-scan.outputs.trivy_exit_code }}"
+        BYPASS_FAILURES="${{ inputs.bypass_failures }}"
+        
+        # Default to failure (1) if exit codes are empty (scans didn't run)
+        [ -z "$DOCKLE_RC" ] && DOCKLE_RC="1"
+        [ -z "$TRIVY_RC" ] && TRIVY_RC="1"
+        
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📊 SECURITY SCAN SUMMARY"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        
+        FAILED=false
+        
+        if [ "$DOCKLE_RC" -eq 0 ] 2>/dev/null; then
+          echo "✅ Dockle: PASSED"
+          echo "dockle_result=success" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Dockle: FAILED (exit code $DOCKLE_RC)"
+          echo "dockle_result=failure" >> $GITHUB_OUTPUT
+          FAILED=true
+        fi
+        
+        if [ "$TRIVY_RC" -eq 0 ] 2>/dev/null; then
+          echo "✅ Trivy: PASSED"
+          echo "trivy_result=success" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Trivy: FAILED (exit code $TRIVY_RC)"
+          echo "trivy_result=failure" >> $GITHUB_OUTPUT
+          FAILED=true
+        fi
+        
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        
+        if [ "$FAILED" = true ]; then
+          echo ""
+          if [ "$BYPASS_FAILURES" = "true" ]; then
+            echo "⚠️  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⚠️  WARNING: SECURITY SCAN FAILURES BYPASSED"
+            echo "⚠️  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⚠️  One or more security scans failed, but bypass_security_scans"
+            echo "⚠️  is enabled. This image will be promoted DESPITE the failures."
+            echo "⚠️  "
+            echo "⚠️  THIS IS A SECURITY RISK. Only use for:"
+            echo "⚠️  - Penetration testing images"
+            echo "⚠️  - Temporary workarounds with documented exceptions"
+            echo "⚠️  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "bypassed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  One or more security scans failed!"
+            echo "Review the results above and consider:"
+            echo "  - Updating dockle_ignore/trivy_ignore in dockerimages.yaml"
+            echo "  - Setting bypass_security_scans: true (for special cases only)"
+            exit 1
+          fi
+        else
+          echo ""
+          echo "🎉 All security scans passed!"
+        fi
