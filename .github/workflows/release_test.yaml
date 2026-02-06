@@ -78,7 +78,7 @@ jobs:
       - name: Build Changelog
         if: steps.tagging.outputs.part
         id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@439f79b5b5428107c7688c1d2b0e8bacc9b8792c # v6.0.1
+        uses: mikepenz/release-changelog-builder-action@6faf020194b7c8853f9e55c4fd92e40b02122a04 # v6.1.0
         with:
           configuration: ".github/workflows/release-notes-config.json"
         env:
