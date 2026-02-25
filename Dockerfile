@@ -1,8 +1,9 @@
 FROM python:alpine3.23 AS base
+RUN apk upgrade
 
 FROM base AS builder
 WORKDIR /app
-RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptools
+RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptools wheel
 COPY        src/ /app/
 RUN apk add --no-cache gcc && \
 	.venv/bin/pip install --no-cache-dir -r requirements.txt && \
