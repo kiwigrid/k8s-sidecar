@@ -143,15 +143,27 @@ def fetch_basic_auth_credentials():
             password = password_from_file
     return username, password
 
+class BearerAuth(requests.auth.AuthBase):
+    def __init__(self, token):
+        self.token = token
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
 
 def request(url, method, enable_5xx=False, payload=None):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
-    username,password = fetch_basic_auth_credentials()
-    encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
-    if username and password:
-        auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
-    else:
+    req_auth_method = os.getenv("REQ_AUTH_METHOD")
+    if req_auth_method and req_auth_method.lower() == "kubernetes_service_account":
+        auth = BearerAuth(read_file_content("/var/run/secrets/kubernetes.io/serviceaccount/token"))
+    elif req_auth_method and req_auth_method.lower() == "none":
         auth = None
+    else:
+        username,password = fetch_basic_auth_credentials()
+        encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
+        if username and password:
+            auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
+        else:
+            auth = None
 
     r = requests.Session()
 
