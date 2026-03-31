@@ -1,5 +1,6 @@
 import os
 import ssl
+import urllib3
 
 from logger import get_logger
 from kubernetes.config.kube_config import KUBE_CONFIG_DEFAULT_LOCATION
@@ -12,6 +13,7 @@ from helpers import REQ_RETRY_TOTAL, REQ_RETRY_CONNECT, REQ_RETRY_READ, REQ_RETR
 logger = get_logger()
 
 SKIP_TLS_VERIFY = "SKIP_TLS_VERIFY"
+DISABLE_X509_STRICT_VERIFICATION = "DISABLE_X509_STRICT_VERIFICATION"
 
 
 def _initialize_kubeclient_configuration():
@@ -81,3 +83,31 @@ def _ensure_kube_config_in_child():
     )
     client.Configuration.set_default(configuration)
     logger.info(f"[child] Kubernetes client configured for host: {configuration.host}")
+
+def get_api_client():
+    """
+    Returns a configured ApiClient.
+    Handles DISABLE_X509_STRICT_VERIFICATION if set.
+    """
+    api_client = client.ApiClient()
+
+    if os.getenv(DISABLE_X509_STRICT_VERIFICATION, "false").lower() == "true":
+        logger.warning("Disabling strict X.509 certificate verification")
+        # Relax OpenSSL TLS validation to support legacy root CA certificates
+        # (e.g. from Kubernetes <= 1.16) which may not satisfy the stricter
+        # VERIFY_X509_STRICT flags enforced by default in Python 3.13+.
+
+        ctx = ssl.create_default_context()
+        ctx.verify_flags = ctx.verify_flags & ~ssl.VERIFY_X509_STRICT
+
+        # We need to recreate the pool manager with the new SSL context
+        # We try to preserve existing pool manager arguments
+        pool_args = api_client.rest_client.pool_manager.connection_pool_kw
+
+        api_client.rest_client.pool_manager = urllib3.PoolManager(
+            num_pools=4,
+            ssl_context=ctx,
+            **pool_args,
+        )
+
+    return api_client

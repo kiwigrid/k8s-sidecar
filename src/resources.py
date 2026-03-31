@@ -8,7 +8,7 @@ import sys
 import traceback
 import json
 from collections import defaultdict
-from multiprocessing import Process
+from threading import Thread
 from time import sleep
 
 from kubernetes import client, watch
@@ -19,7 +19,7 @@ from helpers import (CONTENT_TYPE_BASE64_BINARY, CONTENT_TYPE_TEXT,
                      WATCH_CLIENT_TIMEOUT, WATCH_SERVER_TIMEOUT, execute,
                      remove_file, request, unique_filename, write_data_to_file)
 from logger import get_logger
-from client import _initialize_kubeclient_configuration
+from client import _initialize_kubeclient_configuration, get_api_client
 from healthz import mark_ready, register_watcher_processes, update_k8s_contact
 
 RESOURCE_SECRET = "secret"
@@ -104,12 +104,30 @@ def _get_destination_folder(metadata, default_folder, folder_annotation):
         return dest_folder
     return default_folder
 
+def _iter_k8s_items(list_fn, *, limit=5, **kwargs):
+    """
+    Iterate over k8s list_* results, handling pagination under the hood.
+    """
+    continue_token = None
+
+    while True:
+        resp = list_fn(limit=limit, _continue=continue_token, **kwargs)
+
+        # Yield each item from this page
+        for item in resp.items:
+            yield item
+
+        # Check if there is another page
+        continue_token = getattr(resp.metadata, "_continue", None)
+        if not continue_token:
+            break
+
 
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed, resource_name):
     _initialize_kubeclient_configuration()
-    v1 = client.CoreV1Api()
+    v1 = client.CoreV1Api(api_client=get_api_client())
 
     additional_args = {}
 
@@ -142,8 +160,9 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
 
     else:
         additional_args['label_selector'] = f"{label}={label_value}" if label_value else label
-        ret = getattr(v1, _list_namespace[namespace][resource])(**additional_args)
-        items = ret.items
+
+        list_fn = getattr(v1, _list_namespace[namespace][resource])
+        items = _iter_k8s_items(list_fn, limit=5, **additional_args)
 
     files_changed = False
     exist_keys = set()
@@ -338,7 +357,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                              ignore_already_processed):
     _initialize_kubeclient_configuration()
-    v1 = client.CoreV1Api()
+    v1 = client.CoreV1Api(api_client=get_api_client())
     # Filter resources based on label and value or just label
     label_selector = f"{label}={label_value}" if label_value else label
 
@@ -356,7 +375,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
     first_event = True
 
-    # Process events 
+    # Process events
     for event in stream:
         if first_event:
             mark_ready() # After successful initial WATCH sync
@@ -406,7 +425,7 @@ def _watch_resource_loop(mode, label, label_value, target_folder, request_url, r
                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                          ignore_already_processed, resource_name):
     _initialize_kubeclient_configuration()  # ensure k8s config in child
-    
+
     while True:
         try:
             if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
@@ -443,7 +462,7 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
                                          ignore_already_processed, resource_name)
- 
+
     procs_only = [p for p, ns, resource in processes]
     register_watcher_processes(procs_only)
 
@@ -472,7 +491,7 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
-            proc = Process(target=_watch_resource_loop,
+            proc = Thread(target=_watch_resource_loop,
                            args=(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
                                  ignore_already_processed, resource_name)
@@ -480,5 +499,6 @@ def _start_watcher_processes(namespace, folder_annotation, label, label_value, r
             proc.daemon = True
             proc.start()
             processes.append((proc, ns, resource))
+
 
     return processes

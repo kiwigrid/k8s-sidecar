@@ -55,6 +55,17 @@ class JsonFormatter(Iso8601Formatter, jsonlogger.JsonFormatter):
         super(JsonFormatter, self).add_fields(log_record, record, message_dict)
 
 
+class RemoveColorMessageFilter(logging.Filter):
+    """
+    A logging filter that removes the 'color_message' attribute from log records.
+    Uvicorn adds this attribute, which is not needed for JSON logging.
+    """
+    def filter(self, record):
+        if hasattr(record, 'color_message'):
+            del record.color_message
+        return True
+
+
 # Supported Log Formatters
 LogFormatters = {
     'JSON': (JsonFormatter('%(levelname)s %(message)s',
@@ -75,11 +86,17 @@ default_log_config = {
             "console"
         ]
     },
+    "filters": {
+        "remove_color_message": {
+            "()": "logger.RemoveColorMessageFilter"
+        }
+    },
     "handlers": {
         "console": {
-        "class": "logging.StreamHandler",
-        "level": logLevel,
-        "formatter": fmt.upper()
+            "class": "logging.StreamHandler",
+            "level": logLevel,
+            "formatter": fmt.upper(),
+            "filters": ["remove_color_message"]
         }
     },
     "formatters": {
