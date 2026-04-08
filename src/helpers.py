@@ -153,8 +153,9 @@ class BearerAuth(requests.auth.AuthBase):
 def request(url, method, enable_5xx=False, payload=None):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
     req_auth_method = os.getenv("REQ_AUTH_METHOD")
-    if req_auth_method and req_auth_method.lower() == "kubernetes_service_account":
-        auth = BearerAuth(read_file_content("/var/run/secrets/kubernetes.io/serviceaccount/token"))
+    if req_auth_method and req_auth_method.lower() == "jwt_token_file":
+        jwt_token_file = os.getenv("REQ_AUTH_TOKEN_FILE", "/var/run/secrets/kubernetes.io/serviceaccount/token")
+        auth = BearerAuth(read_file_content(jwt_token_file))
     elif req_auth_method and req_auth_method.lower() == "none":
         auth = None
     else:
