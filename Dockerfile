@@ -1,4 +1,4 @@
-FROM python:3.14.3-alpine3.23 AS base
+FROM python:3.15.0a8-alpine3.23 AS base
 
 FROM base AS builder
 # TARGETPLATFORM is automatically set by buildx (e.g., to "linux/arm/v7")
