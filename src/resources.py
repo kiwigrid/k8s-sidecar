@@ -191,8 +191,12 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         else:
             files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
 
-    # Clear the cache that is not listed.
-    for key in set(_resources_object_map[resource].keys()) - exist_keys:
+    # Clear the cache that is not listed. Scope the diff to this namespace: the cache is shared across per-namespace threads, so an unscoped diff would let one thread delete another's resources. 
+    relevant_keys = {
+        k for k, v in _resources_object_map[resource].items()
+        if namespace == "ALL" or v.metadata.namespace == namespace
+    }
+    for key in relevant_keys - exist_keys:
         item = _resources_object_map[resource].get(key)
         metadata = item.metadata
 
