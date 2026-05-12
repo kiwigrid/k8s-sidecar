@@ -11,7 +11,7 @@ COPY        src/ /app/src/
 RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
         apk add --no-cache gcc musl-dev g++ libffi-dev openssl-dev cargo; \
     else \
-        apk add --no-cache gcc; \
+        apk add --no-cache gcc musl-dev libffi-dev; \
     fi && \
     .venv/bin/pip install --no-cache-dir . && \
     find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
