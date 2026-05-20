@@ -3,7 +3,8 @@ target "k8s-sidecar" {
   platforms = [
     "linux/amd64",
     "linux/arm64",
-    "linux/arm/v7"
+    "linux/arm/v7",
+    "linux/riscv64"
   ]
   # Tags are dynamically defined in wokflows, so we leave this empty here
   tags = []
