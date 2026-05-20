@@ -8,7 +8,7 @@ RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptoo
 COPY        pyproject.toml /app/
 COPY        src/ /app/src/
 # Install dependencies based on the target platform
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+RUN if [ "$TARGETPLATFORM" = "linux/riscv64" ] ||  ["$TARGETPLATFORM" = "linux/arm/v7"]; then \
         apk add --no-cache gcc musl-dev g++ libffi-dev openssl-dev cargo; \
     else \
         apk add --no-cache gcc musl-dev libffi-dev; \
@@ -18,6 +18,12 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
 
 
 FROM base
+ARG TARGETPLATFORM
+RUN if [ "$TARGETPLATFORM" = "linux/riscv64" ] ||  ["$TARGETPLATFORM" = "linux/arm/v7"]; then \
+        # fix for: 
+        # ImportError: Error loading shared library libgcc_s.so.1: No such file or directory (needed by /app/.venv/lib/python3.15/site-packages/cryptography/hazmat/bindings/_rust.abi3.so)
+        apk add --no-cache libgcc libstdc++; \
+    fi
 LABEL org.opencontainers.image.source=https://github.com/kiwigrid/k8s-sidecar
 LABEL org.opencontainers.image.description="K8s sidecar image to collect configmaps and secrets as files"
 LABEL org.opencontainers.image.licenses=MIT
