@@ -3,9 +3,11 @@ target "k8s-sidecar" {
   platforms = [
     "linux/amd64",
     "linux/arm64",
-    "linux/arm/v7"
+    "linux/arm/v7",
+    "linux/ppc64le",
+    "linux/riscv64"
   ]
-  # Tags are dynamically defined in wokflows, so we leave this empty here
+  # Tags are dynamically defined in workflows, so we leave this empty here
   tags = []
 }
 group "default" {

@@ -25,12 +25,12 @@ Images are available at:
 - [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
 - [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
 
-All are identical multi-arch images built for `amd64`, `arm64` and `arm/v7`.
+All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le` and `riscv64`.
 
-## Dropped support for `ppc64le` and `s390x`
+## Dropped support for `s390x`
 
-With v2.x we have dropped support for the `ppc64le` and `s390x` architectures.
-If you still have a need for those architectures please get in touch.
+With v2.x we dropped support for the `ppc64le` and `s390x` architectures. Support for `ppc64le` has since been restored, while `s390x` remains unsupported.
+If you still have a need for `s390x`, please get in touch.
 A possible solution would be to setup a dedicated build job using a native runner instead of qemu.
 
 # Features
@@ -181,6 +181,7 @@ This workflow does **not** create tags, releases, or push images to registries.
   - `push` to `master` that touches:
     - `src/**`
     - `Dockerfile`
+    - `docker-bake.hcl`
 - **Versioning & tagging:**
   - Uses [`anothrNick/github-tag-action`](https://github.com/anothrNick/github-tag-action).
   - By default, each qualifying push bumps the **patch** version
@@ -204,7 +205,7 @@ This workflow does **not** create tags, releases, or push images to registries.
 
 This ensures that:
 
-- Only code changes in `src/**` or `Dockerfile` produce new images.
+- Only changes in `src/**`, `Dockerfile` or `docker-bake.hcl` produce new images.
 - Existing tags are not rebuilt and remain **immutable**.
 - CI-only or documentation-only changes do not trigger a release.
 
