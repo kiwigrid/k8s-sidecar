@@ -436,7 +436,9 @@ spec:
   containers:
   - name: sidecar
     image: kiwigrid/k8s-sidecar:testing
-    command: [ "python" , "-u" , "-m", "sidecar" , "--req-username-file=/opt/creds/username" , "--req-password-file=/opt/creds/password"]
+    args:
+      - --req-username-file=/opt/creds/username
+      - --req-password-file=/opt/creds/password
     imagePullPolicy: IfNotPresent
     volumeMounts:
     - name: auth-creds
