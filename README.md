@@ -70,6 +70,15 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_USERNAME` | false    | -       | string  |
 | `--req-password-file` | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_PASSWORD` | false    | -       | string  |
 
+```yaml
+containers:
+  - name: k8s-sidecar
+    image: ghcr.io/kiwigrid/k8s-sidecar:latest
+    args:
+      - --req-username-file=/path/to/username
+      - --req-password-file=/path/to/password
+```
+
 ## Configuration Environment Variables
 
 | name                       | description                                                                                                                                                                                                                                                                                                                         | required | default                                   | type    |
