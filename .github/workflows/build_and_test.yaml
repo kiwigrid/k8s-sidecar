@@ -203,6 +203,7 @@ jobs:
           wait_for_pod_ready "sidecar-healthcheck"
           wait_for_pod_log "sidecar-healthcheck" "Starting health server on port 8888"
           wait_for_pod_ready "sidecar-basicauth-args"
+          wait_for_pod_ready "sidecar-bearer"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
@@ -219,7 +220,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-bearer" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -253,6 +254,7 @@ jobs:
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
+          kubectl logs sidecar-bearer > /tmp/logs/sidecar-bearer.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
@@ -464,3 +466,10 @@ jobs:
           check_empty_or_missing /tmp/sidecar-5xx/500.txt
           # Optional: Check logs for error messages.
           check_log_contains "Max retries exceeded for URL" /tmp/logs/sidecar.log
+      - name: Verify Service Account Authentication
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying Service Account Authentication ---"
+          # We just need to check if the dummy-server received the authenticated request.
+          wait_for_pod_log "dummy-server-pod" "TEST_SUCCESS: Received Authorization header with Bearer token."
