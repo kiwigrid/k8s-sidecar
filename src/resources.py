@@ -189,11 +189,18 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         if resource == RESOURCE_CONFIGMAP:
             files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx)
         else:
-            files_changed = _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
+            files_changed |= _process_secret(dest_folder, item, resource, unique_filenames, enable_5xx)
 
-    # Clear the cache that is not listed.
-    for key in set(_resources_object_map[resource].keys()) - exist_keys:
-        item = _resources_object_map[resource].get(key)
+    # Clear the cache that is not listed. Scope the diff to this namespace: the cache is shared across per-namespace threads, so an unscoped diff would let one thread delete another's resources. 
+    resource_objects = _resources_object_map[resource].copy()
+    relevant_keys = {
+        key for key, item in resource_objects.items()
+        if namespace == "ALL" or item.metadata.namespace == namespace
+    }
+    for key in relevant_keys - exist_keys:
+        item = resource_objects.get(key)
+        if item is None:
+            continue  # another thread has already removed the key
         metadata = item.metadata
 
         logger.debug(f"Removing {resource}: {metadata.namespace}/{metadata.name}")
@@ -201,7 +208,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         if resource == RESOURCE_CONFIGMAP:
             files_changed |= _process_config_map(None, item, resource, unique_filenames, enable_5xx, True)
         else:
-            files_changed = _process_secret(None, item, resource, unique_filenames, enable_5xx, True)
+            files_changed |= _process_secret(None, item, resource, unique_filenames, enable_5xx, True)
 
     if script and files_changed:
         execute(script)
