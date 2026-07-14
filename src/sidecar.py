@@ -24,6 +24,7 @@ REQ_SKIP_INIT            = "REQ_SKIP_INIT"
 SCRIPT                   = "SCRIPT"
 ENABLE_5XX               = "ENABLE_5XX"
 IGNORE_ALREADY_PROCESSED = "IGNORE_ALREADY_PROCESSED"
+FOLDER_PER_NAMESPACE     = "FOLDER_PER_NAMESPACE"
 
 # Get logger
 logger = get_logger()
@@ -64,6 +65,8 @@ def main():
     if target_folder is None:
         logger.fatal(f"Should have added {FOLDER} as environment variable! Exit")
         return -1
+    
+    folder_per_namespace = os.getenv(FOLDER_PER_NAMESPACE, "false").lower() == "true"
 
     resources = os.getenv(RESOURCE, "configmap")
     resources = ("secret", "configmap") if resources == "both" else (resources,)
@@ -130,7 +133,7 @@ def main():
             for ns in namespace.split(','):
                 list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx,
-                               ignore_already_processed, resource_name)
+                               ignore_already_processed, resource_name, folder_per_namespace)
         mark_ready()
     else:
         # For watch/sleep methods, do an initial list first to ensure files are there at startup
@@ -145,13 +148,13 @@ def main():
                 # so the subsequent watch doesn't re-process immediately if that is enabled.
                 list_resources(label, label_value, target_folder, init_request_url, request_method, request_payload,
                                ns, folder_annotation, res, unique_filenames, script, enable_5xx,
-                               True, resource_name)
+                               True, resource_name, folder_per_namespace)
 
         mark_ready()
         logger.info("Initial sync complete, sidecar is ready.")
         watch_for_changes(method, label, label_value, target_folder, request_url, request_method, request_payload,
                           namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                          ignore_already_processed, resource_name)
+                          ignore_already_processed, resource_name, folder_per_namespace)
     mark_ready() # After successful initial LIST sync
 
 if __name__ == "__main__":
