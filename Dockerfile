@@ -1,4 +1,5 @@
 FROM python:3.15.0b2-alpine3.22 AS base
+RUN apk upgrade --no-cache
 
 FROM base AS builder
 # TARGETPLATFORM is automatically set by buildx (e.g., to "linux/arm/v7")
