@@ -7,7 +7,7 @@ FROM base AS builder
 # TARGETPLATFORM is automatically set by buildx (e.g., to "linux/arm/v7")
 ARG TARGETPLATFORM
 WORKDIR /app
-RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir -U pip setuptools
+RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir pip==26.1.2
 COPY        pyproject.toml /app/
 COPY        src/ /app/src/
 # Install dependencies based on the target platform
