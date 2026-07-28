@@ -121,10 +121,11 @@ containers:
 | `LOG_TZ`                   | Set the log timezone. (LOCAL or UTC)                                                                                                                                                                                                                                                                                                | false    | `LOCAL`                                   | string  |
 | `LOG_CONFIG`               | Log configuration file path. If not configured, uses the default log config for backward compatibility support. When not configured `LOG_LEVEL, LOG_FORMAT and LOG_TZ` would be used. Refer to [Python logging](https://docs.python.org/3/library/logging.config.html) for log configuration. For sample configuration file  refer to file examples/example_logconfig.yaml | false    | -                                         | string  |
 | `HEALTH_PORT`              | The port for the health endpoint (`/healthz`).                                                                                                                                                                                                                                                                                                                             | false    | `8080`                                    | integer |
+| `HEALTH_HOST`              | The host/address the health endpoint binds to. If unset, the sidecar tries dual-stack IPv6 first and automatically falls back to IPv4 if IPv6 is unavailable (e.g. `ipv6.disable=1`, IPv4-only clusters). Set this to force a specific address family, e.g. `0.0.0.0` for IPv4-only or `::` for IPv6-only.                                                              | false    | -                                          | string  |
 
 ## Health Endpoint
 
-The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes. The endpoint is compatible with both IPv4 and IPv6 (dual-stack).
+The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes. By default, the endpoint is compatible with both IPv4 and IPv6 (dual-stack), automatically falling back to IPv4-only if IPv6 is unavailable. Use `HEALTH_HOST` to override the bind address explicitly.
 
 ### Readiness Probe
 

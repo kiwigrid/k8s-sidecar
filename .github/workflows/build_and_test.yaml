@@ -202,6 +202,8 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-healthcheck"
           wait_for_pod_log "sidecar-healthcheck" "Starting health server on port 8888"
+          wait_for_pod_ready "sidecar-healthcheck-ipv4"
+          wait_for_pod_log "sidecar-healthcheck-ipv4" "Starting health server on port 8888"
           wait_for_pod_ready "sidecar-basicauth-args"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
@@ -252,6 +254,7 @@ jobs:
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
+          kubectl logs sidecar-healthcheck-ipv4 > /tmp/logs/sidecar-healthcheck-ipv4.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
@@ -382,6 +385,26 @@ jobs:
         run: |
           echo "--- Verifying health server response on IPv6 in pod sidecar-healthcheck ---"
           kubectl exec sidecar-healthcheck -- python -c "import urllib.request; res = urllib.request.urlopen('http://[::1]:8888/healthz'); print(res.read().decode())"
+      - name: Verify health server startup with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying health server startup in pod sidecar-healthcheck-ipv4 ---"
+          check_log_contains "Starting health server on port 8888" /tmp/logs/sidecar-healthcheck-ipv4.log
+      - name: Verify health server response on IPv4 with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          echo "--- Verifying health server response on IPv4 in pod sidecar-healthcheck-ipv4 ---"
+          kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; res = urllib.request.urlopen('http://0.0.0.0:8888/healthz'); print(res.read().decode())"
+      - name: Verify health server rejects IPv6 with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          echo "--- Verifying health server rejects IPv6 in pod sidecar-healthcheck-ipv4 (HEALTH_HOST=0.0.0.0 forces AF_INET) ---"
+          if kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; urllib.request.urlopen('http://[::1]:8888/healthz', timeout=5)" 2>/dev/null; then
+            echo "Error: expected IPv6 access to fail when HEALTH_HOST=0.0.0.0 is set, but it succeeded"
+            exit 1
+          fi
+          echo "IPv6 access correctly rejected when HEALTH_HOST=0.0.0.0 is set"
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |

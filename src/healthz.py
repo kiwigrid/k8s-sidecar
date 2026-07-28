@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 import logging.config
 import os
@@ -106,6 +107,34 @@ def register_watcher_processes(processes: List[Thread]):
     global watcher_processes
     watcher_processes = processes
 
+def _create_health_http_server(health_port: int) -> ThreadingHTTPServer:
+    """
+    Create the health HTTP server, binding to HEALTH_HOST if set.
+
+    Without HEALTH_HOST, dual-stack IPv6 is attempted first and IPv4 is used
+    as a fallback for clusters/pods without IPv6 support (see #531, #605, #606).
+    """
+    logger = logging.getLogger("health_server")
+    health_host = os.getenv("HEALTH_HOST")
+
+    if health_host is not None:
+        try:
+            family = socket.AF_INET6 if ipaddress.ip_address(health_host).version == 6 else socket.AF_INET
+        except ValueError:
+            # Not an IP literal (e.g. a hostname); let the OS resolve it as IPv6/dual-stack.
+            family = socket.AF_INET6
+        ThreadingHTTPServer.address_family = family
+        return ThreadingHTTPServer((health_host, health_port), HealthHandler)
+
+    try:
+        ThreadingHTTPServer.address_family = socket.AF_INET6
+        return ThreadingHTTPServer(("", health_port), HealthHandler)
+    except OSError:
+        logger.warning("IPv6 not available, falling back to IPv4 for the health server")
+        ThreadingHTTPServer.address_family = socket.AF_INET
+        return ThreadingHTTPServer(("", health_port), HealthHandler)
+
+
 def start_health_server():
     """
     Start the lightweight health HTTP server in a background thread.
@@ -129,8 +158,7 @@ def start_health_server():
         logging.config.dictConfig(log_config)
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
-        ThreadingHTTPServer.address_family = socket.AF_INET6
-        server = ThreadingHTTPServer(("", health_port), HealthHandler)
+        server = _create_health_http_server(health_port)
 
         logging.getLogger("health_server").info(
             "Starting health server on port %d", health_port
