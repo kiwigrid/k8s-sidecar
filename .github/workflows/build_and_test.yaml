@@ -400,7 +400,7 @@ jobs:
         shell: bash
         run: |
           echo "--- Verifying health server rejects IPv6 in pod sidecar-healthcheck-ipv4 (HEALTH_HOST=0.0.0.0 forces AF_INET) ---"
-          if kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; urllib.request.urlopen('http://[::1]:8888/healthz', timeout=5)"; then
+          if kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; urllib.request.urlopen('http://[::1]:8888/healthz', timeout=5)" 2>/dev/null; then
             echo "Error: expected IPv6 access to fail when HEALTH_HOST=0.0.0.0 is set, but it succeeded"
             exit 1
           fi
