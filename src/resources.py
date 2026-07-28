@@ -92,16 +92,23 @@ def _get_file_data_and_name(full_filename, content, enable_5xx, content_type=CON
     return filename, file_data
 
 
-def _get_destination_folder(metadata, default_folder, folder_annotation):
+def _get_destination_folder(metadata, default_folder, folder_annotation, folder_per_namespace):
     if metadata.annotations and folder_annotation in metadata.annotations.keys():
         folder_annotation = metadata.annotations[folder_annotation]
         if os.path.isabs(folder_annotation):
             dest_folder = folder_annotation
         else:
-            dest_folder = os.path.join(default_folder, folder_annotation)
+            if folder_per_namespace:
+                dest_folder = os.path.join(default_folder, metadata.namespace, folder_annotation)
+            else:
+                dest_folder = os.path.join(default_folder, folder_annotation)
         logger.info(f"Found a folder override annotation, "
                     f"placing the {metadata.name} in: {dest_folder}")
         return dest_folder
+    
+    if folder_per_namespace:
+        return os.path.join(default_folder, metadata.namespace)
+
     return default_folder
 
 def _iter_k8s_items(list_fn, *, limit=5, **kwargs):
@@ -125,7 +132,7 @@ def _iter_k8s_items(list_fn, *, limit=5, **kwargs):
 
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                   ignore_already_processed, resource_name):
+                   ignore_already_processed, resource_name, folder_per_namespace):
     _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api(api_client=get_api_client())
 
@@ -184,7 +191,7 @@ def list_resources(label, label_value, target_folder, request_url, request_metho
         logger.debug(f"Working on {resource}: {metadata.namespace}/{metadata.name}")
 
         # Get the destination folder
-        dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation)
+        dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation, folder_per_namespace)
 
         if resource == RESOURCE_CONFIGMAP:
             files_changed |= _process_config_map(dest_folder, item, resource, unique_filenames, enable_5xx)
@@ -364,7 +371,7 @@ def _update_file(data_key, data_content, dest_folder, metadata, resource,
 
 def _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                              namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                             ignore_already_processed):
+                             ignore_already_processed, folder_per_namespace):
     _initialize_kubeclient_configuration()
     v1 = client.CoreV1Api(api_client=get_api_client())
     # Filter resources based on label and value or just label
@@ -414,7 +421,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
         files_changed = False
 
         # Get the destination folder
-        dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation)
+        dest_folder = _get_destination_folder(metadata, target_folder, folder_annotation, folder_per_namespace)
 
         item_removed = event_type == "DELETED"
         if resource == RESOURCE_CONFIGMAP:
@@ -432,7 +439,7 @@ def _watch_resource_iterator(label, label_value, target_folder, request_url, req
 
 def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder, request_url, request_method, request_payload,
                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                         ignore_already_processed, resource_name):
+                         ignore_already_processed, resource_name, folder_per_namespace):
     _initialize_kubeclient_configuration()  # ensure k8s config in child
 
     while not shutdown_event.is_set():
@@ -445,7 +452,7 @@ def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder
             else:
                 _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                         ignore_already_processed)
+                                         ignore_already_processed, folder_per_namespace)
         except ApiException as e:
             if e.status != 500:
                 logger.error(f"ApiException when calling kubernetes: {e}\n")
@@ -467,12 +474,12 @@ def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder
 
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
-                      ignore_already_processed, resource_name):
+                      ignore_already_processed, resource_name, folder_per_namespace):
     shutdown_event = Event()
     processes = _start_watcher_processes(shutdown_event, current_namespace, folder_annotation, label,
                                          label_value, request_method, mode, request_payload, resources,
                                          target_folder, unique_filenames, script, request_url, enable_5xx,
-                                         ignore_already_processed, resource_name)
+                                         ignore_already_processed, resource_name, folder_per_namespace)
 
     procs_only = [p for p, ns, resource in processes]
     register_watcher_processes(procs_only)
@@ -499,14 +506,14 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
 
 def _start_watcher_processes(shutdown_event, namespace, folder_annotation, label, label_value, request_method,
                              mode, request_payload, resources, target_folder, unique_filenames, script, request_url,
-                             enable_5xx, ignore_already_processed, resource_name):
+                             enable_5xx, ignore_already_processed, resource_name, folder_per_namespace):
     processes = []
     for resource in resources:
         for ns in namespace.split(','):
             proc = Thread(target=_watch_resource_loop,
                            args=(shutdown_event, mode, label, label_value, target_folder, request_url, request_method, request_payload,
                                  ns, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                                 ignore_already_processed, resource_name)
+                                 ignore_already_processed, resource_name, folder_per_namespace)
                            )
             proc.daemon = True
             proc.start()
