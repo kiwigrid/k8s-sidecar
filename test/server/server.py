@@ -1,4 +1,6 @@
-from fastapi import Depends, FastAPI, status, HTTPException
+from typing import Optional
+
+from fastapi import Depends, FastAPI, Header, status, HTTPException
 from fastapi.logger import logger
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
@@ -46,3 +48,16 @@ async def read_secure_data(auth: HTTPBasicCredentials = Depends(basic_auth_schem
             headers={"WWW-Authenticate": "Basic"},
         )
     return 'allowed'
+
+
+@app.get("/secured-bearer", status_code=200, response_class=PlainTextResponse)
+async def read_secure_bearer_data(authorization: Optional[str] = Header(default=None)):
+    if authorization and authorization.startswith("Bearer ") and authorization[7:].strip():
+        logger.info("TEST_SUCCESS: Received Authorization header with Bearer token.")
+        return 'allowed'
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Missing or invalid Bearer token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

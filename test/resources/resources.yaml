@@ -95,6 +95,15 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: url-configmap-jwt
+  labels:
+    findme: "jwt"
+data:
+  secured-bearer.txt.url: "http://dummy-server/secured-bearer"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: url-configmap-binary-download
   labels:
     findme: "yup"
