@@ -275,6 +275,7 @@ jobs:
           mkdir /tmp/sidecar
           mkdir /tmp/sidecar-5xx
           mkdir /tmp/sidecar-basicauth-args
+          mkdir /tmp/sidecar-basicauth-envfile
           echo "Downloading resource files from sidecar..."
           kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
