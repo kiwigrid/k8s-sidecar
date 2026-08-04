@@ -133,12 +133,15 @@ def read_file_content(file_path):
 def fetch_basic_auth_credentials():
     username = os.getenv("REQ_USERNAME")
     password = os.getenv("REQ_PASSWORD")
-    if args.req_username_file:
-        username_from_file = read_file_content(args.req_username_file)
+    # CLI flags take precedence over environment variables
+    req_username_file = args.req_username_file or os.getenv("REQ_USERNAME_FILE")
+    req_password_file = args.req_password_file or os.getenv("REQ_PASSWORD_FILE")
+    if req_username_file:
+        username_from_file = read_file_content(req_username_file)
         if username_from_file is not None:
             username = username_from_file
-    if args.req_password_file:
-        password_from_file = read_file_content(args.req_password_file)
+    if req_password_file:
+        password_from_file = read_file_content(req_password_file)
         if password_from_file is not None:
             password = password_from_file
     return username, password
