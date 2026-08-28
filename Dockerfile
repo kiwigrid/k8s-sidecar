@@ -1,7 +1,7 @@
 FROM python:3.15.0b2-alpine3.22@sha256:8374b202f092c233441f36b3018fd839c5c42d58b0a8ea479860f9ff2326d8cf AS base
 RUN apk add --no-cache \
-        libcrypto3=3.5.8-r0 \
-        libssl3=3.5.8-r0
+        'libcrypto3>=3.5.7-r0' \
+        'libssl3>=3.5.7-r0'
 
 FROM base AS builder
 # TARGETPLATFORM is automatically set by buildx (e.g., to "linux/arm/v7")
