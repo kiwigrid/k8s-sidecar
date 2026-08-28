@@ -8,7 +8,6 @@ dependencies = [
     "requests==2.33.1",
     "python-json-logger==4.1.0",
     "logfmter==0.0.12",
-    "argparse==1.4.0",
     "pyasn1==0.6.4",
 ]
 
