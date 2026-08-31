@@ -7,6 +7,24 @@ on:
   - pull_request
   - workflow_dispatch
 jobs:
+  # Unit tests for the liveness signal (#621, #626). Standard library only, so
+  # this needs no test runner dependency and finishes in seconds; it runs
+  # independently of the image build. `pip install .` is only there to pull the
+  # runtime dependencies that src/ imports.
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install runtime dependencies
+        run: pip install .
+      - name: Run unit tests
+        run: python -m unittest discover -s test/unit -t test/unit
+
   build:
     runs-on: ubuntu-latest
     steps:
