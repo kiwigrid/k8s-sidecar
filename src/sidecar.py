@@ -65,7 +65,7 @@ def main():
     if target_folder is None:
         logger.fatal(f"Should have added {FOLDER} as environment variable! Exit")
         return -1
-    
+
     folder_per_namespace = os.getenv(FOLDER_PER_NAMESPACE, "false").lower() == "true"
 
     resources = os.getenv(RESOURCE, "configmap")

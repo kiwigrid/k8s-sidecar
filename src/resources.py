@@ -105,7 +105,7 @@ def _get_destination_folder(metadata, default_folder, folder_annotation, folder_
         logger.info(f"Found a folder override annotation, "
                     f"placing the {metadata.name} in: {dest_folder}")
         return dest_folder
-    
+
     if folder_per_namespace:
         return os.path.join(default_folder, metadata.namespace)
 
