@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
       - name: Build sidecar
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
@@ -24,7 +24,7 @@ jobs:
         run: |
           cp test/kubelogo.png test/server/static/
       - name: Build dummy server
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: "test/server"
           push: false
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Create k8s Kind Cluster
         # make sure the k8s versions match the kind version of the action version 🤯
         uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0 # use kind release v0.31.0
@@ -202,7 +202,10 @@ jobs:
           wait_for_pod_ready "sidecar"
           wait_for_pod_ready "sidecar-healthcheck"
           wait_for_pod_log "sidecar-healthcheck" "Starting health server on port 8888"
+          wait_for_pod_ready "sidecar-healthcheck-ipv4"
+          wait_for_pod_log "sidecar-healthcheck-ipv4" "Starting health server on port 8888"
           wait_for_pod_ready "sidecar-basicauth-args"
+          wait_for_pod_ready "sidecar-basicauth-envfile"
           wait_for_pod_ready "sidecar-5xx"
           wait_for_pod_ready "sidecar-pythonscript"
           wait_for_pod_ready "sidecar-pythonscript-logfile"
@@ -220,7 +223,7 @@ jobs:
           sleep 20
           echo "Installing resources..."
           kubectl apply -f "test/resources/resources.yaml"
-          pods=("sidecar" "sidecar-basicauth-args" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
+          pods=("sidecar" "sidecar-basicauth-args" "sidecar-basicauth-envfile" "sidecar-5xx" "sidecar-pythonscript" "sidecar-pythonscript-logfile")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -262,7 +265,9 @@ jobs:
           mkdir /tmp/logs
           kubectl logs sidecar > /tmp/logs/sidecar.log
           kubectl logs sidecar-healthcheck > /tmp/logs/sidecar-healthcheck.log
+          kubectl logs sidecar-healthcheck-ipv4 > /tmp/logs/sidecar-healthcheck-ipv4.log
           kubectl logs sidecar-basicauth-args > /tmp/logs/sidecar-basicauth-args.log
+          kubectl logs sidecar-basicauth-envfile > /tmp/logs/sidecar-basicauth-envfile.log
           kubectl logs sidecar-5xx > /tmp/logs/sidecar-5xx.log
           kubectl logs sidecar-pythonscript > /tmp/logs/sidecar-pythonscript.log
           kubectl logs sidecar-pythonscript-logfile > /tmp/logs/sidecar-pythonscript-logfile.log
@@ -280,6 +285,8 @@ jobs:
         run: |
           mkdir /tmp/sidecar
           mkdir /tmp/sidecar-5xx
+          mkdir /tmp/sidecar-basicauth-args
+          mkdir /tmp/sidecar-basicauth-envfile
           echo "Downloading resource files from sidecar..."
           kubectl cp sidecar:/tmp/hello.world /tmp/sidecar/hello.world
           kubectl cp sidecar:/tmp/cm-kubelogo.png /tmp/sidecar/cm-kubelogo.png
@@ -298,6 +305,9 @@ jobs:
 
           echo "Downloading resource files from sidecar-basicauth-args pod"
           kubectl cp sidecar-basicauth-args:/tmp/secured.txt /tmp/sidecar-basicauth-args/secured.txt
+
+          echo "Downloading resource files from sidecar-basicauth-envfile pod"
+          kubectl cp sidecar-basicauth-envfile:/tmp/secured.txt /tmp/sidecar-basicauth-envfile/secured.txt
 
           echo "Downloading resource files from sidecar-5xx..."
           kubectl cp sidecar-5xx:/tmp-5xx/hello.world /tmp/sidecar-5xx/hello.world
@@ -392,12 +402,38 @@ jobs:
         run: |
           echo "--- Verifying health server response on IPv6 in pod sidecar-healthcheck ---"
           kubectl exec sidecar-healthcheck -- python -c "import urllib.request; res = urllib.request.urlopen('http://[::1]:8888/healthz'); print(res.read().decode())"
+      - name: Verify health server startup with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying health server startup in pod sidecar-healthcheck-ipv4 ---"
+          check_log_contains "Starting health server on port 8888" /tmp/logs/sidecar-healthcheck-ipv4.log
+      - name: Verify health server response on IPv4 with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          echo "--- Verifying health server response on IPv4 in pod sidecar-healthcheck-ipv4 ---"
+          kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; res = urllib.request.urlopen('http://0.0.0.0:8888/healthz'); print(res.read().decode())"
+      - name: Verify health server rejects IPv6 with HEALTH_HOST=0.0.0.0
+        shell: bash
+        run: |
+          echo "--- Verifying health server rejects IPv6 in pod sidecar-healthcheck-ipv4 (HEALTH_HOST=0.0.0.0 forces AF_INET) ---"
+          if kubectl exec sidecar-healthcheck-ipv4 -- python -c "import urllib.request; urllib.request.urlopen('http://[::1]:8888/healthz', timeout=5)" 2>/dev/null; then
+            echo "Error: expected IPv6 access to fail when HEALTH_HOST=0.0.0.0 is set, but it succeeded"
+            exit 1
+          fi
+          echo "IPv6 access correctly rejected when HEALTH_HOST=0.0.0.0 is set"
       - name: Verify sidecar-basicauth-args pod file after initial sync
         shell: bash
         run: |
           source /tmp/sidecar_helpers.sh
           echo "--- Verifying sidecar-basicauth-args pod file after initial sync ---"
           check_content "allowed" /tmp/sidecar-basicauth-args/secured.txt          
+      - name: Verify sidecar-basicauth-envfile pod file after initial sync
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying sidecar-basicauth-envfile pod file after initial sync ---"
+          check_content "allowed" /tmp/sidecar-basicauth-envfile/secured.txt
       - name: Verify sidecar-5xx files after initial sync
         shell: bash
         run: |

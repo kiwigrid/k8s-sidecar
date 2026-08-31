@@ -67,8 +67,17 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 
 | name                  | description                                                                                                                                                      | required | default | type    |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|---------|
-| `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_USERNAME` | false    | -       | string  |
-| `--req-password-file` | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides the `REQ_PASSWORD` | false    | -       | string  |
+| `--req-username-file` | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides `REQ_USERNAME`. Takes precedence over `REQ_USERNAME_FILE` env var. | false    | -       | string  |
+| `--req-password-file` | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides `REQ_PASSWORD`. Takes precedence over `REQ_PASSWORD_FILE` env var. | false    | -       | string  |
+
+```yaml
+containers:
+  - name: k8s-sidecar
+    image: ghcr.io/kiwigrid/k8s-sidecar:latest
+    args:
+      - --req-username-file=/path/to/username
+      - --req-password-file=/path/to/password
+```
 
 ## Configuration Environment Variables
 
@@ -94,6 +103,8 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `REQ_TIMEOUT`              | How many seconds to wait for the server to send data before giving up for `.url` triggered requests or requests to `REQ_URI` (does not apply to k8s api requests)                                                                                                                                                                   | false    | `10`                                      | float   |
 | `REQ_USERNAME`             | Username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests                                                                                                                                                                                                                               | false    | -                                         | string  |
 | `REQ_PASSWORD`             | Password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests                                                                                                                                                                                                                               | false    | -                                         | string  |
+| `REQ_USERNAME_FILE`        | Path to file containing username to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides `REQ_USERNAME`. The CLI flag `--req-username-file` takes precedence over this env var.                                                                                                 | false    | -                                         | string  |
+| `REQ_PASSWORD_FILE`        | Path to file containing password to use for basic authentication for requests to `REQ_URL` and for `*.url` triggered requests. This overrides `REQ_PASSWORD`. The CLI flag `--req-password-file` takes precedence over this env var.                                                                                                 | false    | -                                         | string  |
 | `REQ_BASIC_AUTH_ENCODING`  | Which encoding to use for username and password as [by default it's undefined](https://datatracker.ietf.org/doc/html/rfc7617) (e.g. `utf-8`).                                                                                                                                                                                       | false    | `latin1`                                  | string  |
 | `REQ_SKIP_INIT`            | Set to `true` to skip the initial request on startup to `REQ_URL` when using `WATCH` method                                                                                                                                                                                                                                         | false    | `false`                                   | boolean |
 | `SCRIPT`                   | Absolute path to a script to execute after a configmap got reloaded. It runs before calls to `REQ_URI`. If the file is not executable it will be passed to `sh`. Otherwise it's executed as is. [Shebangs](https://en.wikipedia.org/wiki/Shebang_(Unix)) known to work are `#!/bin/sh` and `#!/usr/bin/env python`                  | false    | -                                         | string  |
@@ -113,10 +124,11 @@ If the filename ends with `.url` suffix, the content will be processed as a URL 
 | `LOG_TZ`                   | Set the log timezone. (LOCAL or UTC)                                                                                                                                                                                                                                                                                                | false    | `LOCAL`                                   | string  |
 | `LOG_CONFIG`               | Log configuration file path. If not configured, uses the default log config for backward compatibility support. When not configured `LOG_LEVEL, LOG_FORMAT and LOG_TZ` would be used. Refer to [Python logging](https://docs.python.org/3/library/logging.config.html) for log configuration. For sample configuration file  refer to file examples/example_logconfig.yaml | false    | -                                         | string  |
 | `HEALTH_PORT`              | The port for the health endpoint (`/healthz`).                                                                                                                                                                                                                                                                                                                             | false    | `8080`                                    | integer |
+| `HEALTH_HOST`              | The host/address the health endpoint binds to. If unset, the sidecar tries dual-stack IPv6 first and automatically falls back to IPv4 if IPv6 is unavailable (e.g. `ipv6.disable=1`, IPv4-only clusters). Set this to force a specific address family, e.g. `0.0.0.0` for IPv4-only or `::` for IPv6-only.                                                              | false    | -                                          | string  |
 
 ## Health Endpoint
 
-The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes. The endpoint is compatible with both IPv4 and IPv6 (dual-stack).
+The sidecar provides a health endpoint at `/healthz` on port `8080` (or as configured by `HEALTH_PORT`) that can be used for Kubernetes readiness and liveness probes. By default, the endpoint is compatible with both IPv4 and IPv6 (dual-stack), automatically falling back to IPv4-only if IPv6 is unavailable. Use `HEALTH_HOST` to override the bind address explicitly.
 
 ### Readiness Probe
 
