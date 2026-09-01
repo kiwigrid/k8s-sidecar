@@ -518,14 +518,14 @@ jobs:
           echo "--- Verifying sidecar-folder-per-namespace pod files ---"
           # No annotation: file lands under FOLDER/<namespace>/
           check_pod_file_exists sidecar-folder-per-namespace /tmp/default/hello-fpn.world
-          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/default/hello-fpn.world" | diff - <(echo "Hello FPN Default!") || { echo "hello-fpn.world content mismatch"; exit 1; }
+          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/default/hello-fpn.world" | diff - <(echo -n "Hello FPN Default!") || { echo "hello-fpn.world content mismatch"; exit 1; }
           # Relative folder annotation: nested under FOLDER/<namespace>/<annotation>/
           check_pod_file_exists sidecar-folder-per-namespace /tmp/default/relative-fpn/relative-fpn.txt
-          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/default/relative-fpn/relative-fpn.txt" | diff - <(echo "This FPN relative exists") || { echo "relative-fpn.txt content mismatch"; exit 1; }
+          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/default/relative-fpn/relative-fpn.txt" | diff - <(echo -n "This FPN relative exists") || { echo "relative-fpn.txt content mismatch"; exit 1; }
           # Absolute folder annotation: namespace is ignored, path used as-is
           check_pod_file_exists sidecar-folder-per-namespace /tmp/fpn-absolute/absolute-fpn.txt
-          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/fpn-absolute/absolute-fpn.txt" | diff - <(echo "This FPN absolute exists") || { echo "absolute-fpn.txt content mismatch"; exit 1; }
+          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/fpn-absolute/absolute-fpn.txt" | diff - <(echo -n "This FPN absolute exists") || { echo "absolute-fpn.txt content mismatch"; exit 1; }
           # A different namespace gets its own subfolder
           check_pod_file_exists sidecar-folder-per-namespace /tmp/folder-per-ns-test/hello-fpn-otherns.world
-          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/folder-per-ns-test/hello-fpn-otherns.world" | diff - <(echo "Hello FPN Other NS!") || { echo "hello-fpn-otherns.world content mismatch"; exit 1; }
+          kubectl exec sidecar-folder-per-namespace -- sh -c "cat /tmp/folder-per-ns-test/hello-fpn-otherns.world" | diff - <(echo -n "Hello FPN Other NS!") || { echo "hello-fpn-otherns.world content mismatch"; exit 1; }
           echo "FOLDER_PER_NAMESPACE behavior verified successfully."
