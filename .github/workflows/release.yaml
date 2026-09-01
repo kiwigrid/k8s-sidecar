@@ -80,7 +80,7 @@ jobs:
       - name: Build Changelog
         if: steps.tagging.outputs.part != '' && steps.tagging.outputs.part != 'none'
         id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@c9bcd8238b6f41e05561348339429d360b1c0247 # v6.2.3
+        uses: mikepenz/release-changelog-builder-action@cb021f9b36a51a7c6f18e4679b6fa2cb77a1260c # v6.3.0
         with:
           configuration: ".github/workflows/release-notes-config.json"
         env:
