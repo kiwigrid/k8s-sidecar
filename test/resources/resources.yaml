@@ -101,3 +101,51 @@ metadata:
 binaryData:
   # Base64 encoded url is 'http://dummy-server/static/kubelogo.png'
   url-downloaded-kubelogo.png.url: "aHR0cDovL2R1bW15LXNlcnZlci9zdGF0aWMva3ViZWxvZ28ucG5n"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpn-default-configmap
+  namespace: default
+  labels:
+    folderpernamespace: "yes"
+data:
+  hello-fpn.world: |-
+    Hello FPN Default!
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpn-relative-configmap
+  namespace: default
+  labels:
+    folderpernamespace: "yes"
+  annotations:
+    k8s-sidecar-target-directory: relative-fpn
+data:
+  relative-fpn.txt: |-
+    This FPN relative exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpn-absolute-configmap
+  namespace: default
+  labels:
+    folderpernamespace: "yes"
+  annotations:
+    k8s-sidecar-target-directory: /tmp/fpn-absolute/
+data:
+  absolute-fpn.txt: |-
+    This FPN absolute exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fpn-other-ns-configmap
+  namespace: folder-per-ns-test
+  labels:
+    folderpernamespace: "yes"
+data:
+  hello-fpn-otherns.world: |-
+    Hello FPN Other NS!

@@ -26,6 +26,11 @@ subjects:
   namespace: default
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: folder-per-ns-test
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: script-configmap
@@ -612,6 +617,36 @@ spec:
         value: "SLEEP"
       - name: SLEEP_TIME
         value: "10"
+      - name: LOG_LEVEL
+        value: "DEBUG"
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sidecar-folder-per-namespace
+  namespace: default
+spec:
+  serviceAccountName: sample-acc
+  containers:
+  - name: sidecar
+    image: kiwigrid/k8s-sidecar:testing
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /tmp/
+    env:
+      - name: LABEL
+        value: "folderpernamespace"
+      - name: FOLDER
+        value: /tmp/
+      - name: RESOURCE
+        value: configmap
+      - name: NAMESPACE
+        value: "ALL"
+      - name: FOLDER_PER_NAMESPACE
+        value: "true"
       - name: LOG_LEVEL
         value: "DEBUG"
   volumes:
