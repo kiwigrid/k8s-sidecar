@@ -448,11 +448,21 @@ def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder
                 list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                                namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                                ignore_already_processed, resource_name, folder_per_namespace)
+                # A completed LIST is proof of contact for this watcher.
+                update_k8s_contact()
                 sleep(int(os.getenv("SLEEP_TIME", 60)))
             else:
                 _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
                                          namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                                          ignore_already_processed, folder_per_namespace)
+                # The iterator returns once the server closes the stream after
+                # WATCH_SERVER_TIMEOUT, so reaching this line proves the
+                # connection ran its full course. This is the heartbeat that
+                # keeps an IDLE cluster healthy -- the per-event stamp inside
+                # the iterator never fires when no resources change. A stalled
+                # stream never returns here, so the heartbeat ages out and
+                # /healthz reports 503 (#338, #621).
+                update_k8s_contact()
         except ApiException as e:
             if e.status != 500:
                 logger.error(f"ApiException when calling kubernetes: {e}\n")
@@ -472,6 +482,23 @@ def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder
     logger.info(f"Shutdown event received, stopping watcher for {namespace}/{resource}.")
 
 
+def heartbeat_interval(mode, namespace, resource_name):
+    """
+    How often a healthy watcher is expected to report a successful Kubernetes
+    contact. The liveness threshold in healthz is derived from this value.
+
+    The predicate has to match the branch taken in _watch_resource_loop()
+    exactly, not just `mode`: with RESOURCE_NAME set on a non-ALL namespace,
+    WATCH also runs the list-and-sleep path and therefore reports in at
+    SLEEP_TIME rather than at WATCH_SERVER_TIMEOUT. Deriving from `mode` alone
+    sizes the threshold against the wrong interval and flaps as soon as
+    SLEEP_TIME exceeds twice WATCH_SERVER_TIMEOUT.
+    """
+    if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
+        return int(os.getenv("SLEEP_TIME", 60))
+    return int(WATCH_SERVER_TIMEOUT)
+
+
 def watch_for_changes(mode, label, label_value, target_folder, request_url, request_method, request_payload,
                       current_namespace, folder_annotation, resources, unique_filenames, script, enable_5xx,
                       ignore_already_processed, resource_name, folder_per_namespace):
@@ -482,11 +509,13 @@ def watch_for_changes(mode, label, label_value, target_folder, request_url, requ
                                          ignore_already_processed, resource_name, folder_per_namespace)
 
     procs_only = [p for p, ns, resource in processes]
-    register_watcher_processes(procs_only)
+    register_watcher_processes(procs_only, heartbeat_interval(mode, current_namespace, resource_name))
 
     while True:
-        # Update k8s contact timestamp to show the main process is alive and watchers are running
-        update_k8s_contact()
+        # NOTE: deliberately no update_k8s_contact() here. Stamping from this
+        # loop would only prove that the loop itself is running, which is
+        # always true while the container is up -- it made the liveness check
+        # unfalsifiable (#621). Watchers stamp for themselves.
         died = False
         for proc, ns, resource in processes:
             if not proc.is_alive():

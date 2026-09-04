@@ -7,17 +7,25 @@ import threading
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
-from typing import List
+from typing import Dict, List, Optional
 
 from logger import get_log_config
 
 # Health state variables
 is_ready = False
-last_k8s_contact = datetime.now(timezone.utc)
 watcher_processes: List[Thread] = []
 
-# Settings
-K8S_CONTACT_THRESHOLD_SECONDS = 60  # tolerated delay before declaring not live
+# Last successful Kubernetes contact, tracked PER WATCHER THREAD (keyed by
+# thread ident). A single shared timestamp is not enough: with RESOURCE=both
+# there is one watcher per resource kind, and a healthy one would keep the
+# shared timestamp fresh while another sits on a stalled stream (see #621).
+watcher_heartbeats: Dict[int, datetime] = {}
+_heartbeat_lock = threading.Lock()
+
+# Tolerated delay before declaring not live. Overridden in
+# register_watcher_processes() based on how often watchers actually report in;
+# the default only applies until watchers are registered.
+K8S_CONTACT_THRESHOLD_SECONDS = 60
 
 
 class HealthCheckFilter(logging.Filter):
@@ -32,7 +40,7 @@ class HealthHandler(BaseHTTPRequestHandler):
     server_version = "HealthHTTP/1.0"
 
     def do_GET(self):
-        global is_ready, last_k8s_contact, watcher_processes
+        global is_ready, watcher_processes
 
         if self.path != "/healthz":
             self.send_response(404)
@@ -49,16 +57,16 @@ class HealthHandler(BaseHTTPRequestHandler):
         if not is_ready:
             status = 503
             body = "NOT READY"
-        # Liveness check (k8s contact)
-        elif (now - last_k8s_contact) > timedelta(
-                seconds=K8S_CONTACT_THRESHOLD_SECONDS
-        ):
-            status = 503
-            body = "NOT LIVE (K8s contact lost)"
-        # Liveness check (watcher processes)
+        # Liveness check (watcher threads still running)
         elif watcher_processes and not all(p.is_alive() for p in watcher_processes):
             status = 503
             body = "NOT LIVE (watcher thread died)"
+        # Liveness check (k8s contact, per watcher). This is what catches a
+        # watcher that is still alive but stuck in a stream that never returns
+        # -- the failure mode of #338/#621, which is_alive() cannot see.
+        elif _stale_watchers(now):
+            status = 503
+            body = "NOT LIVE (K8s contact lost)"
         else:
             status = 200
             body = "OK"
@@ -95,17 +103,57 @@ def mark_ready():
 
 def update_k8s_contact():
     """
-    Update the timestamp of the last successful Kubernetes contact.
-    """
-    global last_k8s_contact
-    last_k8s_contact = datetime.now(timezone.utc)
+    Record a successful Kubernetes contact for the CALLING watcher thread.
 
-def register_watcher_processes(processes: List[Thread]):
+    Must be called from the watcher thread itself -- the heartbeat is keyed by
+    threading.get_ident(). Calling it from the main thread would only refresh
+    an entry nothing looks at, which was the original defect (#621): the main
+    loop refreshed a single shared timestamp every 5s regardless of whether any
+    watcher had reached the API server, so the liveness check could never fail.
     """
-    Register the list of watcher threads to be monitored for liveness.
+    with _heartbeat_lock:
+        watcher_heartbeats[threading.get_ident()] = datetime.now(timezone.utc)
+
+
+def _stale_watchers(now: datetime) -> List[Thread]:
     """
-    global watcher_processes
+    Return the registered watcher threads whose last Kubernetes contact is older
+    than the tolerated threshold. Empty while no watchers are registered (e.g.
+    METHOD=LIST), so a one-shot run is never reported as not live.
+    """
+    threshold = timedelta(seconds=K8S_CONTACT_THRESHOLD_SECONDS)
+    with _heartbeat_lock:
+        return [
+            t for t in watcher_processes
+            if (now - watcher_heartbeats.get(t.ident, now)) > threshold
+        ]
+
+
+def register_watcher_processes(processes: List[Thread], heartbeat_interval: Optional[int] = None):
+    """
+    Register the watcher threads to be monitored for liveness and seed their
+    heartbeats, so the clock starts at registration rather than at first report.
+
+    heartbeat_interval is how often a healthy watcher is expected to report in
+    (WATCH_SERVER_TIMEOUT when watching, SLEEP_TIME when polling). The threshold
+    is derived as twice that, so the check never sits exactly on the reconnect
+    boundary and flaps. K8S_CONTACT_THRESHOLD_SECONDS in the environment
+    overrides the derived value.
+    """
+    global watcher_processes, K8S_CONTACT_THRESHOLD_SECONDS
     watcher_processes = processes
+
+    override = os.getenv("K8S_CONTACT_THRESHOLD_SECONDS")
+    if override:
+        K8S_CONTACT_THRESHOLD_SECONDS = int(override)
+    elif heartbeat_interval:
+        K8S_CONTACT_THRESHOLD_SECONDS = 2 * int(heartbeat_interval)
+
+    now = datetime.now(timezone.utc)
+    with _heartbeat_lock:
+        watcher_heartbeats.clear()
+        for thread in processes:
+            watcher_heartbeats[thread.ident] = now
 
 def _create_health_http_server(health_port: int) -> ThreadingHTTPServer:
     """
