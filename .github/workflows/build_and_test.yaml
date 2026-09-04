@@ -358,7 +358,7 @@ jobs:
           }
           echo "Updating resources..."
           kubectl apply -f "test/resources/change_resources.yaml"
-          pods=("sidecar" "sidecar-5xx")
+          pods=("sidecar" "sidecar-5xx" "sidecar-sleep")
           resources=("sample-configmap" "sample-secret-binary" "absolute-configmap" "relative-configmap" "change-dir-configmap" "similar-configmap-secret" "url-configmap-500" "url-configmap-basic-auth" "sample-configmap")
           for p in ${pods[*]}; do
             for r in ${resources[*]}; do
@@ -386,6 +386,12 @@ jobs:
           ls /tmp/sidecar/script_result || echo "script_result missing"
 
           echo "All sidecar files after initial sync verified successfully."
+      - name: Verify sidecar-sleep files after update
+        shell: bash
+        run: |
+          source /tmp/sidecar_helpers.sh
+          echo "--- Verifying sidecar-sleep picks up updates via its LIST+sleep loop (METHOD=SLEEP) ---"
+          check_pod_file_exists sidecar-sleep /tmp/change-hello.world
       - name: Verify health server startup
         shell: bash
         run: |

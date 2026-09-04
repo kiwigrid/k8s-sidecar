@@ -447,7 +447,7 @@ def _watch_resource_loop(shutdown_event, mode, label, label_value, target_folder
             if mode == "SLEEP" or (namespace != 'ALL' and resource_name):
                 list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                                namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
-                               ignore_already_processed, resource_name)
+                               ignore_already_processed, resource_name, folder_per_namespace)
                 sleep(int(os.getenv("SLEEP_TIME", 60)))
             else:
                 _watch_resource_iterator(label, label_value, target_folder, request_url, request_method, request_payload,
