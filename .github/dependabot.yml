@@ -13,7 +13,7 @@ updates:
       - dependencies
       - github_actions      
   - package-ecosystem: pip
-    directory: "/src"
+    directory: "/"
     schedule:
       interval: "daily"
     labels:
