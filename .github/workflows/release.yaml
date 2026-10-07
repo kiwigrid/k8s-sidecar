@@ -39,10 +39,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: master
           INITIAL_VERSION: 1.0.0
-          # Evaluate all commits since the last tag, so a bump token is not lost
-          # when the concurrency group cancels a pending run in favour of a newer one.
-          BRANCH_HISTORY: compare
-          # Only release when a commit contains #major, #minor or #patch (highest wins).
+          # Only evaluate the message of the pushed (merge) commit, so the maintainer
+          # decides the bump at merge time. 'compare' would also scan every commit
+          # body since the last tag, including contributor commits and old messages
+          # that merely mention a token.
+          # Trade-off: GitHub keeps only one pending run per concurrency group. If
+          # three release-relevant merges land within one release build, the middle
+          # run is cancelled and its token is not evaluated; the newest merge still
+          # releases with its own token.
+          BRANCH_HISTORY: last
+          # Only release when the merge commit contains #major, #minor or #patch.
           DEFAULT_BUMP: none
           # The action matches tokens case-sensitively via an unquoted bash `case`
           # pattern, so use globs to also accept e.g. #Patch or #None.
