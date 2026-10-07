@@ -5,7 +5,7 @@ description = "Kubernetes sidecar to watch for changes in resources and mount th
 requires-python = ">=3.12"
 dependencies = [
     "kubernetes==32.0.1",
-    "requests==2.33.1",
+    "requests==2.34.2",
     "python-json-logger==4.2.0",
     "logfmter==0.0.12",
     "pyasn1==0.6.4",
