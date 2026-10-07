@@ -165,7 +165,7 @@ cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-.gemini
-GEMINI.md
+.claude/
+CLAUDE.md
 test/tmp
 *.sh
