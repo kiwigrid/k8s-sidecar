@@ -6,6 +6,7 @@ import os
 import stat
 import subprocess
 from datetime import datetime
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -147,14 +148,86 @@ def fetch_basic_auth_credentials():
     return username, password
 
 
-def request(url, method, enable_5xx=False, payload=None):
+def _basic_auth_encoding():
+    return os.getenv("REQ_BASIC_AUTH_ENCODING") or "latin1"
+
+
+def _http_basic_auth(username, password):
+    if not username or not password:
+        return None
+    encoding = _basic_auth_encoding()
+    return HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
+
+
+def _fetch_url_basic_auth_credentials():
+    username = os.getenv("URL_USERNAME")
+    password = os.getenv("URL_PASSWORD")
+    # File paths override the environment variables when the file is readable.
+    # A missing file leaves the env value in place (read_file_content returns None).
+    username_file = os.getenv("URL_USERNAME_FILE")
+    password_file = os.getenv("URL_PASSWORD_FILE")
+    if username_file:
+        username_from_file = read_file_content(username_file)
+        if username_from_file is not None:
+            username = username_from_file
+    if password_file:
+        password_from_file = read_file_content(password_file)
+        if password_from_file is not None:
+            password = password_from_file
+    return username, password
+
+
+def _use_req_basic_auth_for_file_urls():
+    flag = os.getenv("URL_USE_REQ_BASIC_AUTH")
+    if flag is None:
+        return True
+    return flag.lower() != "false"
+
+
+def _strip_url_userinfo(url):
+    """Drop userinfo from a URL, keeping bracketed IPv6 hosts intact.
+
+    urlsplit().username and .password are already percent-decoded. A username
+    with an empty password is still explicit auth and must not fall through.
+    """
+    parts = urlsplit(url)
+    if parts.username is None:
+        return url, None, None
+    host = parts.netloc.rsplit("@", 1)[-1]
+    cleaned = urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
+    return cleaned, parts.username, parts.password
+
+
+def _file_url_basic_auth(url):
+    """Select basic auth for a *.url download and return the URL without userinfo.
+
+    Order: userinfo embedded in the URL, then URL_USERNAME/URL_PASSWORD (both
+    required), then the REQ pair unless URL_USE_REQ_BASIC_AUTH is false.
+    """
+    url, username, password = _strip_url_userinfo(url)
+    if username is not None:
+        encoding = _basic_auth_encoding()
+        if password is None:
+            password = ""
+        return url, HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
+
+    username, password = _fetch_url_basic_auth_credentials()
+    auth = _http_basic_auth(username, password)
+    if auth is not None:
+        return url, auth
+    if _use_req_basic_auth_for_file_urls():
+        username, password = fetch_basic_auth_credentials()
+        return url, _http_basic_auth(username, password)
+    return url, None
+
+
+def request(url, method, enable_5xx=False, payload=None, *, file_url=False):
     enforce_status_codes = list() if enable_5xx else [500, 502, 503, 504]
-    username,password = fetch_basic_auth_credentials()
-    encoding = 'latin1' if not os.getenv("REQ_BASIC_AUTH_ENCODING") else os.getenv("REQ_BASIC_AUTH_ENCODING")
-    if username and password:
-        auth = HTTPBasicAuth(username.encode(encoding), password.encode(encoding))
+    if file_url and url:
+        url, auth = _file_url_basic_auth(url)
     else:
-        auth = None
+        username, password = fetch_basic_auth_credentials()
+        auth = _http_basic_auth(username, password)
 
     r = requests.Session()
 
