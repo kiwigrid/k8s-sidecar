@@ -1,7 +1,7 @@
-FROM python:3.15.0b2-alpine3.22@sha256:8374b202f092c233441f36b3018fd839c5c42d58b0a8ea479860f9ff2326d8cf AS base
+FROM python:3.14.8-alpine3.24@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS base
 RUN apk add --no-cache \
-        'libcrypto3>=3.5.7-r0' \
-        'libssl3>=3.5.7-r0'
+        libcrypto3=3.5.9-r0 \
+        libssl3=3.5.9-r0
 
 FROM base AS builder
 WORKDIR /app
@@ -11,8 +11,8 @@ COPY        src/ /app/src/
 # A C toolchain is enough for dependencies without a wheel for the target
 # platform (e.g. PyYAML); no Rust/C++ dependency is left since kubernetes 35.
 RUN apk add --no-cache \
-        gcc=14.2.0-r6 \
-        musl-dev=1.2.5-r12 && \
+        gcc=15.2.0-r5 \
+        musl-dev=1.2.6-r2 && \
     .venv/bin/pip install --no-cache-dir . && \
     find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
 
