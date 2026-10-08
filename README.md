@@ -25,13 +25,13 @@ Images are available at:
 - [quay.io/kiwigrid/k8s-sidecar](https://quay.io/repository/kiwigrid/k8s-sidecar)
 - [ghcr.io/kiwigrid/k8s-sidecar](https://github.com/orgs/kiwigrid/packages/container/package/k8s-sidecar)
 
-All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le` and `riscv64`.
+All are identical multi-arch images built for `amd64`, `arm64`, `arm/v7`, `ppc64le`, `riscv64` and `s390x`.
 
-## Dropped support for `s390x`
+## Architecture support history
 
-With v2.x we dropped support for the `ppc64le` and `s390x` architectures. Support for `ppc64le` has since been restored, while `s390x` remains unsupported.
-If you still have a need for `s390x`, please get in touch.
-A possible solution would be to setup a dedicated build job using a native runner instead of qemu.
+With v2.x we dropped support for the `ppc64le` and `s390x` architectures. Support for `ppc64le` was restored first.
+`s390x` stayed unsupported because the Rust toolchain available on Alpine for `s390x` was too old to build the `cryptography` dependency.
+Since the image no longer needs any Rust or C++ dependency, `s390x` is supported again.
 
 # Features
 
