@@ -38,6 +38,20 @@ jobs:
           push: false
           outputs: type=docker,dest=/tmp/k8s-sidecar.tar
           tags: "kiwigrid/k8s-sidecar:testing"
+      # Run the unit tests with the interpreter and compiled extensions that
+      # actually ship in the image; the unit-test job above uses a different
+      # Python and would not catch ABI problems like the charset_normalizer
+      # crash on the Python 3.15 beta base image (#633).
+      - name: Run unit tests inside the sidecar image
+        run: |
+          docker load --input /tmp/k8s-sidecar.tar
+          docker run --rm \
+            --volume "$PWD/test/unit:/tests:ro" \
+            --workdir /tmp \
+            --env PYTHONPATH=/app/src \
+            --entrypoint python \
+            kiwigrid/k8s-sidecar:testing \
+            -m unittest discover -s /tests -t /tests
       - name: Prepare dummy server static resources
         run: |
           cp test/kubelogo.png test/server/static/
