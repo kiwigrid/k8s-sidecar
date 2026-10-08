@@ -4,7 +4,7 @@ version = "1.0.0" # Placeholder, actual version is managed by github-tag-action
 description = "Kubernetes sidecar to watch for changes in resources and mount them as files."
 requires-python = ">=3.12"
 dependencies = [
-    "kubernetes==35.0.0",
+    "kubernetes==36.0.3",
     "requests==2.34.2",
     "python-json-logger==4.2.0",
     "logfmter==0.0.12",
