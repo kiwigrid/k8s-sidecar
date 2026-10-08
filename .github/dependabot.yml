@@ -24,6 +24,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    ignore:
+      # Python minor upgrades (e.g. 3.14 -> 3.15, including alpha/beta/rc tags)
+      # are done manually after checking that all platforms in docker-bake.hcl
+      # are published for the new tag. Patch updates still come automatically.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor"]
     labels:
       - dependencies
       - github_actions
