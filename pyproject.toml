@@ -8,6 +8,7 @@ dependencies = [
     "requests==2.34.2",
     "python-json-logger==4.2.0",
     "logfmter==0.0.12",
+    "certifi>=2026.10.19", # transitive (requests, kubernetes); floor for GHSA-6q48-6c7w-9gw2
 ]
 
 [build-system]

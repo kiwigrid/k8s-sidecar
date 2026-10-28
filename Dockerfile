@@ -1,7 +1,10 @@
 FROM python:3.14.8-alpine3.24@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS base
+# pip is not needed at runtime and its vendored packages get flagged by
+# scanners; `python -m venv` bootstraps the builder's pip via ensurepip.
 RUN apk add --no-cache \
         libcrypto3=3.5.9-r0 \
-        libssl3=3.5.9-r0
+        libssl3=3.5.9-r0 && \
+    python -m pip uninstall -y pip
 
 FROM base AS builder
 WORKDIR /app
@@ -14,6 +17,7 @@ RUN apk add --no-cache \
         gcc=15.2.0-r5 \
         musl-dev=1.2.6-r2 && \
     .venv/bin/pip install --no-cache-dir . && \
+    .venv/bin/python -m pip uninstall -y pip && \
     find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
 
 
