@@ -1,4 +1,4 @@
-FROM python:3.14.9-alpine3.24@sha256:dbeb11d16bb95c3a7e3c25c842cb9f20cbc8c18f8be0461a4a0dcc861ad386a0 AS base
+FROM python:3.14.10-alpine3.24@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2 AS base
 RUN apk add --no-cache \
         libcrypto3=3.5.9-r0 \
         libssl3=3.5.9-r0
