@@ -1,3 +1,4 @@
+import errno
 import ipaddress
 import logging
 import logging.config
@@ -177,8 +178,11 @@ def _create_health_http_server(health_port: int) -> ThreadingHTTPServer:
     try:
         ThreadingHTTPServer.address_family = socket.AF_INET6
         return ThreadingHTTPServer(("", health_port), HealthHandler)
-    except OSError:
-        logger.warning("IPv6 not available, falling back to IPv4 for the health server")
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            # The port is taken, IPv6 works; an IPv4 bind would fail the same way.
+            raise
+        logger.warning("IPv6 not available (%s), falling back to IPv4 for the health server", e)
         ThreadingHTTPServer.address_family = socket.AF_INET
         return ThreadingHTTPServer(("", health_port), HealthHandler)
 
@@ -206,7 +210,15 @@ def start_health_server():
         logging.config.dictConfig(log_config)
 
         health_port = int(os.getenv("HEALTH_PORT", "8080"))
-        server = _create_health_http_server(health_port)
+        try:
+            server = _create_health_http_server(health_port)
+        except OSError as e:
+            logging.getLogger("health_server").error(
+                "Cannot start the health server on port %d: %s. Set HEALTH_PORT to a free port; "
+                "each k8s-sidecar container in the same pod needs its own.",
+                health_port, e
+            )
+            return
 
         logging.getLogger("health_server").info(
             "Starting health server on port %d", health_port
