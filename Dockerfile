@@ -12,7 +12,7 @@ COPY        src/ /app/src/
 # platform (e.g. PyYAML); no Rust/C++ dependency is left since kubernetes 35.
 RUN apk add --no-cache \
         gcc=15.2.0-r5 \
-        musl-dev=1.2.6-r2 && \
+        musl-dev=1.2.6-r3 && \
     .venv/bin/pip install --no-cache-dir . && \
     find /app/.venv \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' \+
 
