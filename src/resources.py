@@ -130,6 +130,38 @@ def _iter_k8s_items(list_fn, *, limit=5, **kwargs):
             break
 
 
+# HTTP statuses for which a failed initial LIST is worth retrying. The
+# urllib3 Retry on the API client only covers connect/read errors, not these
+# status codes, so a 504 from the API server would otherwise end startup.
+_TRANSIENT_API_STATUSES = frozenset({429, 502, 503, 504})
+
+
+def list_resources_with_retry(*args, **kwargs):
+    """
+    Run list_resources() and retry it on transient Kubernetes API failures.
+
+    Used for the initial sync at startup, which runs before the watch loop and
+    so is not covered by the watch loop's own error handling. Retries up to
+    INITIAL_SYNC_RETRIES times (default 5), waiting ERROR_THROTTLE_SLEEP
+    seconds between attempts; any other error is raised immediately.
+    """
+    max_retries = int(os.getenv("INITIAL_SYNC_RETRIES", 5))
+    delay = int(os.getenv("ERROR_THROTTLE_SLEEP", 5))
+    attempt = 0
+    while True:
+        try:
+            return list_resources(*args, **kwargs)
+        except (ApiException, ProtocolError, MaxRetryError) as e:
+            if isinstance(e, ApiException) and e.status not in _TRANSIENT_API_STATUSES:
+                raise
+            if attempt >= max_retries:
+                raise
+            attempt += 1
+            logger.warning(f"Initial list-based sync failed with a transient error, "
+                           f"retrying in {delay}s (attempt {attempt}/{max_retries}): {e}")
+            sleep(delay)
+
+
 def list_resources(label, label_value, target_folder, request_url, request_method, request_payload,
                    namespace, folder_annotation, resource, unique_filenames, script, enable_5xx,
                    ignore_already_processed, resource_name, folder_per_namespace):
