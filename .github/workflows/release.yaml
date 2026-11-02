@@ -100,6 +100,19 @@ jobs:
             k8s-sidecar.tags=quay.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.new_tag }}
             k8s-sidecar.tags=ghcr.io/kiwigrid/k8s-sidecar:${{ steps.tagging.outputs.new_tag }}
 
+      - name: Determine previous release
+        if: steps.tagging.outputs.part != '' && steps.tagging.outputs.part != 'none'
+        id: previous_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OLD_TAG: ${{ steps.tagging.outputs.old_tag }}
+        # A failed release run has already pushed its tag, so old_tag may have no
+        # GitHub release (e.g. 2.14.2). Start the changelog at the latest published
+        # release instead, otherwise the changes up to that tag are never listed.
+        run: |
+          tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || true)
+          echo "tag=${tag:-$OLD_TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Build Changelog
         if: steps.tagging.outputs.part != '' && steps.tagging.outputs.part != 'none'
         id: build_changelog
@@ -108,7 +121,7 @@ jobs:
           configuration: ".github/workflows/release-notes-config.json"
           # Pin the range to this run's tags; otherwise the action resolves the
           # newest tags in the repo, which may belong to a later release.
-          fromTag: ${{ steps.tagging.outputs.old_tag }}
+          fromTag: ${{ steps.previous_release.outputs.tag }}
           toTag: ${{ steps.tagging.outputs.new_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
