@@ -45,6 +45,25 @@ Since the image no longer needs any Rust or C++ dependency, `s390x` is supported
   - Values can also be base64 encoded URLs that download binary data e.g. executables
     - The key in the `ConfigMap`/`Secret` must end with "`.url`" ([see](https://github.com/kiwigrid/k8s-sidecar/blob/master/test/resources/resources.yaml#L84))
 
+## File updates
+
+Each changed file is written to a temporary `.k8s-sidecar-*` file in the destination
+directory and atomically replaced after the write succeeds. Readers reopening the
+destination see either the previous complete file or the new complete file. Readers
+holding an open file descriptor keep reading the previous file until they reopen it.
+Applications scanning the directory should ignore the temporary dotfiles.
+
+The sidecar needs write permission on the destination directory. Existing symbolic
+links are followed and the resolved file is replaced; existing ownership and file
+mode are preserved unless `DEFAULT_FILE_MODE` overrides the mode. New files respect
+the process umask when no explicit mode is configured. A failed write leaves the
+previous destination intact and removes the temporary file; abrupt process termination
+can leave a temporary dotfile. Replacement changes the inode, so other hard links do
+not receive the update.
+
+This guarantees atomic replacement of one file, not a transaction across all files
+from a ConfigMap or Secret, application reload success, or persistence after volume loss.
+
 # Usage
 
 Example for a simple deployment can be found in [`example.yaml`](./examples/example.yaml). Depending on the cluster setup you have to grant yourself admin rights first:
