@@ -3,6 +3,7 @@
 import errno
 import hashlib
 import os
+import secrets
 import stat
 import subprocess
 from datetime import datetime
@@ -97,12 +98,36 @@ def write_data_to_file(folder, filename, data, data_type=CONTENT_TYPE_TEXT):
         write_type = "w"
 
     logger.info(f"Writing {absolute_path} ({data_type})")
-    with open(absolute_path, write_type) as f:
-        f.write(data)
-        f.close()
-    if os.getenv('DEFAULT_FILE_MODE'):
-        mode = int(os.getenv('DEFAULT_FILE_MODE'), base=8)
-        os.chmod(absolute_path, mode)
+    # Keep following existing symlinks, but replace the resolved file atomically.
+    target_path = os.path.realpath(absolute_path) if os.path.islink(absolute_path) else absolute_path
+    try:
+        previous = os.stat(target_path)
+    except FileNotFoundError:
+        previous = None
+    if previous is not None and not stat.S_ISREG(previous.st_mode):
+        raise OSError(errno.EINVAL, "Atomic writes require a regular file", target_path)
+
+    # Create beside the destination: rename across filesystems is not atomic.
+    # os.open applies the normal creation umask, unlike mkstemp's fixed 0600.
+    temporary_path = os.path.join(os.path.dirname(target_path), ".k8s-sidecar-" + secrets.token_hex(16))
+    fd = os.open(temporary_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+    try:
+        with os.fdopen(fd, write_type) as f:
+            if previous is not None:
+                current = os.fstat(f.fileno())
+                if (current.st_uid, current.st_gid) != (previous.st_uid, previous.st_gid):
+                    os.fchown(f.fileno(), previous.st_uid, previous.st_gid)
+            if os.getenv('DEFAULT_FILE_MODE'):
+                os.fchmod(f.fileno(), int(os.getenv('DEFAULT_FILE_MODE'), base=8))
+            elif previous is not None:
+                os.fchmod(f.fileno(), stat.S_IMODE(previous.st_mode))
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_path, target_path)
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
     return True
 
 
