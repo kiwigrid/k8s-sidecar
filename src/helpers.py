@@ -38,6 +38,21 @@ REQ_TIMEOUT              = 10 if os.getenv("REQ_TIMEOUT") is None else float(os.
 # env vars; however a custom truststore can be set via REQUESTS_CA_BUNDLE
 REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY") == "true" else None
 
+def _int_from_env(name, default):
+    """Read an integer from the environment variable `name`, or return `default` if it is unset.
+
+    Values from the environment are strings; they must be converted, because e.g.
+    the kubernetes client silently ignores a `_request_timeout` that is a string.
+    """
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(f"{name} must be an integer, got {value!r}") from None
+
+
 # Tune default timeouts as outlined in
 # https://github.com/kubernetes-client/python/issues/1148#issuecomment-626184613
 # https://github.com/kubernetes-client/python/blob/master/examples/watch/timeout-settings.md
@@ -46,13 +61,13 @@ REQ_TLS_VERIFY = False if os.getenv("REQ_SKIP_TLS_VERIFY") == "true" else None
 # 60 is a polite request to the server, asking it to cleanly close the connection after that.
 # If you have a network outage, this does nothing.
 # You can set this number much higher, maybe to 3600 seconds (1h).
-WATCH_SERVER_TIMEOUT = os.environ.get("WATCH_SERVER_TIMEOUT", 60)
+WATCH_SERVER_TIMEOUT = _int_from_env("WATCH_SERVER_TIMEOUT", 60)
 
 # 66 is a client-side timeout, configuring your local socket.
 # If you have a network outage dropping all packets with no RST/FIN,
 # this is how long your client waits before realizing & dropping the connection.
 # You can keep this number low, maybe 60 seconds.
-WATCH_CLIENT_TIMEOUT = os.environ.get("WATCH_CLIENT_TIMEOUT", 66)
+WATCH_CLIENT_TIMEOUT = _int_from_env("WATCH_CLIENT_TIMEOUT", 66)
 
 # Get logger
 logger = get_logger()
