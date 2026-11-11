@@ -179,6 +179,12 @@ class WatchTimeoutConfigTest(unittest.TestCase):
         self.assertEqual(reloaded.WATCH_SERVER_TIMEOUT, 3600)
         self.assertEqual(reloaded.WATCH_CLIENT_TIMEOUT, 3660)
 
+    def test_non_integer_value_from_environment_is_rejected(self):
+        for value in ("66s", "66.5", ""):
+            with self.subTest(value=value), \
+                    self.assertRaisesRegex(ValueError, "WATCH_CLIENT_TIMEOUT must be an integer"):
+                _helpers_reloaded_with({"WATCH_CLIENT_TIMEOUT": value})
+
 
 if __name__ == "__main__":
     unittest.main()
